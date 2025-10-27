@@ -1,0 +1,48 @@
+Name: taskprojectapi
+Host: 0.0.0.0
+Port: 8888
+Mode: dev
+
+# 数据库配置
+MySQL:
+  DataSource: "root:password@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local"
+
+# Redis配置
+Redis:
+  Host: "localhost"
+  Port: 6379
+  Password: ""
+  DB: 0
+
+# JWT配置
+JWT:
+  SecretKey: "your-secret-key-here-change-in-production"
+  ExpireTime: "24h"
+  RefreshTime: "1h"
+  Issuer: "task-project-api"
+  Audience: "task-project-client"
+
+# 邮件配置
+Email:
+  Host: "smtp.qq.com"
+  Port: 587
+  Username: "your-email@qq.com"
+  Password: "your-email-password-or-auth-code"
+  From: "企业任务系统"
+  UseTLS: true
+
+# 短信配置
+SMS:
+  Provider: "aliyun"  # aliyun, tencent
+  AccessKey: "your-access-key"
+  SecretKey: "your-secret-key"
+  SignName: "企业任务系统"
+  TemplateID: "SMS_123456789"
+  Endpoint: "https://dysmsapi.aliyuncs.com"
+  Region: "cn-hangzhou"
+
+# RabbitMQ配置
+RabbitMQ:
+  URL: "amqp://guest:guest@localhost:5672/"
+  Exchange: "task.exchange"
+  Queue: "task.queue"

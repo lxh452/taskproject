@@ -6,6 +6,15 @@ package handler
 import (
 	"net/http"
 
+	auth "task_Project/task/internal/handler/auth"
+	company "task_Project/task/internal/handler/company"
+	department "task_Project/task/internal/handler/department"
+	employee "task_Project/task/internal/handler/employee"
+	handover "task_Project/task/internal/handler/handover"
+	notification "task_Project/task/internal/handler/notification"
+	position "task_Project/task/internal/handler/position"
+	task "task_Project/task/internal/handler/task"
+	tasknode "task_Project/task/internal/handler/tasknode"
 	"task_Project/task/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -15,10 +24,336 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				Method:  http.MethodGet,
-				Path:    "/from/:name",
-				Handler: TaskHandler(serverCtx),
+				// 用户登录
+				Method:  http.MethodPost,
+				Path:    "/login",
+				Handler: auth.LoginHandler(serverCtx),
+			},
+			{
+				// 用户登出
+				Method:  http.MethodPost,
+				Path:    "/logout",
+				Handler: auth.LogoutHandler(serverCtx),
+			},
+			{
+				// 用户注册
+				Method:  http.MethodPost,
+				Path:    "/register",
+				Handler: auth.RegisterHandler(serverCtx),
 			},
 		},
+		rest.WithPrefix("/api/v1/auth"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建公司
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: company.CreateCompanyHandler(serverCtx),
+			},
+			{
+				// 删除公司
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: company.DeleteCompanyHandler(serverCtx),
+			},
+			{
+				// 获取公司信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: company.GetCompanyHandler(serverCtx),
+			},
+			{
+				// 获取公司列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: company.GetCompanyListHandler(serverCtx),
+			},
+			{
+				// 更新公司信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: company.UpdateCompanyHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/company"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建部门
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: department.CreateDepartmentHandler(serverCtx),
+			},
+			{
+				// 删除部门
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: department.DeleteDepartmentHandler(serverCtx),
+			},
+			{
+				// 获取部门信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: department.GetDepartmentHandler(serverCtx),
+			},
+			{
+				// 获取部门列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: department.GetDepartmentListHandler(serverCtx),
+			},
+			{
+				// 更新部门信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: department.UpdateDepartmentHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/department"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建员工
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: employee.CreateEmployeeHandler(serverCtx),
+			},
+			{
+				// 删除员工
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: employee.DeleteEmployeeHandler(serverCtx),
+			},
+			{
+				// 获取员工信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: employee.GetEmployeeHandler(serverCtx),
+			},
+			{
+				// 员工离职
+				Method:  http.MethodPost,
+				Path:    "/leave",
+				Handler: employee.EmployeeLeaveHandler(serverCtx),
+			},
+			{
+				// 获取员工列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: employee.GetEmployeeListHandler(serverCtx),
+			},
+			{
+				// 更新员工信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: employee.UpdateEmployeeHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/employee"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 审批任务交接
+				Method:  http.MethodPost,
+				Path:    "/approve",
+				Handler: handover.ApproveHandoverHandler(serverCtx),
+			},
+			{
+				// 确认交接
+				Method:  http.MethodPost,
+				Path:    "/confirm",
+				Handler: handover.ConfirmHandoverHandler(serverCtx),
+			},
+			{
+				// 创建任务交接
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: handover.CreateHandoverHandler(serverCtx),
+			},
+			{
+				// 获取交接信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: handover.GetHandoverHandler(serverCtx),
+			},
+			{
+				// 获取交接列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: handover.GetHandoverListHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/handover"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建通知
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: notification.CreateNotificationHandler(serverCtx),
+			},
+			{
+				// 获取通知信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: notification.GetNotificationHandler(serverCtx),
+			},
+			{
+				// 获取通知列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: notification.GetNotificationListHandler(serverCtx),
+			},
+			{
+				// 标记通知为已读
+				Method:  http.MethodPut,
+				Path:    "/read",
+				Handler: notification.MarkNotificationReadHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/notification"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建职位
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: position.CreatePositionHandler(serverCtx),
+			},
+			{
+				// 删除职位
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: position.DeletePositionHandler(serverCtx),
+			},
+			{
+				// 获取职位信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: position.GetPositionHandler(serverCtx),
+			},
+			{
+				// 获取职位列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: position.GetPositionListHandler(serverCtx),
+			},
+			{
+				// 更新职位信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: position.UpdatePositionHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/position"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 任务完成
+				Method:  http.MethodPost,
+				Path:    "/complete",
+				Handler: task.CompleteTaskHandler(serverCtx),
+			},
+			{
+				// 创建任务
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: task.CreateTaskHandler(serverCtx),
+			},
+			{
+				// 删除任务
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: task.DeleteTaskHandler(serverCtx),
+			},
+			{
+				// 任务自动派发
+				Method:  http.MethodPost,
+				Path:    "/dispatch",
+				Handler: task.AutoDispatchHandler(serverCtx),
+			},
+			{
+				// 获取任务信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: task.GetTaskHandler(serverCtx),
+			},
+			{
+				// 获取任务列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: task.GetTaskListHandler(serverCtx),
+			},
+			{
+				// 任务进度更新
+				Method:  http.MethodPut,
+				Path:    "/progress",
+				Handler: task.UpdateTaskProgressHandler(serverCtx),
+			},
+			{
+				// 更新任务信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: task.UpdateTaskHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/task"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建任务节点
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: tasknode.CreateTaskNodeHandler(serverCtx),
+			},
+			{
+				// 删除任务节点
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: tasknode.DeleteTaskNodeHandler(serverCtx),
+			},
+			{
+				// 获取任务节点信息
+				Method:  http.MethodPost,
+				Path:    "/get",
+				Handler: tasknode.GetTaskNodeHandler(serverCtx),
+			},
+			{
+				// 获取用户的任务节点信息
+				Method:  http.MethodGet,
+				Path:    "/get/user",
+				Handler: tasknode.GetUserTaskNodeHandler(serverCtx),
+			},
+			{
+				// 获取任务节点列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: tasknode.GetTaskNodeListHandler(serverCtx),
+			},
+			{
+				// 更新任务节点
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: tasknode.UpdateTaskNodeHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/tasknode"),
 	)
 }

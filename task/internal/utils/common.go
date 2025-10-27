@@ -1,0 +1,246 @@
+package utils
+
+import (
+	"context"
+	"crypto/rand"
+	"database/sql"
+	"fmt"
+	"github.com/mitchellh/mapstructure"
+	"strings"
+	"time"
+
+	"task_Project/task/internal/middleware"
+)
+
+var Common = NewCommon()
+
+// Common 通用工具类
+type common struct{}
+
+// NewCommon 创建通用工具实例
+func NewCommon() *common {
+	return &common{}
+}
+
+// GetCurrentUserID 获取当前用户ID
+func (c *common) GetCurrentUserID(ctx context.Context) (string, bool) {
+	return middleware.GetUserID(ctx)
+}
+
+// GetCurrentUsername 获取当前用户名
+func (c *common) GetCurrentUsername(ctx context.Context) (string, bool) {
+	return middleware.GetUsername(ctx)
+}
+
+// GetCurrentRealName 获取当前用户真实姓名
+func (c *common) GetCurrentRealName(ctx context.Context) (string, bool) {
+	return middleware.GetRealName(ctx)
+}
+
+// GetCurrentUserRole 获取当前用户角色
+func (c *common) GetCurrentUserRole(ctx context.Context) (string, bool) {
+	// 这里需要根据实际的middleware实现来获取用户角色
+	// 暂时返回空字符串和false
+	return "", false
+}
+
+// GenerateID 生成ID
+func (c *common) GenerateID() string {
+	return time.Now().Format("20060102150405") + "0001"
+}
+
+// GenerateIDWithPrefix 生成带前缀的ID
+func (c *common) GenerateIDWithPrefix(prefix string) string {
+	return prefix + time.Now().Format("20060102150405") + "0001"
+}
+
+// GetCurrentTime 获取当前时间
+func (c *common) GetCurrentTime() time.Time {
+	return time.Now()
+}
+
+// FormatTime 格式化时间
+func (c *common) FormatTime(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05")
+}
+
+// FormatDate 格式化日期
+func (c *common) FormatDate(t time.Time) string {
+	return t.Format("2006-01-02")
+}
+
+// IsValidTime 验证时间是否有效
+func (c *common) IsValidTime(t *time.Time) bool {
+	return t != nil && !t.IsZero()
+}
+
+// IsValidDate 验证日期是否有效
+func (c *common) IsValidDate(t *time.Time) bool {
+	return t != nil && !t.IsZero()
+}
+
+// GetTimeString 获取时间字符串
+func (c *common) GetTimeString(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02 15:04:05")
+}
+
+// GetDateString 获取日期字符串
+func (c *common) GetDateString(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
+}
+
+// ParseTime 解析时间字符串
+func (c *common) ParseTime(timeStr string) (time.Time, error) {
+	return time.Parse("2006-01-02 15:04:05", timeStr)
+}
+
+// ParseDate 解析日期字符串
+func (c *common) ParseDate(dateStr string) (time.Time, error) {
+	return time.Parse("2006-01-02", dateStr)
+}
+
+// IsEmptyString 检查字符串是否为空
+func (c *common) IsEmptyString(str string) bool {
+	return len(str) == 0
+}
+
+// IsNotEmptyString 检查字符串是否不为空
+func (c *common) IsNotEmptyString(str string) bool {
+	return len(str) > 0
+}
+
+// TrimString 去除字符串首尾空格
+func (c *common) TrimString(str string) string {
+	return strings.TrimSpace(str)
+}
+
+// DefaultString 获取默认字符串
+func (c *common) DefaultString(str, defaultStr string) string {
+	if c.IsEmptyString(str) {
+		return defaultStr
+	}
+	return str
+}
+
+// DefaultInt 获取默认整数值
+func (c *common) DefaultInt(value, defaultValue int) int {
+	if value == 0 {
+		return defaultValue
+	}
+	return value
+}
+
+// DefaultInt64 获取默认int64值
+func (c *common) DefaultInt64(value, defaultValue int64) int64 {
+	if value == 0 {
+		return defaultValue
+	}
+	return value
+}
+
+// MaxInt 获取两个整数的最大值
+func (c *common) MaxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// MinInt 获取两个整数的最小值
+func (c *common) MinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// MaxInt64 获取两个int64的最大值
+func (c *common) MaxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// MinInt64 获取两个int64的最小值
+func (c *common) MinInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// 将string类型转换为sql.
+func (c *common) ToSqlNullString(str string) sql.NullString {
+	sqlNullString := sql.NullString{}
+	if str == "" {
+		sqlNullString.Valid = false
+		return sqlNullString
+	}
+	sqlNullString.String = str
+	sqlNullString.Valid = true
+	return sqlNullString
+}
+
+func (c *common) ToSqlNullTime(timeStr string) sql.NullTime {
+	var nullTime sql.NullTime
+
+	timeFormat := "2006-01-02 15:04:05"
+
+	parsedTime, err := time.Parse(timeFormat, timeStr)
+	if err != nil {
+		nullTime.Valid = false
+		return nullTime
+	}
+	if parsedTime.IsZero() {
+		nullTime.Valid = false
+	} else {
+		nullTime.Time = parsedTime
+		nullTime.Valid = true
+	}
+
+	return nullTime
+}
+
+// 将int类型转换为sql.
+func (c *common) ToSqlNullFloat64(num int) sql.NullFloat64 {
+	sqlNullFloat64 := sql.NullFloat64{}
+	sqlNullFloat64.Float64 = float64(num)
+	sqlNullFloat64.Valid = true
+	return sqlNullFloat64
+}
+
+func (c *common) MapToStructWithMapstructure(data map[string]interface{}, result interface{}) error {
+	config := &mapstructure.DecoderConfig{
+		Metadata: nil,
+		Result:   result,
+		TagName:  "json", // 使用json标签
+		// 可以添加更多配置
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			// 字符串转时间
+			mapstructure.StringToTimeHookFunc(time.RFC3339),
+		),
+	}
+
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(data)
+}
+
+func (c *common) GenId(name string) string {
+	bytes := make([]byte, 5)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%v_%X", name, bytes)
+}

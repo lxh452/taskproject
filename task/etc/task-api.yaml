@@ -1,3 +1,12 @@
 Name: task-api
 Host: 0.0.0.0
 Port: 8888
+Database:
+  Mysql:
+    Datasource:
+  MongoDB:
+    Datasource:
+  redis:
+    Datasource:
+Jwt:
+  Secret: A_terrible_and_irresponsible_Supervisor_yfzhou

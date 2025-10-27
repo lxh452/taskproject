@@ -25,5 +25,7 @@ task:
 clean:
 	rm -rf ./user ./company ./role ./user_auth ./task
 
+
+
 # 重新生成所有表
 rebuild: clean all

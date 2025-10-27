@@ -1,0 +1,815 @@
+syntax = "v1"
+
+// 通用类型定义
+type (
+	// 通用响应
+	BaseResponse {
+		Code int         `json:"code"`
+		Msg  string      `json:"msg"`
+		Data interface{} `json:"data,optional"`
+	}
+	// 分页请求
+	PageReq {
+		Page     int `json:"page,optional"`
+		PageSize int `json:"pageSize,optional"`
+	}
+	// 分页响应
+	PageResp {
+		Total int         `json:"total"`
+		List  interface{} `json:"list"`
+	}
+)
+
+// 用户认证相关类型
+type (
+	// 用户登录请求
+	LoginRequest {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	// 用户注册请求
+	RegisterRequest {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Email    string `json:"email,optional"`
+		Phone    string `json:"phone,optional"`
+		RealName string `json:"realName"`
+	}
+	// 登录响应
+	LoginResponse {
+		Token    string `json:"token"`
+		UserID   string `json:"userId"`
+		Username string `json:"username"`
+		RealName string `json:"realName"`
+	}
+)
+
+// 公司管理相关类型
+type (
+	// 创建公司请求
+	CreateCompanyRequest {
+		Name              string `json:"name"`
+		CompanyAttributes int    `json:"companyAttributes"`
+		CompanyBusiness   int    `json:"companyBusiness"`
+		Description       string `json:"description,optional"`
+		Address           string `json:"address,optional"`
+		Phone             string `json:"phone,optional"`
+		Email             string `json:"email,optional"`
+	}
+	// 更新公司请求
+	UpdateCompanyRequest {
+		ID                string `json:"id"`
+		Name              string `json:"name,optional"`
+		CompanyAttributes int    `json:"companyAttributes,optional"`
+		CompanyBusiness   int    `json:"companyBusiness,optional"`
+		Description       string `json:"description,optional"`
+		Address           string `json:"address,optional"`
+		Phone             string `json:"phone,optional"`
+		Email             string `json:"email,optional"`
+	}
+	// 公司信息响应
+	CompanyInfo {
+		ID                string `json:"id"`
+		Name              string `json:"name"`
+		CompanyAttributes int    `json:"companyAttributes"`
+		CompanyBusiness   int    `json:"companyBusiness"`
+		Owner             string `json:"owner"`
+		Description       string `json:"description"`
+		Address           string `json:"address"`
+		Phone             string `json:"phone"`
+		Email             string `json:"email"`
+		Status            int    `json:"status"`
+		CreateTime        string `json:"createTime"`
+		UpdateTime        string `json:"updateTime"`
+	}
+	// 公司列表请求
+	CompanyListRequest {
+		PageReq
+		Name string `json:"name,optional"`
+	}
+	// 获取公司信息请求
+	GetCompanyRequest {
+		CompanyID string `json:"companyId"`
+	}
+	// 删除公司请求
+	DeleteCompanyRequest {
+		CompanyID string `json:"companyId"`
+	}
+)
+
+// 部门管理相关类型
+type (
+	// 创建部门请求
+	CreateDepartmentRequest {
+		CompanyID      string `json:"companyId"`
+		DepartmentName string `json:"departmentName"`
+		ParentID       string `json:"parentId,optional"`
+		DepartmentCode string `json:"departmentCode"`
+		ManagerID      string `json:"managerId,optional"`
+		Description    string `json:"description,optional"`
+	}
+	// 更新部门请求
+	UpdateDepartmentRequest {
+		ID             string `json:"id"`
+		DepartmentName string `json:"departmentName,optional"`
+		ParentID       string `json:"parentId,optional"`
+		DepartmentCode string `json:"departmentCode,optional"`
+		ManagerID      string `json:"managerId,optional"`
+		Description    string `json:"description,optional"`
+	}
+	// 删除部门请求
+	DeleteDepartmentRequest {
+		ID string `json:"id"`
+	}
+	// 获取部门请求
+	GetDepartmentRequest {
+		ID string `json:"id"`
+	}
+	// 部门信息响应
+	DepartmentInfo {
+		ID             string `json:"id"`
+		CompanyID      string `json:"companyId"`
+		DepartmentName string `json:"departmentName"`
+		ParentID       string `json:"parentId"`
+		DepartmentCode string `json:"departmentCode"`
+		ManagerID      string `json:"managerId"`
+		Description    string `json:"description"`
+		Status         int    `json:"status"`
+		CreateTime     string `json:"createTime"`
+		UpdateTime     string `json:"updateTime"`
+	}
+	// 部门列表请求
+	DepartmentListRequest {
+		PageReq
+		CompanyID string `json:"companyId"`
+		Name      string `json:"name,optional"`
+	}
+)
+
+// 职位管理相关类型
+type (
+	// 创建职位请求
+	CreatePositionRequest {
+		DepartmentID     string `json:"departmentId"`
+		PositionName     string `json:"positionName"`
+		PositionCode     string `json:"positionCode"`
+		PositionLevel    int    `json:"positionLevel"`
+		RequiredSkills   string `json:"requiredSkills,optional"`
+		JobDescription   string `json:"jobDescription,optional"`
+		Responsibilities string `json:"responsibilities,optional"`
+		Requirements     string `json:"requirements,optional"`
+		SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
+		SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
+		IsManagement     int    `json:"isManagement,optional"`
+		MaxEmployees     int    `json:"maxEmployees,optional"`
+	}
+	// 更新职位请求
+	UpdatePositionRequest {
+		ID               string `json:"id"`
+		PositionName     string `json:"positionName,optional"`
+		PositionCode     string `json:"positionCode,optional"`
+		PositionLevel    int    `json:"positionLevel,optional"`
+		RequiredSkills   string `json:"requiredSkills,optional"`
+		JobDescription   string `json:"jobDescription,optional"`
+		Responsibilities string `json:"responsibilities,optional"`
+		Requirements     string `json:"requirements,optional"`
+		SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
+		SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
+		IsManagement     int    `json:"isManagement,optional"`
+		MaxEmployees     int    `json:"maxEmployees,optional"`
+	}
+	// 职位信息响应
+	PositionInfo {
+		ID               string `json:"id"`
+		DepartmentID     string `json:"departmentId"`
+		PositionName     string `json:"positionName"`
+		PositionCode     string `json:"positionCode"`
+		PositionLevel    int    `json:"positionLevel"`
+		RequiredSkills   string `json:"requiredSkills"`
+		JobDescription   string `json:"jobDescription"`
+		Responsibilities string `json:"responsibilities"`
+		Requirements     string `json:"requirements"`
+		SalaryRangeMin   int    `json:"salaryRangeMin"`
+		SalaryRangeMax   int    `json:"salaryRangeMax"`
+		IsManagement     int    `json:"isManagement"`
+		MaxEmployees     int    `json:"maxEmployees"`
+		CurrentEmployees int    `json:"currentEmployees"`
+		Status           int    `json:"status"`
+		CreateTime       string `json:"createTime"`
+		UpdateTime       string `json:"updateTime"`
+	}
+	// 职位列表请求
+	PositionListRequest {
+		PageReq
+		DepartmentID string `json:"departmentId"`
+		Name         string `json:"name,optional"`
+	}
+	// 获取职位信息请求
+	GetPositionRequest {
+		PositionID string `json:"positionId"`
+	}
+	// 删除职位请求
+	DeletePositionRequest {
+		PositionID string `json:"positionId"`
+	}
+)
+
+// 员工管理相关类型
+type (
+	// 创建员工请求
+	CreateEmployeeRequest {
+		UserID       string `json:"userId"`
+		CompanyID    string `json:"companyId"`
+		DepartmentID string `json:"departmentId,optional"`
+		PositionID   string `json:"positionId,optional"`
+		EmployeeID   string `json:"employeeId"`
+		RealName     string `json:"realName"`
+		WorkEmail    string `json:"workEmail,optional"`
+		WorkPhone    string `json:"workPhone,optional"`
+		Skills       string `json:"skills,optional"`
+		RoleTags     string `json:"roleTags,optional"`
+		HireDate     string `json:"hireDate,optional"`
+	}
+	// 更新员工请求
+	UpdateEmployeeRequest {
+		ID           string `json:"id"`
+		DepartmentID string `json:"departmentId,optional"`
+		PositionID   string `json:"positionId,optional"`
+		EmployeeID   string `json:"employeeId,optional"`
+		RealName     string `json:"realName,optional"`
+		WorkEmail    string `json:"workEmail,optional"`
+		WorkPhone    string `json:"workPhone,optional"`
+		Skills       string `json:"skills,optional"`
+		RoleTags     string `json:"roleTags,optional"`
+		HireDate     string `json:"hireDate,optional"`
+		LeaveDate    string `json:"leaveDate,optional"`
+	}
+	// 员工信息响应
+	EmployeeInfo {
+		ID           string `json:"id"`
+		UserID       string `json:"userId"`
+		CompanyID    string `json:"companyId"`
+		DepartmentID string `json:"departmentId"`
+		PositionID   string `json:"positionId"`
+		EmployeeID   string `json:"employeeId"`
+		RealName     string `json:"realName"`
+		WorkEmail    string `json:"workEmail"`
+		WorkPhone    string `json:"workPhone"`
+		Skills       string `json:"skills"`
+		RoleTags     string `json:"roleTags"`
+		HireDate     string `json:"hireDate"`
+		LeaveDate    string `json:"leaveDate"`
+		Status       int    `json:"status"`
+		CreateTime   string `json:"createTime"`
+		UpdateTime   string `json:"updateTime"`
+	}
+	// 员工列表请求
+	EmployeeListRequest {
+		PageReq
+		CompanyID    string `json:"companyId"`
+		DepartmentID string `json:"departmentId,optional"`
+		Name         string `json:"name,optional"`
+	}
+	// 员工离职请求
+	EmployeeLeaveRequest {
+		EmployeeID  string `json:"employeeId"`
+		LeaveReason string `json:"leaveReason"`
+		LeaveDate   string `json:"leaveDate,optional"`
+	}
+	// 获取员工信息请求
+	GetEmployeeRequest {
+		EmployeeID string `json:"employeeId"`
+	}
+	// 删除员工请求
+	DeleteEmployeeRequest {
+		EmployeeID string `json:"employeeId"`
+	}
+)
+
+// 任务管理相关类型
+type (
+	// 创建任务请求
+	CreateTaskRequest {
+		CompanyID              string `json:"companyId"`
+		TaskTitle              string `json:"taskTitle"`
+		TaskDetail             string `json:"taskDetail"`
+		TaskPriority           int    `json:"taskPriority"`
+		TaskType               int    `json:"taskType"`
+		ResponsibleEmployeeIDs string `json:"responsibleEmployeeIds,optional"`
+		NodeEmployeeIDs        string `json:"nodeEmployeeIds,optional"`
+		DepartmentIDs          string `json:"departmentIds,optional"`
+		TaskDeadline           string `json:"taskDeadline"`
+		AttachmentURL          string `json:"attachmentUrl,optional"`
+	}
+	// 更新任务请求
+	UpdateTaskRequest {
+		TaskID          string `json:"taskId"`
+		TaskTitle       string `json:"taskTitle,optional"`
+		TaskDescription string `json:"taskDescription,optional"`
+		Deadline        string `json:"deadline,optional"`
+		Status          int    `json:"status,optional"`
+		UpdateNote      string `json:"updateNote,optional"`
+	}
+	// 删除任务请求
+	DeleteTaskRequest {
+		TaskID       string `json:"taskId"`
+		DeleteReason string `json:"deleteReason,optional"`
+	}
+	// 完成任务请求
+	CompleteTaskRequest {
+		TaskID         string `json:"taskId"`
+		ActualHours    int    `json:"actualHours,optional"`
+		CompletionNote string `json:"completionNote,optional"`
+	}
+	// 自动派发请求
+	AutoDispatchRequest {
+		TaskID string `json:"taskId"`
+	}
+	// 派发任务请求
+	DispatchTaskRequest {
+		TaskNodeID string `json:"taskNodeId"`
+		EmployeeID string `json:"employeeId,optional"` // 如果为空则自动派发
+	}
+	// 更新任务进度请求
+	UpdateTaskProgressRequest {
+		TaskNodeID   string `json:"taskNodeId"`
+		Progress     int    `json:"progress"`
+		ActualHours  int    `json:"actualHours,optional"`
+		ProgressNote string `json:"progressNote,optional"`
+	}
+	// 任务交接请求
+	HandoverTaskRequest {
+		TaskNodeID   string `json:"taskNodeId"`
+		ToEmployeeID string `json:"toEmployeeId,optional"`
+		Reason       string `json:"reason"`
+		Description  string `json:"description"`
+	}
+	// 我的任务请求
+	MyTasksRequest {
+		PageReq
+		Status int `json:"status,optional"`
+	}
+	// 任务详情请求
+	TaskDetailRequest {
+		TaskID string `json:"taskId"`
+	}
+	// 任务日志信息
+	TaskLogInfo {
+		ID         string `json:"id"`
+		TaskID     string `json:"taskId"`
+		TaskNodeID string `json:"taskNodeId"`
+		LogType    string `json:"logType"`
+		LogContent string `json:"logContent"`
+		OperatorID string `json:"operatorId"`
+		CreateTime string `json:"createTime"`
+	}
+	// 任务详情信息
+	TaskDetailInfo {
+		TaskInfo
+		Logs []TaskLogInfo `json:"logs,optional"`
+	}
+	// 任务列表响应
+	TaskListResponse {
+		List     []TaskInfo `json:"list"`
+		Total    int64      `json:"total"`
+		Page     int        `json:"page"`
+		PageSize int        `json:"pageSize"`
+	}
+	// 任务信息响应
+	TaskInfo {
+		ID              string         `json:"id"`
+		TaskTitle       string         `json:"taskTitle"`
+		TaskDescription string         `json:"taskDescription"`
+		TaskType        string         `json:"taskType"`
+		Priority        int            `json:"priority"`
+		Status          int            `json:"status"`
+		CompanyID       string         `json:"companyId"`
+		DepartmentID    string         `json:"departmentId"`
+		CreatorID       string         `json:"creatorId"`
+		StartTime       string         `json:"startTime"`
+		Deadline        string         `json:"deadline"`
+		EstimatedHours  int            `json:"estimatedHours"`
+		ActualHours     int            `json:"actualHours"`
+		Progress        int            `json:"progress"`
+		CreateTime      string         `json:"createTime"`
+		UpdateTime      string         `json:"updateTime"`
+		Nodes           []TaskNodeInfo `json:"nodes,optional"`
+	}
+	// 任务列表请求
+	TaskListRequest {
+		PageReq
+		Keyword      string `json:"keyword,optional"`
+		Status       int    `json:"status,optional"`
+		CompanyID    string `json:"companyId,optional"`
+		DepartmentID string `json:"departmentId,optional"`
+		Priority     int    `json:"priority,optional"`
+		TaskType     string `json:"taskType,optional"`
+	}
+	// 获取任务信息请求
+	GetTaskRequest {
+		TaskID string `json:"taskId"`
+	}
+)
+
+// 任务节点相关类型
+type (
+	// 创建任务节点请求
+	CreateTaskNodeRequest {
+		TaskID        string   `json:"taskId"` // 总任务id
+		NodeName      string   `json:"nodeName"` // 节点名字
+		NodeDetail    string   `json:"nodeDetail"` // 该节点的详情
+		NodePriority  int64    `json:"nodeType"` // 该节点的优先级
+		DepartmentID  string   `json:"departmentId"` // 该节点的所属部门
+		LeaderID      string   `json:"leaderId"` // 该任务节点的负责人
+		ExecutorIDs   []string `json:"executorId,optional"` // 执行者们的id
+		EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间
+	}
+	// 更新任务节点请求
+	UpdateTaskNodeRequest {
+		NodeID            string   `json:"nodeId"`
+		NodeName          string   `json:"nodeName,optional"` // 任务名称
+		NodeDetail        string   `json:"nodeDetail,optional"` // 任务节点详情
+		ExecutorID        []string `json:"executorId,optional"` // 执行人id
+		LastExecutorID    []string `json:"lastExecutorId,optional"` // 上一位执行人的id 如果这个不为空即为更换，为空则为新增
+		LeaderID          string   `json:"leaderId,optional"` // 更换节点状态人的状态
+		NodeStatus        []int    `json:"nodeStatus,optional"` // 节点状态
+		NodeDeadline      string   `json:"nodeDeadline,optional"` // 节点截至时间
+		NodeFinishTime    string   `json:"nodeFinishTime,optional"` // 节点完成时间
+		PrerequisiteNodes string   `json:"prerequisiteNodes,optional"` // 前置条件
+		progress          []int    `json:"progress"` //任务节点进度
+	}
+	// 任务节点信息响应
+	TaskNodeInfo {
+		ID                string `json:"id"`
+		TaskID            string `json:"taskId"`
+		NodeName          string `json:"nodeName"`
+		NodeDetail        string `json:"nodeDetail"`
+		NodeType          string `json:"nodeType"`
+		Status            int    `json:"status"`
+		DepartmentID      string `json:"departmentId"`
+		LeaderID          string `json:"leaderId"`
+		ExecutorID        string `json:"executorId"`
+		NodeDeadline      string `json:"nodeDeadline"`
+		EstimatedHours    int    `json:"estimatedHours"`
+		ActualHours       int    `json:"actualHours"`
+		Progress          int    `json:"progress"`
+		PrerequisiteNodes string `json:"prerequisiteNodes"`
+		CreateTime        string `json:"createTime"`
+		UpdateTime        string `json:"updateTime"`
+	}
+	// 任务节点列表请求
+	TaskNodeListRequest {
+		PageReq
+		TaskID       string `json:"taskId"`
+		DepartmentID string `json:"departmentId,optional"`
+		Status       int    `json:"status,optional"`
+	}
+	// 获取任务节点信息请求
+	GetTaskNodeRequest {
+		TaskNodeID string `json:"taskNodeId"`
+	}
+	// 删除任务节点请求
+	DeleteTaskNodeRequest {
+		TaskNodeID string `json:"taskNodeId"`
+	}
+)
+
+// 任务交接相关类型
+type (
+	// 创建交接请求
+	CreateHandoverRequest {
+		TaskID         string `json:"taskId"`
+		FromEmployeeID string `json:"fromEmployeeId"`
+		ToEmployeeID   string `json:"toEmployeeId"`
+		HandoverReason string `json:"handoverReason"`
+		HandoverNote   string `json:"handoverNote,optional"`
+		ApproverID     string `json:"approverId,optional"`
+	}
+	// 审批交接请求
+	ApproveHandoverRequest {
+		HandoverID string `json:"handoverId"`
+		Approved   int    `json:"approved"`
+		Comment    string `json:"comment,optional"`
+	}
+	// 交接信息响应
+	HandoverInfo {
+		HandoverID     string `json:"handoverId"`
+		TaskID         string `json:"taskId"`
+		FromEmployeeID string `json:"fromEmployeeId"`
+		ToEmployeeID   string `json:"toEmployeeId"`
+		HandoverReason string `json:"handoverReason"`
+		HandoverNote   string `json:"handoverNote"`
+		HandoverStatus int    `json:"handoverStatus"`
+		ApproverID     string `json:"approverId"`
+		Approved       int    `json:"approved"`
+		ApprovalNote   string `json:"approvalNote"`
+		HandoverTime   string `json:"handoverTime"`
+		CreateTime     string `json:"createTime"`
+		UpdateTime     string `json:"updateTime"`
+	}
+	// 交接列表请求
+	HandoverListRequest {
+		PageReq
+		TaskID         string `json:"taskId,optional"`
+		FromEmployeeID string `json:"fromEmployeeId,optional"`
+		ToEmployeeID   string `json:"toEmployeeId,optional"`
+		Status         int    `json:"status,optional"`
+	}
+	// 确认交接请求
+	ConfirmHandoverRequest {
+		HandoverID string `json:"handoverId"`
+	}
+	// 获取交接信息请求
+	GetHandoverRequest {
+		HandoverID string `json:"handoverId"`
+	}
+)
+
+// 通知相关类型
+type (
+	// 创建通知请求
+	CreateNotificationRequest {
+		EmployeeID  string `json:"employeeId"`
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		Type        int    `json:"type"`
+		Priority    int    `json:"priority,optional"`
+		RelatedID   string `json:"relatedId,optional"`
+		RelatedType string `json:"relatedType,optional"`
+	}
+	// 标记通知为已读请求
+	MarkNotificationReadRequest {
+		NotificationID string `json:"notificationId"`
+	}
+	// 通知信息响应
+	NotificationInfo {
+		ID          string `json:"id"`
+		EmployeeID  string `json:"employeeId"`
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		Type        int    `json:"type"`
+		Priority    int    `json:"priority"`
+		IsRead      int    `json:"isRead"`
+		SenderID    string `json:"senderId"`
+		RelatedID   string `json:"relatedId"`
+		RelatedType string `json:"relatedType"`
+		ReadTime    string `json:"readTime"`
+		CreateTime  string `json:"createTime"`
+		UpdateTime  string `json:"updateTime"`
+	}
+	// 通知列表请求
+	NotificationListRequest {
+		PageReq
+		EmployeeID string `json:"employeeId"`
+		Category   int    `json:"category,optional"`
+		IsRead     int    `json:"isRead,optional"`
+	}
+	// 获取通知信息请求
+	GetNotificationRequest {
+		NotificationID string `json:"notificationId"`
+	}
+)
+
+// 企业任务交接与派发系统API
+@server (
+	group:  auth
+	prefix: /api/v1/auth
+)
+service taskprojectapi {
+	@doc "用户登录"
+	@handler Login
+	post /login (LoginRequest) returns (BaseResponse)
+
+	@doc "用户注册"
+	@handler Register
+	post /register (RegisterRequest) returns (BaseResponse)
+
+	@doc "用户登出"
+	@handler Logout
+	post /logout returns (BaseResponse)
+}
+
+@server (
+	group:  company
+	prefix: /api/v1/company
+)
+service taskprojectapi {
+	@doc "创建公司"
+	@handler CreateCompany
+	post /create (CreateCompanyRequest) returns (BaseResponse)
+
+	@doc "更新公司信息"
+	@handler UpdateCompany
+	put /update (UpdateCompanyRequest) returns (BaseResponse)
+
+	@doc "删除公司"
+	@handler DeleteCompany
+	post /delete (DeleteCompanyRequest) returns (BaseResponse)
+
+	@doc "获取公司信息"
+	@handler GetCompany
+	post /get (GetCompanyRequest) returns (BaseResponse)
+
+	@doc "获取公司列表"
+	@handler GetCompanyList
+	post /list (CompanyListRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  department
+	prefix: /api/v1/department
+)
+service taskprojectapi {
+	@doc "创建部门"
+	@handler CreateDepartment
+	post /create (CreateDepartmentRequest) returns (BaseResponse)
+
+	@doc "更新部门信息"
+	@handler UpdateDepartment
+	put /update (UpdateDepartmentRequest) returns (BaseResponse)
+
+	@doc "删除部门"
+	@handler DeleteDepartment
+	post /delete (DeleteDepartmentRequest) returns (BaseResponse)
+
+	@doc "获取部门信息"
+	@handler GetDepartment
+	post /get (GetDepartmentRequest) returns (BaseResponse)
+
+	@doc "获取部门列表"
+	@handler GetDepartmentList
+	post /list (DepartmentListRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  position
+	prefix: /api/v1/position
+)
+service taskprojectapi {
+	@doc "创建职位"
+	@handler CreatePosition
+	post /create (CreatePositionRequest) returns (BaseResponse)
+
+	@doc "更新职位信息"
+	@handler UpdatePosition
+	put /update (UpdatePositionRequest) returns (BaseResponse)
+
+	@doc "删除职位"
+	@handler DeletePosition
+	post /delete (DeletePositionRequest) returns (BaseResponse)
+
+	@doc "获取职位信息"
+	@handler GetPosition
+	post /get (GetPositionRequest) returns (BaseResponse)
+
+	@doc "获取职位列表"
+	@handler GetPositionList
+	post /list (PositionListRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  employee
+	prefix: /api/v1/employee
+)
+service taskprojectapi {
+	@doc "创建员工"
+	@handler CreateEmployee
+	post /create (CreateEmployeeRequest) returns (BaseResponse)
+
+	@doc "更新员工信息"
+	@handler UpdateEmployee
+	put /update (UpdateEmployeeRequest) returns (BaseResponse)
+
+	@doc "删除员工"
+	@handler DeleteEmployee
+	post /delete (DeleteEmployeeRequest) returns (BaseResponse)
+
+	@doc "获取员工信息"
+	@handler GetEmployee
+	post /get (GetEmployeeRequest) returns (BaseResponse)
+
+	@doc "获取员工列表"
+	@handler GetEmployeeList
+	post /list (EmployeeListRequest) returns (BaseResponse)
+
+	@doc "员工离职"
+	@handler EmployeeLeave
+	post /leave (EmployeeLeaveRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  task
+	prefix: /api/v1/task
+)
+service taskprojectapi {
+	@doc "创建任务"
+	@handler CreateTask
+	post /create (CreateTaskRequest) returns (BaseResponse)
+
+	@doc "更新任务信息"
+	@handler UpdateTask
+	put /update (UpdateTaskRequest) returns (BaseResponse)
+
+	@doc "删除任务"
+	@handler DeleteTask
+	post /delete (DeleteTaskRequest) returns (BaseResponse)
+
+	@doc "获取任务信息"
+	@handler GetTask
+	post /get (GetTaskRequest) returns (BaseResponse)
+
+	@doc "获取任务列表"
+	@handler GetTaskList
+	post /list (TaskListRequest) returns (BaseResponse)
+
+	@doc "任务自动派发"
+	@handler AutoDispatch
+	post /dispatch (AutoDispatchRequest) returns (BaseResponse)
+
+	@doc "任务完成"
+	@handler CompleteTask
+	post /complete (CompleteTaskRequest) returns (BaseResponse)
+
+	@doc "任务进度更新"
+	@handler UpdateTaskProgress
+	put /progress (UpdateTaskProgressRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  tasknode
+	prefix: /api/v1/tasknode
+)
+service taskprojectapi {
+	@doc "创建任务节点"
+	@handler CreateTaskNode
+	post /create (CreateTaskNodeRequest) returns (BaseResponse)
+
+	@doc "更新任务节点"
+	@handler UpdateTaskNode
+	put /update (UpdateTaskNodeRequest) returns (BaseResponse)
+
+	@doc "删除任务节点"
+	@handler DeleteTaskNode
+	post /delete (DeleteTaskNodeRequest) returns (BaseResponse)
+
+	@doc "获取任务节点信息"
+	@handler GetTaskNode
+	post /get (GetTaskNodeRequest) returns (BaseResponse)
+
+	@doc "获取用户的任务节点信息"
+	@handler GetUserTaskNode
+	get /get/user (PageReq) returns (BaseResponse)
+
+	@doc "获取任务节点列表"
+	@handler GetTaskNodeList
+	post /list (TaskNodeListRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  handover
+	prefix: /api/v1/handover
+)
+service taskprojectapi {
+	@doc "创建任务交接"
+	@handler CreateHandover
+	post /create (CreateHandoverRequest) returns (BaseResponse)
+
+	@doc "审批任务交接"
+	@handler ApproveHandover
+	post /approve (ApproveHandoverRequest) returns (BaseResponse)
+
+	@doc "获取交接信息"
+	@handler GetHandover
+	post /get (GetHandoverRequest) returns (BaseResponse)
+
+	@doc "获取交接列表"
+	@handler GetHandoverList
+	post /list (HandoverListRequest) returns (BaseResponse)
+
+	@doc "确认交接"
+	@handler ConfirmHandover
+	post /confirm (ConfirmHandoverRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  notification
+	prefix: /api/v1/notification
+)
+service taskprojectapi {
+	@doc "创建通知"
+	@handler CreateNotification
+	post /create (CreateNotificationRequest) returns (BaseResponse)
+
+	@doc "获取通知信息"
+	@handler GetNotification
+	post /get (GetNotificationRequest) returns (BaseResponse)
+
+	@doc "获取通知列表"
+	@handler GetNotificationList
+	post /list (NotificationListRequest) returns (BaseResponse)
+
+	@doc "标记通知为已读"
+	@handler MarkNotificationRead
+	put /read (MarkNotificationReadRequest) returns (BaseResponse)
+}
+

@@ -42,6 +42,7 @@ type (
 		DepartmentId   string         `db:"department_id"`    // 部门id
 		NodeName       string         `db:"node_name"`        // 节点名称
 		NodeDetail     sql.NullString `db:"node_detail"`      // 节点详情
+		ExNodeIds      string         `db:"ex_node_ids"`      // 需要先完成的节点
 		NodeDeadline   time.Time      `db:"node_deadline"`    // 节点截止时间
 		NodeStartTime  time.Time      `db:"node_start_time"`  // 节点开始时间
 		EstimatedDays  int64          `db:"estimated_days"`   // 预计完成天数

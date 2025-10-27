@@ -3,10 +3,532 @@
 
 package types
 
-type Request struct {
-	Name string `path:"name,options=you|me"`
+type ApproveHandoverRequest struct {
+	HandoverID string `json:"handoverId"`
+	Approved   int    `json:"approved"`
+	Comment    string `json:"comment,optional"`
 }
 
-type Response struct {
-	Message string `json:"message"`
+type AutoDispatchRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+type BaseResponse struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data,optional"`
+}
+
+type CompanyInfo struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	CompanyAttributes int    `json:"companyAttributes"`
+	CompanyBusiness   int    `json:"companyBusiness"`
+	Owner             string `json:"owner"`
+	Description       string `json:"description"`
+	Address           string `json:"address"`
+	Phone             string `json:"phone"`
+	Email             string `json:"email"`
+	Status            int    `json:"status"`
+	CreateTime        string `json:"createTime"`
+	UpdateTime        string `json:"updateTime"`
+}
+
+type CompanyListRequest struct {
+	PageReq
+	Name string `json:"name,optional"`
+}
+
+type CompleteTaskRequest struct {
+	TaskID         string `json:"taskId"`
+	ActualHours    int    `json:"actualHours,optional"`
+	CompletionNote string `json:"completionNote,optional"`
+}
+
+type ConfirmHandoverRequest struct {
+	HandoverID string `json:"handoverId"`
+}
+
+type CreateCompanyRequest struct {
+	Name              string `json:"name"`
+	CompanyAttributes int    `json:"companyAttributes"`
+	CompanyBusiness   int    `json:"companyBusiness"`
+	Description       string `json:"description,optional"`
+	Address           string `json:"address,optional"`
+	Phone             string `json:"phone,optional"`
+	Email             string `json:"email,optional"`
+}
+
+type CreateDepartmentRequest struct {
+	CompanyID      string `json:"companyId"`
+	DepartmentName string `json:"departmentName"`
+	ParentID       string `json:"parentId,optional"`
+	DepartmentCode string `json:"departmentCode"`
+	ManagerID      string `json:"managerId,optional"`
+	Description    string `json:"description,optional"`
+}
+
+type CreateEmployeeRequest struct {
+	UserID       string `json:"userId"`
+	CompanyID    string `json:"companyId"`
+	DepartmentID string `json:"departmentId,optional"`
+	PositionID   string `json:"positionId,optional"`
+	EmployeeID   string `json:"employeeId"`
+	RealName     string `json:"realName"`
+	WorkEmail    string `json:"workEmail,optional"`
+	WorkPhone    string `json:"workPhone,optional"`
+	Skills       string `json:"skills,optional"`
+	RoleTags     string `json:"roleTags,optional"`
+	HireDate     string `json:"hireDate,optional"`
+}
+
+type CreateHandoverRequest struct {
+	TaskID         string `json:"taskId"`
+	FromEmployeeID string `json:"fromEmployeeId"`
+	ToEmployeeID   string `json:"toEmployeeId"`
+	HandoverReason string `json:"handoverReason"`
+	HandoverNote   string `json:"handoverNote,optional"`
+	ApproverID     string `json:"approverId,optional"`
+}
+
+type CreateNotificationRequest struct {
+	EmployeeID  string `json:"employeeId"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	Type        int    `json:"type"`
+	Priority    int    `json:"priority,optional"`
+	RelatedID   string `json:"relatedId,optional"`
+	RelatedType string `json:"relatedType,optional"`
+}
+
+type CreatePositionRequest struct {
+	DepartmentID     string `json:"departmentId"`
+	PositionName     string `json:"positionName"`
+	PositionCode     string `json:"positionCode"`
+	PositionLevel    int    `json:"positionLevel"`
+	RequiredSkills   string `json:"requiredSkills,optional"`
+	JobDescription   string `json:"jobDescription,optional"`
+	Responsibilities string `json:"responsibilities,optional"`
+	Requirements     string `json:"requirements,optional"`
+	SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
+	SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
+	IsManagement     int    `json:"isManagement,optional"`
+	MaxEmployees     int    `json:"maxEmployees,optional"`
+}
+
+type CreateTaskNodeRequest struct {
+	TaskID        string   `json:"taskId"`                  // 总任务id
+	NodeName      string   `json:"nodeName"`                // 节点名字
+	NodeDetail    string   `json:"nodeDetail"`              // 该节点的详情
+	NodePriority  int64    `json:"nodeType"`                // 该节点的优先级
+	DepartmentID  string   `json:"departmentId"`            // 该节点的所属部门
+	LeaderID      string   `json:"leaderId"`                // 该任务节点的负责人
+	ExecutorIDs   []string `json:"executorId,optional"`     // 执行者们的id
+	EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间
+}
+
+type CreateTaskRequest struct {
+	CompanyID              string `json:"companyId"`
+	TaskTitle              string `json:"taskTitle"`
+	TaskDetail             string `json:"taskDetail"`
+	TaskPriority           int    `json:"taskPriority"`
+	TaskType               int    `json:"taskType"`
+	ResponsibleEmployeeIDs string `json:"responsibleEmployeeIds,optional"`
+	NodeEmployeeIDs        string `json:"nodeEmployeeIds,optional"`
+	DepartmentIDs          string `json:"departmentIds,optional"`
+	TaskDeadline           string `json:"taskDeadline"`
+	AttachmentURL          string `json:"attachmentUrl,optional"`
+}
+
+type DeleteCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+}
+
+type DeleteDepartmentRequest struct {
+	ID string `json:"id"`
+}
+
+type DeleteEmployeeRequest struct {
+	EmployeeID string `json:"employeeId"`
+}
+
+type DeletePositionRequest struct {
+	PositionID string `json:"positionId"`
+}
+
+type DeleteTaskNodeRequest struct {
+	TaskNodeID string `json:"taskNodeId"`
+}
+
+type DeleteTaskRequest struct {
+	TaskID       string `json:"taskId"`
+	DeleteReason string `json:"deleteReason,optional"`
+}
+
+type DepartmentInfo struct {
+	ID             string `json:"id"`
+	CompanyID      string `json:"companyId"`
+	DepartmentName string `json:"departmentName"`
+	ParentID       string `json:"parentId"`
+	DepartmentCode string `json:"departmentCode"`
+	ManagerID      string `json:"managerId"`
+	Description    string `json:"description"`
+	Status         int    `json:"status"`
+	CreateTime     string `json:"createTime"`
+	UpdateTime     string `json:"updateTime"`
+}
+
+type DepartmentListRequest struct {
+	PageReq
+	CompanyID string `json:"companyId"`
+	Name      string `json:"name,optional"`
+}
+
+type DispatchTaskRequest struct {
+	TaskNodeID string `json:"taskNodeId"`
+	EmployeeID string `json:"employeeId,optional"` // 如果为空则自动派发
+}
+
+type EmployeeInfo struct {
+	ID           string `json:"id"`
+	UserID       string `json:"userId"`
+	CompanyID    string `json:"companyId"`
+	DepartmentID string `json:"departmentId"`
+	PositionID   string `json:"positionId"`
+	EmployeeID   string `json:"employeeId"`
+	RealName     string `json:"realName"`
+	WorkEmail    string `json:"workEmail"`
+	WorkPhone    string `json:"workPhone"`
+	Skills       string `json:"skills"`
+	RoleTags     string `json:"roleTags"`
+	HireDate     string `json:"hireDate"`
+	LeaveDate    string `json:"leaveDate"`
+	Status       int    `json:"status"`
+	CreateTime   string `json:"createTime"`
+	UpdateTime   string `json:"updateTime"`
+}
+
+type EmployeeLeaveRequest struct {
+	EmployeeID  string `json:"employeeId"`
+	LeaveReason string `json:"leaveReason"`
+	LeaveDate   string `json:"leaveDate,optional"`
+}
+
+type EmployeeListRequest struct {
+	PageReq
+	CompanyID    string `json:"companyId"`
+	DepartmentID string `json:"departmentId,optional"`
+	Name         string `json:"name,optional"`
+}
+
+type GetCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+}
+
+type GetDepartmentRequest struct {
+	ID string `json:"id"`
+}
+
+type GetEmployeeRequest struct {
+	EmployeeID string `json:"employeeId"`
+}
+
+type GetHandoverRequest struct {
+	HandoverID string `json:"handoverId"`
+}
+
+type GetNotificationRequest struct {
+	NotificationID string `json:"notificationId"`
+}
+
+type GetPositionRequest struct {
+	PositionID string `json:"positionId"`
+}
+
+type GetTaskNodeRequest struct {
+	TaskNodeID string `json:"taskNodeId"`
+}
+
+type GetTaskRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+type HandoverInfo struct {
+	HandoverID     string `json:"handoverId"`
+	TaskID         string `json:"taskId"`
+	FromEmployeeID string `json:"fromEmployeeId"`
+	ToEmployeeID   string `json:"toEmployeeId"`
+	HandoverReason string `json:"handoverReason"`
+	HandoverNote   string `json:"handoverNote"`
+	HandoverStatus int    `json:"handoverStatus"`
+	ApproverID     string `json:"approverId"`
+	Approved       int    `json:"approved"`
+	ApprovalNote   string `json:"approvalNote"`
+	HandoverTime   string `json:"handoverTime"`
+	CreateTime     string `json:"createTime"`
+	UpdateTime     string `json:"updateTime"`
+}
+
+type HandoverListRequest struct {
+	PageReq
+	TaskID         string `json:"taskId,optional"`
+	FromEmployeeID string `json:"fromEmployeeId,optional"`
+	ToEmployeeID   string `json:"toEmployeeId,optional"`
+	Status         int    `json:"status,optional"`
+}
+
+type HandoverTaskRequest struct {
+	TaskNodeID   string `json:"taskNodeId"`
+	ToEmployeeID string `json:"toEmployeeId,optional"`
+	Reason       string `json:"reason"`
+	Description  string `json:"description"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token    string `json:"token"`
+	UserID   string `json:"userId"`
+	Username string `json:"username"`
+	RealName string `json:"realName"`
+}
+
+type MarkNotificationReadRequest struct {
+	NotificationID string `json:"notificationId"`
+}
+
+type MyTasksRequest struct {
+	PageReq
+	Status int `json:"status,optional"`
+}
+
+type NotificationInfo struct {
+	ID          string `json:"id"`
+	EmployeeID  string `json:"employeeId"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	Type        int    `json:"type"`
+	Priority    int    `json:"priority"`
+	IsRead      int    `json:"isRead"`
+	SenderID    string `json:"senderId"`
+	RelatedID   string `json:"relatedId"`
+	RelatedType string `json:"relatedType"`
+	ReadTime    string `json:"readTime"`
+	CreateTime  string `json:"createTime"`
+	UpdateTime  string `json:"updateTime"`
+}
+
+type NotificationListRequest struct {
+	PageReq
+	EmployeeID string `json:"employeeId"`
+	Category   int    `json:"category,optional"`
+	IsRead     int    `json:"isRead,optional"`
+}
+
+type PageReq struct {
+	Page     int `json:"page,optional"`
+	PageSize int `json:"pageSize,optional"`
+}
+
+type PageResp struct {
+	Total int         `json:"total"`
+	List  interface{} `json:"list"`
+}
+
+type PositionInfo struct {
+	ID               string `json:"id"`
+	DepartmentID     string `json:"departmentId"`
+	PositionName     string `json:"positionName"`
+	PositionCode     string `json:"positionCode"`
+	PositionLevel    int    `json:"positionLevel"`
+	RequiredSkills   string `json:"requiredSkills"`
+	JobDescription   string `json:"jobDescription"`
+	Responsibilities string `json:"responsibilities"`
+	Requirements     string `json:"requirements"`
+	SalaryRangeMin   int    `json:"salaryRangeMin"`
+	SalaryRangeMax   int    `json:"salaryRangeMax"`
+	IsManagement     int    `json:"isManagement"`
+	MaxEmployees     int    `json:"maxEmployees"`
+	CurrentEmployees int    `json:"currentEmployees"`
+	Status           int    `json:"status"`
+	CreateTime       string `json:"createTime"`
+	UpdateTime       string `json:"updateTime"`
+}
+
+type PositionListRequest struct {
+	PageReq
+	DepartmentID string `json:"departmentId"`
+	Name         string `json:"name,optional"`
+}
+
+type RegisterRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email,optional"`
+	Phone    string `json:"phone,optional"`
+	RealName string `json:"realName"`
+}
+
+type TaskDetailInfo struct {
+	TaskInfo
+	Logs []TaskLogInfo `json:"logs,optional"`
+}
+
+type TaskDetailRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+type TaskInfo struct {
+	ID              string         `json:"id"`
+	TaskTitle       string         `json:"taskTitle"`
+	TaskDescription string         `json:"taskDescription"`
+	TaskType        string         `json:"taskType"`
+	Priority        int            `json:"priority"`
+	Status          int            `json:"status"`
+	CompanyID       string         `json:"companyId"`
+	DepartmentID    string         `json:"departmentId"`
+	CreatorID       string         `json:"creatorId"`
+	StartTime       string         `json:"startTime"`
+	Deadline        string         `json:"deadline"`
+	EstimatedHours  int            `json:"estimatedHours"`
+	ActualHours     int            `json:"actualHours"`
+	Progress        int            `json:"progress"`
+	CreateTime      string         `json:"createTime"`
+	UpdateTime      string         `json:"updateTime"`
+	Nodes           []TaskNodeInfo `json:"nodes,optional"`
+}
+
+type TaskListRequest struct {
+	PageReq
+	Keyword      string `json:"keyword,optional"`
+	Status       int    `json:"status,optional"`
+	CompanyID    string `json:"companyId,optional"`
+	DepartmentID string `json:"departmentId,optional"`
+	Priority     int    `json:"priority,optional"`
+	TaskType     string `json:"taskType,optional"`
+}
+
+type TaskListResponse struct {
+	List     []TaskInfo `json:"list"`
+	Total    int64      `json:"total"`
+	Page     int        `json:"page"`
+	PageSize int        `json:"pageSize"`
+}
+
+type TaskLogInfo struct {
+	ID         string `json:"id"`
+	TaskID     string `json:"taskId"`
+	TaskNodeID string `json:"taskNodeId"`
+	LogType    string `json:"logType"`
+	LogContent string `json:"logContent"`
+	OperatorID string `json:"operatorId"`
+	CreateTime string `json:"createTime"`
+}
+
+type TaskNodeInfo struct {
+	ID                string `json:"id"`
+	TaskID            string `json:"taskId"`
+	NodeName          string `json:"nodeName"`
+	NodeDetail        string `json:"nodeDetail"`
+	NodeType          string `json:"nodeType"`
+	Status            int    `json:"status"`
+	DepartmentID      string `json:"departmentId"`
+	LeaderID          string `json:"leaderId"`
+	ExecutorID        string `json:"executorId"`
+	NodeDeadline      string `json:"nodeDeadline"`
+	EstimatedHours    int    `json:"estimatedHours"`
+	ActualHours       int    `json:"actualHours"`
+	Progress          int    `json:"progress"`
+	PrerequisiteNodes string `json:"prerequisiteNodes"`
+	CreateTime        string `json:"createTime"`
+	UpdateTime        string `json:"updateTime"`
+}
+
+type TaskNodeListRequest struct {
+	PageReq
+	TaskID       string `json:"taskId"`
+	DepartmentID string `json:"departmentId,optional"`
+	Status       int    `json:"status,optional"`
+}
+
+type UpdateCompanyRequest struct {
+	ID                string `json:"id"`
+	Name              string `json:"name,optional"`
+	CompanyAttributes int    `json:"companyAttributes,optional"`
+	CompanyBusiness   int    `json:"companyBusiness,optional"`
+	Description       string `json:"description,optional"`
+	Address           string `json:"address,optional"`
+	Phone             string `json:"phone,optional"`
+	Email             string `json:"email,optional"`
+}
+
+type UpdateDepartmentRequest struct {
+	ID             string `json:"id"`
+	DepartmentName string `json:"departmentName,optional"`
+	ParentID       string `json:"parentId,optional"`
+	DepartmentCode string `json:"departmentCode,optional"`
+	ManagerID      string `json:"managerId,optional"`
+	Description    string `json:"description,optional"`
+}
+
+type UpdateEmployeeRequest struct {
+	ID           string `json:"id"`
+	DepartmentID string `json:"departmentId,optional"`
+	PositionID   string `json:"positionId,optional"`
+	EmployeeID   string `json:"employeeId,optional"`
+	RealName     string `json:"realName,optional"`
+	WorkEmail    string `json:"workEmail,optional"`
+	WorkPhone    string `json:"workPhone,optional"`
+	Skills       string `json:"skills,optional"`
+	RoleTags     string `json:"roleTags,optional"`
+	HireDate     string `json:"hireDate,optional"`
+	LeaveDate    string `json:"leaveDate,optional"`
+}
+
+type UpdatePositionRequest struct {
+	ID               string `json:"id"`
+	PositionName     string `json:"positionName,optional"`
+	PositionCode     string `json:"positionCode,optional"`
+	PositionLevel    int    `json:"positionLevel,optional"`
+	RequiredSkills   string `json:"requiredSkills,optional"`
+	JobDescription   string `json:"jobDescription,optional"`
+	Responsibilities string `json:"responsibilities,optional"`
+	Requirements     string `json:"requirements,optional"`
+	SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
+	SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
+	IsManagement     int    `json:"isManagement,optional"`
+	MaxEmployees     int    `json:"maxEmployees,optional"`
+}
+
+type UpdateTaskNodeRequest struct {
+	NodeID            string   `json:"nodeId"`
+	NodeName          string   `json:"nodeName,optional"`          // 任务名称
+	NodeDetail        string   `json:"nodeDetail,optional"`        // 任务节点详情
+	ExecutorID        []string `json:"executorId,optional"`        // 执行人id
+	LastExecutorID    []string `json:"lastExecutorId,optional"`    // 上一位执行人的id 如果这个不为空即为更换，为空则为新增
+	LeaderID          string   `json:"leaderId,optional"`          // 更换节点状态人的状态
+	NodeStatus        []int    `json:"nodeStatus,optional"`        // 节点状态
+	NodeDeadline      string   `json:"nodeDeadline,optional"`      // 节点截至时间
+	NodeFinishTime    string   `json:"nodeFinishTime,optional"`    // 节点完成时间
+	PrerequisiteNodes string   `json:"prerequisiteNodes,optional"` // 前置条件
+	Progress          []int    `json:"progress"`                   //任务节点进度
+}
+
+type UpdateTaskProgressRequest struct {
+	TaskNodeID   string `json:"taskNodeId"`
+	Progress     int    `json:"progress"`
+	ActualHours  int    `json:"actualHours,optional"`
+	ProgressNote string `json:"progressNote,optional"`
+}
+
+type UpdateTaskRequest struct {
+	TaskID          string `json:"taskId"`
+	TaskTitle       string `json:"taskTitle,optional"`
+	TaskDescription string `json:"taskDescription,optional"`
+	Deadline        string `json:"deadline,optional"`
+	Status          int    `json:"status,optional"`
+	UpdateNote      string `json:"updateNote,optional"`
 }
