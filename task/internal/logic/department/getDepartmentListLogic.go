@@ -39,9 +39,12 @@ func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequ
 	if _, ok := utils.Common.GetCurrentUserID(l.ctx); !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
-
+	if req.CompanyID == "" {
+		l.Logger.Errorf("公司id不能为空")
+		return utils.Response.NotFoundError("公司id不能为空"), nil
+	}
 	// 查询部门列表
-	departments, total, err := l.svcCtx.DepartmentModel.FindByPage(l.ctx, req.Page, req.PageSize)
+	departments, total, err := l.svcCtx.DepartmentModel.FindByPageCompany(l.ctx, req.CompanyID, req.Page, req.PageSize)
 	if err != nil {
 		logx.Errorf("查询部门列表失败: %v", err)
 		return utils.Response.InternalError("查询部门列表失败"), err

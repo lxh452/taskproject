@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"task_Project/model/user"
-	"task_Project/task/internal/middleware"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -96,16 +95,14 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		logx.Errorf("更新最后登录信息失败: %v", updateErr)
 	}
 
-	// 发送登录成功通知邮件
+	// 发送登录成功通知邮件（通过消息队列）
 	go func() {
-		emailMsg := middleware.EmailMessage{
-			To:      []string{userInfo.Email.String},
-			Subject: "登录成功通知",
-			Body:    "您的账户已成功登录，登录时间：" + now.Format("2006-01-02 15:04:05"),
-			IsHTML:  false,
-		}
-		if err := l.svcCtx.EmailMiddleware.SendEmail(context.Background(), emailMsg); err != nil {
-			logx.Errorf("发送登录通知邮件失败: %v", err)
+		if userInfo.Email.Valid && userInfo.Email.String != "" && l.svcCtx.EmailService != nil {
+			loginTime := now.Format("2006-01-02 15:04:05")
+			loginIP := "127.0.0.1" // TODO: 从请求中获取真实IP
+			if err := l.svcCtx.EmailService.SendLoginSuccessEmail(context.Background(), userInfo.Email.String, userInfo.Username, loginTime, loginIP); err != nil {
+				logx.Errorf("发送登录通知邮件失败: %v", err)
+			}
 		}
 	}()
 

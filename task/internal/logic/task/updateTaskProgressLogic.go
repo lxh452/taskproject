@@ -5,11 +5,19 @@ package task
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
 
+	taskmodel "task_Project/model/task"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
+	"task_Project/task/internal/utils"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type UpdateTaskProgressLogic struct {
@@ -28,7 +36,165 @@ func NewUpdateTaskProgressLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgressRequest) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
+	// 1. 参数验证
+	if req.TaskNodeID == "" {
+		return utils.Response.BusinessError("task_node_not_found"), nil
+	}
+	if req.Progress < 0 || req.Progress > 100 {
+		return utils.Response.BusinessError("进度值必须在0-100之间"), nil
+	}
 
-	return
+	// 2. 获取当前用户ID
+	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	if !ok {
+		return utils.Response.UnauthorizedError(), nil
+	}
+	emp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, currentUserID)
+	if err != nil && err != sqlx.ErrNotFound {
+		return utils.Response.BusinessError(err.Error()), nil
+	}
+	// 3. 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.TaskNodeID)
+	if err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return utils.Response.BusinessError("task_not_found"), nil
+		}
+		return nil, err
+	}
+	// 4. 验证用户权限（只有执行人或负责人可以更新进度）
+	exectorIds := strings.Split(taskNode.ExecutorId, ",")
+	leaderIds := strings.Split(taskNode.LeaderId, ",")
+	i := make(chan bool, 1)
+	for _, leaderId := range leaderIds {
+		if leaderId == emp.Id {
+			i <- true
+		}
+	}
+	go func() {
+		for _, exectorId := range exectorIds {
+			if exectorId == emp.Id {
+				i <- true
+				return
+			}
+		}
+	}()
+	if !<-i {
+		return utils.Response.BusinessError("taskProgress"), nil
+	}
+
+	// 5. 更新任务节点进度
+	err = l.svcCtx.TaskNodeModel.UpdateProgress(l.ctx, req.TaskNodeID, req.Progress)
+	if err != nil {
+		l.Logger.Errorf("更新任务节点进度失败: %v", err)
+		return utils.Response.InternalError("更新进度失败"), nil
+	}
+
+	// 6. 如果提供了实际工时，更新实际工时
+	if req.ActualHours > 0 {
+		err = l.svcCtx.TaskNodeModel.UpdateActualHours(l.ctx, req.TaskNodeID, req.ActualHours)
+		if err != nil {
+			l.Logger.Errorf("更新任务节点实际工时失败: %v", err)
+			// 不影响主流程，继续执行
+		}
+	}
+
+	// 7. 如果进度达到100%，自动更新节点状态为已完成
+	if req.Progress >= 100 && taskNode.NodeStatus != 2 {
+		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, req.TaskNodeID, 2) // 2-已完成
+		if err != nil {
+			l.Logger.Errorf("更新任务节点状态失败: %v", err)
+		}
+	}
+
+	// 8. 创建任务日志
+	logContent := fmt.Sprintf("更新任务节点进度: %d%%", req.Progress)
+	if req.ProgressNote != "" {
+		logContent += fmt.Sprintf("，备注: %s", req.ProgressNote)
+	}
+	if req.ActualHours > 0 {
+		logContent += fmt.Sprintf("，实际工时: %d小时", req.ActualHours)
+	}
+
+	taskLog := &taskmodel.TaskLog{
+		LogId:      utils.NewCommon().GenerateIDWithPrefix("task_log"),
+		TaskId:     taskNode.TaskId,
+		TaskNodeId: utils.Common.ToSqlNullString(req.TaskNodeID),
+		EmployeeId: currentUserID,
+		LogType:    1, // 更新类型
+		LogContent: logContent,
+		Progress:   sql.NullInt64{Int64: int64(req.Progress), Valid: true},
+		CreateTime: time.Now(),
+	}
+	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+	if err != nil {
+		l.Logger.Errorf("创建任务日志失败: %v", err)
+		// 不影响主流程，继续执行
+	}
+
+	// 9. 如果进度达到100%，发送完成通知给负责人（通过消息队列）
+	if req.Progress >= 100 {
+		// 获取任务信息和负责人信息
+		taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+		if err == nil {
+			// 收集需要通知的人员（负责人和执行人）
+			employeeIDSet := make(map[string]bool)
+			if taskNode.LeaderId != "" {
+				employeeIDSet[taskNode.LeaderId] = true
+			}
+			for _, executorId := range exectorIds {
+				if executorId != "" {
+					employeeIDSet[executorId] = true
+				}
+			}
+			employeeIDs := make([]string, 0, len(employeeIDSet))
+			for id := range employeeIDSet {
+				employeeIDs = append(employeeIDs, id)
+			}
+
+			// 发布通知事件
+			if l.svcCtx.NotificationMQService != nil && len(employeeIDs) > 0 {
+				notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+					svc.TaskNodeCompleted,
+					employeeIDs,
+					req.TaskNodeID,
+					svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: req.TaskNodeID},
+				)
+				notificationEvent.Title = "任务节点完成通知"
+				notificationEvent.Content = fmt.Sprintf("任务节点 %s 已完成（任务：%s）", taskNode.NodeName, taskInfo.TaskTitle)
+				notificationEvent.Priority = 2
+				if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
+					l.Logger.Errorf("发布任务节点完成通知事件失败: %v", err)
+				}
+			}
+
+			// 发布邮件事件
+			if l.svcCtx.EmailMQService != nil {
+				emailEvent := &svc.EmailEvent{
+					EventType: svc.TaskNodeCompleted,
+					TaskID:    taskNode.TaskId,
+					NodeID:    req.TaskNodeID,
+				}
+				if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
+					l.Logger.Errorf("发布任务节点完成邮件事件失败: %v", err)
+				}
+			}
+
+			// 同时也通过 EmailService 直接发送（如果可用）
+			leader, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, taskNode.LeaderId)
+			if err == nil && leader.Email.Valid && leader.Email.String != "" {
+				if l.svcCtx.EmailService != nil {
+					completeTime := time.Now().Format("2006-01-02 15:04:05")
+					if err := l.svcCtx.EmailService.SendTaskCompletedEmail(l.ctx, leader.Email.String, taskInfo.TaskTitle, taskNode.NodeName, completeTime); err != nil {
+						l.Logger.Errorf("发送任务完成邮件失败: %v", err)
+					}
+				}
+			}
+		}
+	}
+
+	return utils.Response.Success(map[string]interface{}{
+		"taskNodeId": req.TaskNodeID,
+		"progress":   req.Progress,
+		"message":    "进度更新成功",
+	}), nil
 }

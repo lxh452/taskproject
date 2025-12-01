@@ -48,7 +48,7 @@ CREATE TABLE `task_node` (
     `ex_node_ids` varchar(200) comment '需要优先完成的任务节点',
     `node_status` TINYINT NOT NULL DEFAULT 0 COMMENT '节点状态 0--未开始 1--进行中 2--已完成 3--已逾期',
     `node_finish_time` TIMESTAMP NULL COMMENT '节点完成时间',
-    `executor_id` VARCHAR(32) NOT NULL COMMENT '节点执行人员工ID',
+    `executor_id` VARCHAR(200) NOT NULL COMMENT '节点执行人员工ID',
     `leader_id` VARCHAR(32) NOT NULL COMMENT '节点负责人员工ID',
     `progress` TINYINT NOT NULL DEFAULT 0 COMMENT '完成进度 0-100',
     `node_priority` TINYINT NOT NULL DEFAULT 0 COMMENT '节点优先级 0-低 1-中 2-高 3-紧急',

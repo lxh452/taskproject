@@ -52,6 +52,11 @@ func (h *TransactionHelper) GetRoleModelWithSession(session sqlx.Session) role.R
 	return role.NewRoleModel(sqlx.NewSqlConnFromSession(session))
 }
 
+// GetPositionRoleModelWithSession 获取带会话的职位角色关联模型
+func (h *TransactionHelper) GetPositionRoleModelWithSession(session sqlx.Session) role.PositionRoleModel {
+	return role.NewPositionRoleModel(sqlx.NewSqlConnFromSession(session))
+}
+
 // GetTaskModelWithSession 获取带会话的任务模型
 func (h *TransactionHelper) GetTaskModelWithSession(session sqlx.Session) task.TaskModel {
 	return task.NewTaskModel(sqlx.NewSqlConnFromSession(session))

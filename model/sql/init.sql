@@ -1,5 +1,5 @@
 -- 企业任务交接与派发系统数据库初始化脚本
--- 创建顺序：company -> department -> position -> user -> employee -> role -> employee_role -> task -> task_node -> task_log -> task_handover -> notification -> system_config -> operation_log
+-- 创建顺序：company -> department -> position -> user -> employee -> role -> position_role -> task -> task_node -> task_log -> task_handover -> notification -> system_config -> operation_log
 
 -- 设置字符集
 SET NAMES utf8mb4;
@@ -364,10 +364,10 @@ ALTER TABLE `employee` ADD CONSTRAINT `fk_employee_position` FOREIGN KEY (`posit
 -- 角色表外键
 ALTER TABLE `role` ADD CONSTRAINT `fk_role_company` FOREIGN KEY (`company_id`) REFERENCES `company`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
--- 员工角色关联表外键
-ALTER TABLE `employee_role` ADD CONSTRAINT `fk_employee_role_employee` FOREIGN KEY (`employee_id`) REFERENCES `employee`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE `employee_role` ADD CONSTRAINT `fk_employee_role_role` FOREIGN KEY (`role_id`) REFERENCES `role`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE `employee_role` ADD CONSTRAINT `fk_employee_role_grant_by` FOREIGN KEY (`grant_by`) REFERENCES `employee`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+-- 职位角色关联表外键
+ALTER TABLE `position_role` ADD CONSTRAINT `fk_position_role_position` FOREIGN KEY (`position_id`) REFERENCES `position`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `position_role` ADD CONSTRAINT `fk_position_role_role` FOREIGN KEY (`role_id`) REFERENCES `role`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `position_role` ADD CONSTRAINT `fk_position_role_grant_by` FOREIGN KEY (`grant_by`) REFERENCES `employee`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- 任务表外键
 ALTER TABLE `task` ADD CONSTRAINT `fk_task_company` FOREIGN KEY (`company_id`) REFERENCES `company`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

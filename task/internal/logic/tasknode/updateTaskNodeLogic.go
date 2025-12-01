@@ -1,15 +1,18 @@
-// Code scaffolded by goctl. Safe to edit.
-// goctl 1.9.2
-
 package tasknode
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
+	"task_Project/model/task"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
+	"task_Project/task/internal/utils"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type UpdateTaskNodeLogic struct {
@@ -18,7 +21,6 @@ type UpdateTaskNodeLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// 更新任务节点
 func NewUpdateTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateTaskNodeLogic {
 	return &UpdateTaskNodeLogic{
 		Logger: logx.WithContext(ctx),
@@ -28,31 +30,189 @@ func NewUpdateTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Up
 }
 
 func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (resp *types.BaseResponse, err error) {
-
-	if req.PrerequisiteNodes != "" {
-		//情况1： 前置任务条件的选择可以等后续节点人都完成该总任务的任务填写后，告知所有节点负责人自己的任务节点的前置条件
-		//（当所有节点都完成编写后，发送邮件和消息给节点负责人和负责人 需要他们补充进展） //这里放在update中 主动/被动
-		// 这个情况跟情况七一起处理
-
-		// 情况七，需要先完成节点的修正和删除
-	}
-	if len(req.Progress) > 0 {
-		// 情况二，执行人每天修正自己的任务节点情况，任务节点进度的修正 被动调用该接口
-	}
-	if len(req.ExecutorID) > 0 && len(req.LastExecutorID) > 0 {
-		// 情况三，人员变动
+	// 1. 参数验证
+	if req.NodeID == "" {
+		return utils.Response.BusinessError("任务节点ID不能为空"), nil
 	}
 
-	if req.NodeDetail != "" {
-		// 情况四，节点负责人修改任务细节
+	// 2. 获取当前用户ID
+	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	if !ok {
+		return utils.Response.UnauthorizedError(), nil
 	}
-	if len(req.ExecutorID) > 0 && len(req.LastExecutorID) == 0 {
-		// 情况五，人员增派
+
+	// 3. 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.NodeID)
+	if err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return utils.Response.BusinessError("任务节点不存在"), nil
+		}
+		return nil, err
 	}
-	// 情况六，节点状态修正,一般情况是得系统查询到上个所需节点完成会自动修正
+
+	// 4. 验证用户权限
+	if taskNode.LeaderId != currentUserID && taskNode.ExecutorId != currentUserID {
+		return utils.Response.BusinessError("无权限更新此任务节点"), nil
+	}
+
+	// 5. 构建更新数据
+	updateData := make(map[string]interface{})
+	updateFields := []string{}
+
+	// 更新节点名称
+	if req.NodeName != "" {
+		updateData["node_name"] = req.NodeName
+		updateFields = append(updateFields, "节点名称")
+	}
+
+	// 更新节点详情（只有负责人可以修改）
+	if req.NodeDetail != "" && taskNode.LeaderId == currentUserID {
+		updateData["node_detail"] = req.NodeDetail
+		updateFields = append(updateFields, "节点详情")
+	}
+
+	// 更新执行人（只有负责人可以修改）
+	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentUserID {
+		// 取第一个执行人
+		newExecutorID := req.ExecutorID[0]
+		// 验证新执行人是否存在
+		_, err = l.svcCtx.EmployeeModel.FindOne(l.ctx, newExecutorID)
+		if err != nil {
+			if errors.Is(err, sqlx.ErrNotFound) {
+				return utils.Response.BusinessError("指定的执行人不存在"), nil
+			}
+			return nil, err
+		}
+		updateData["executor_id"] = newExecutorID
+		updateFields = append(updateFields, "执行人")
+	}
+
+	// 更新节点状态
 	if len(req.NodeStatus) > 0 {
-
+		updateData["node_status"] = req.NodeStatus[0]
+		updateFields = append(updateFields, "节点状态")
 	}
 
-	return
+	// 更新截止时间
+	if req.NodeDeadline != "" {
+		deadline, err := time.Parse("2006-01-02", req.NodeDeadline)
+		if err != nil {
+			return utils.Response.BusinessError("截止时间格式错误"), nil
+		}
+		updateData["node_deadline"] = deadline
+		updateFields = append(updateFields, "截止时间")
+	}
+
+	// 更新完成时间
+	if req.NodeFinishTime != "" {
+		finishTime, err := time.Parse("2006-01-02 15:04:05", req.NodeFinishTime)
+		if err != nil {
+			return utils.Response.BusinessError("完成时间格式错误"), nil
+		}
+		updateData["node_finish_time"] = finishTime
+		updateFields = append(updateFields, "完成时间")
+	}
+
+	// 更新前置节点（保存到 ex_node_ids）
+	if req.PrerequisiteNodes != "" {
+		if err := l.svcCtx.TaskNodeModel.UpdateExNodeIds(l.ctx, req.NodeID, req.PrerequisiteNodes); err != nil {
+			return utils.Response.InternalError("更新前置节点失败"), nil
+		}
+		updateFields = append(updateFields, "前置节点")
+	}
+
+	if len(updateData) == 0 {
+		return utils.Response.BusinessError("没有需要更新的字段"), nil
+	}
+
+	updateData["update_time"] = time.Now()
+
+	// 6. 更新任务节点
+	updatedTaskNode := *taskNode
+	if req.NodeName != "" {
+		updatedTaskNode.NodeName = req.NodeName
+	}
+	if req.NodeDetail != "" && taskNode.LeaderId == currentUserID {
+		updatedTaskNode.NodeDetail = utils.Common.ToSqlNullString(req.NodeDetail)
+	}
+	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentUserID {
+		updatedTaskNode.ExecutorId = req.ExecutorID[0]
+	}
+	if len(req.NodeStatus) > 0 {
+		updatedTaskNode.NodeStatus = int64(req.NodeStatus[0])
+	}
+	if req.NodeDeadline != "" {
+		deadline, err := time.Parse("2006-01-02", req.NodeDeadline)
+		if err == nil {
+			updatedTaskNode.NodeDeadline = deadline
+		}
+	}
+	if req.NodeFinishTime != "" {
+		finishTime, err := time.Parse("2006-01-02 15:04:05", req.NodeFinishTime)
+		if err == nil {
+			updatedTaskNode.NodeFinishTime = utils.Common.ToSqlNullTime(finishTime.Format("2006-01-02 15:04:05"))
+		}
+	}
+	if req.PrerequisiteNodes != "" {
+		// 暂时注释掉，因为字段名可能不匹配
+		// updatedTaskNode.PrerequisiteNodes = utils.Common.ToSqlNullString(req.PrerequisiteNodes)
+	}
+	updatedTaskNode.UpdateTime = time.Now()
+
+	err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedTaskNode)
+	if err != nil {
+		l.Logger.Errorf("更新任务节点失败: %v", err)
+		return nil, err
+	}
+
+	// 7. 创建任务日志
+	logContent := fmt.Sprintf("任务节点 %s 已更新：%s", taskNode.NodeName, fmt.Sprintf("%v", updateFields))
+	taskLog := &task.TaskLog{
+		LogId:      utils.Common.GenerateID(),
+		TaskId:     taskNode.TaskId,
+		LogType:    2, // 更新类型
+		LogContent: logContent,
+		EmployeeId: currentUserID,
+		CreateTime: time.Now(),
+	}
+	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+	if err != nil {
+		l.Logger.Errorf("创建任务日志失败: %v", err)
+	}
+
+	// 8. 如果更新了执行人，发送通知和邮件（通过消息队列，消费者会查询并发送）
+	if len(req.ExecutorID) > 0 && req.ExecutorID[0] != taskNode.ExecutorId {
+		// 发布邮件事件（消费者会查询新执行人并发送）
+		if l.svcCtx.EmailMQService != nil {
+			emailEvent := &svc.EmailEvent{
+				EventType: "task.node.executor.changed",
+				NodeID:    req.NodeID,
+			}
+			if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
+				l.Logger.Errorf("发布邮件事件失败: %v", err)
+			}
+		}
+
+		// 发布通知事件（消费者会查询新执行人并创建通知）
+		if l.svcCtx.NotificationMQService != nil {
+			event := &svc.NotificationEvent{
+				EventType:   "task.node.executor.changed",
+				NodeID:      req.NodeID,
+				Type:        3,
+				Category:    "handover",
+				Priority:    2,
+				RelatedID:   req.NodeID,
+				RelatedType: "tasknode",
+			}
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, event); err != nil {
+				l.Logger.Errorf("发布通知事件失败: %v", err)
+			}
+		}
+	}
+
+	return utils.Response.Success(map[string]interface{}{
+		"taskNodeId":    req.NodeID,
+		"message":       "任务节点更新成功",
+		"updatedFields": updateFields,
+	}), nil
 }

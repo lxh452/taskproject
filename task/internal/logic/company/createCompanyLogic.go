@@ -80,6 +80,12 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 		return utils.Response.InternalError("创建公司失败"), nil
 	}
 
+	// 复制系统默认部门与职位
+	if err := l.svcCtx.ApplyDefaultOrgStructure(l.ctx, companyID); err != nil {
+		logx.Errorf("初始化公司组织结构失败: %v", err)
+		return utils.Response.InternalError("初始化公司组织结构失败"), nil
+	}
+
 	// 发送创建成功通知邮件
 	go func() {
 		// 这里可以发送邮件通知用户公司创建成功
@@ -87,7 +93,8 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 	}()
 
 	return utils.Response.SuccessWithKey("create", map[string]interface{}{
-		"companyId": companyID,
-		"name":      req.Name,
+		"companyId":   companyID,
+		"name":        req.Name,
+		"bootstraped": true,
 	}), nil
 }

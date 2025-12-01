@@ -11,12 +11,19 @@ import (
 
 type Config struct {
 	rest.RestConf
-	
+
+	// 系统配置
+	System struct {
+		// BaseURL 用于邮件中的前端访问地址，如：https://task.yourcompany.com
+		// 如果为空，则邮件中的链接会使用相对路径
+		BaseURL string `json:"baseURL"`
+	} `json:"system"`
+
 	// 数据库配置
 	MySQL struct {
 		DataSource string `json:"dataSource"`
 	} `json:"mysql"`
-	
+
 	// Redis配置
 	Redis struct {
 		Host     string `json:"host"`
@@ -24,7 +31,7 @@ type Config struct {
 		Password string `json:"password"`
 		DB       int    `json:"db"`
 	} `json:"redis"`
-	
+
 	// JWT配置
 	JWT struct {
 		SecretKey   string        `json:"secretKey"`
@@ -33,7 +40,7 @@ type Config struct {
 		Issuer      string        `json:"issuer"`
 		Audience    string        `json:"audience"`
 	} `json:"jwt"`
-	
+
 	// 邮件配置
 	Email struct {
 		Host     string `json:"host"`
@@ -43,7 +50,7 @@ type Config struct {
 		From     string `json:"from"`
 		UseTLS   bool   `json:"useTLS"`
 	} `json:"email"`
-	
+
 	// 短信配置
 	SMS struct {
 		Provider   string `json:"provider"`
@@ -54,11 +61,26 @@ type Config struct {
 		Endpoint   string `json:"endpoint"`
 		Region     string `json:"region"`
 	} `json:"sms"`
-	
+
 	// RabbitMQ配置
 	RabbitMQ struct {
 		URL      string `json:"url"`
 		Exchange string `json:"exchange"`
 		Queue    string `json:"queue"`
 	} `json:"rabbitmq"`
+
+	// MongoDB配置
+	Mongo struct {
+		Host            string        `json:"host"`
+		Port            int           `json:"port"`
+		Database        string        `json:"database"`
+		Username        string        `json:"username"`
+		Password        string        `json:"password"`
+		AuthSource      string        `json:"authSource"`
+		Timeout         time.Duration `json:"timeout"`
+		MaxIdleConns    int           `json:"maxIdleConns"`
+		MaxOpenConns    int           `json:"maxOpenConns"`
+		MaxConnLifetime time.Duration `json:"maxConnLifetime"`
+		MaxConnIdleTime time.Duration `json:"maxConnIdleTime"`
+	} `json:"mongo"`
 }

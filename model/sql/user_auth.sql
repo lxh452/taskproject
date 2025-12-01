@@ -48,7 +48,7 @@ CREATE TABLE `notification` (
     KEY `idx_notification_category` (`category`),
     KEY `idx_notification_read` (`is_read`),
     KEY `idx_notification_priority` (`priority`),
-    KEY `idx_notification_related` (`related_id`, `related_type`),
+    index `idx_notification_related` (`related_id`, `related_type`),
     KEY `idx_notification_sender` (`sender_id`),
     KEY `idx_create_time` (`create_time`)
 

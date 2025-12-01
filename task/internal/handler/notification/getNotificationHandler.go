@@ -9,13 +9,20 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"task_Project/task/internal/logic/notification"
 	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
 )
 
 // 获取通知信息
 func GetNotificationHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.GetNotificationRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
 		l := notification.NewGetNotificationLogic(r.Context(), svcCtx)
-		resp, err := l.GetNotification()
+		resp, err := l.GetNotification(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

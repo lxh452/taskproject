@@ -9,13 +9,20 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"task_Project/task/internal/logic/company"
 	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
 )
 
 // 删除公司
 func DeleteCompanyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.DeleteCompanyRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
 		l := company.NewDeleteCompanyLogic(r.Context(), svcCtx)
-		resp, err := l.DeleteCompany()
+		resp, err := l.DeleteCompany(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

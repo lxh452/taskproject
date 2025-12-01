@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"task_Project/model/task"
+	"task_Project/model/user"
 	"task_Project/task/internal/middleware"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -289,15 +291,119 @@ func (d *DispatchService) generateScoreReason(lastMonthTasks int, priorityRate f
 
 // 获取候选员工列表
 func (d *DispatchService) getCandidateEmployees(ctx context.Context, taskNode *task.TaskNode) ([]string, error) {
-	// 根据任务节点的要求获取候选员工
-	// 1. 根据部门筛选
-	// 2. 根据技能要求筛选
-	// 3. 根据角色标签筛选
-	// 4. 排除已离职员工
+	var candidates []string
 
-	// 这里需要根据实际的业务逻辑实现
-	// 假设有GetCandidatesByTaskNode方法
-	return []string{}, nil // TODO: 实现具体查询逻辑
+	// 1. 根据部门筛选在职员工
+	employees, err := d.svcCtx.EmployeeModel.FindByDepartmentID(ctx, taskNode.DepartmentId)
+	if err != nil {
+		logx.Errorf("根据部门查询员工失败: %v", err)
+		return candidates, err
+	}
+
+	// 2. 过滤候选员工
+	for _, employee := range employees {
+		// 排除已离职员工
+		if employee.Status != 1 {
+			continue
+		}
+
+		// 检查技能匹配（如果有技能要求）
+		// TaskNode 没有 RequiredSkills 字段，使用岗位/员工技能匹配
+		if employee.Skills.Valid && employee.Skills.String != "" && taskNode.NodeDetail.Valid && taskNode.NodeDetail.String != "" {
+			if !d.hasRequiredSkills(employee, taskNode.NodeDetail.String) { // 简化：从节点详情里提取关键词
+				continue
+			}
+		}
+
+		// 检查角色标签匹配（如果有角色要求）
+		if employee.RoleTags.Valid && employee.RoleTags.String != "" {
+			// 简化：若节点优先级高，则需要包含 "priority" 类标签
+			required := ""
+			if taskNode.NodePriority >= 2 {
+				required = "priority"
+			}
+			if required != "" && !d.hasRequiredRoles(employee, required) {
+				continue
+			}
+		}
+
+		// 检查工作负载（避免过度分配）
+		if d.isOverloaded(ctx, employee.EmployeeId) {
+			continue
+		}
+
+		candidates = append(candidates, employee.EmployeeId)
+	}
+
+	return candidates, nil
+}
+
+// hasRequiredSkills 检查员工是否具备所需技能
+func (d *DispatchService) hasRequiredSkills(employee *user.Employee, requiredSkills string) bool {
+	if !employee.Skills.Valid || employee.Skills.String == "" {
+		return false
+	}
+
+	// 简单的字符串包含检查，实际项目中可能需要更复杂的匹配逻辑
+	// 这里假设技能用逗号分隔
+	employeeSkills := strings.Split(employee.Skills.String, ",")
+	requiredSkillsList := strings.Split(requiredSkills, ",")
+
+	for _, required := range requiredSkillsList {
+		required = strings.TrimSpace(required)
+		found := false
+		for _, skill := range employeeSkills {
+			if strings.TrimSpace(skill) == required {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
+}
+
+// hasRequiredRoles 检查员工是否具备所需角色
+func (d *DispatchService) hasRequiredRoles(employee *user.Employee, requiredRoles string) bool {
+	if !employee.RoleTags.Valid || employee.RoleTags.String == "" {
+		return false
+	}
+
+	// 简单的字符串包含检查
+	employeeRoles := strings.Split(employee.RoleTags.String, ",")
+	requiredRolesList := strings.Split(requiredRoles, ",")
+
+	for _, required := range requiredRolesList {
+		required = strings.TrimSpace(required)
+		found := false
+		for _, role := range employeeRoles {
+			if strings.TrimSpace(role) == required {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isOverloaded 检查员工是否工作过载
+func (d *DispatchService) isOverloaded(ctx context.Context, employeeID string) bool {
+	// 获取员工当前正在执行的任务节点数量
+	activeTasks, _, err := d.svcCtx.TaskNodeModel.FindByExecutor(ctx, employeeID, 1, 1000)
+	if err != nil {
+		logx.Errorf("查询员工活跃任务失败: %v", err)
+		return false
+	}
+
+	// 如果活跃任务超过5个，认为过载
+	return len(activeTasks) >= 5
 }
 
 // 发送派发通知邮件

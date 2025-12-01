@@ -5,8 +5,6 @@ package company
 
 import (
 	"context"
-	"task_Project/model/company"
-	"time"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -42,34 +40,9 @@ func (l *UpdateCompanyLogic) UpdateCompany(req *types.UpdateCompanyRequest) (res
 		logx.Errorf("查询公司失败: %v", err)
 		return utils.Response.ErrorWithKey("company_not_found"), nil
 	}
+	// todo 这里要更正，由于公司的拥有者才有权限修改
 
-	// 更新公司信息
-	updateData := l.updatedata(req)
-
-	if len(updateData) == 0 {
-		return utils.Response.ValidationError("没有需要更新的字段"), nil
-	}
-
-	updateData["update_time"] = time.Now()
-
-	// 遍历转换成结构体
-	var updateCompany company.Company
-	if err = utils.Common.MapToStructWithMapstructure(updateData, &updateCompany); err != nil {
-		logx.Errorf("转换结构体失败信息失败: %v", err)
-		return utils.Response.ErrorWithKey("operation_failed"), err
-	}
-	updateCompany.Id = req.ID
-	err = l.svcCtx.CompanyModel.Update(l.ctx, &updateCompany)
-	if err != nil {
-		logx.Errorf("更新公司信息失败: %v", err)
-		return utils.Response.InternalError("更新公司信息失败"), err
-	}
-
-	return utils.Response.Success("更新公司信息成功"), nil
-}
-
-// 判断修改类型
-func (l *UpdateCompanyLogic) updatedata(req *types.UpdateCompanyRequest) map[string]interface{} {
+	// 构建更新数据
 	updateData := make(map[string]interface{})
 	if !utils.Validator.IsEmpty(req.Name) {
 		updateData["name"] = req.Name
@@ -92,5 +65,17 @@ func (l *UpdateCompanyLogic) updatedata(req *types.UpdateCompanyRequest) map[str
 	if !utils.Validator.IsEmpty(req.Email) {
 		updateData["email"] = req.Email
 	}
-	return updateData
+
+	if len(updateData) == 0 {
+		return utils.Response.ValidationError("没有需要更新的字段"), nil
+	}
+
+	// 使用选择性更新
+	err = l.svcCtx.CompanyModel.SelectiveUpdate(l.ctx, req.ID, updateData)
+	if err != nil {
+		logx.Errorf("更新公司信息失败: %v", err)
+		return utils.Response.InternalError("更新公司信息失败"), err
+	}
+
+	return utils.Response.Success("更新公司信息成功"), nil
 }

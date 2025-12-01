@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"task_Project/model/company"
+	"task_Project/model/role"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type CreatePositionLogic struct {
@@ -73,7 +75,56 @@ func (l *CreatePositionLogic) CreatePosition(req *types.CreatePositionRequest) (
 		DeleteTime:       sql.NullTime{Time: time.Time{}, Valid: false},
 	}
 
-	_, err = l.svcCtx.PositionModel.Insert(l.ctx, position)
+	// 使用事务创建职位和角色关联
+	err = l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+		// 创建职位
+		positionModelWithSession := l.svcCtx.TransactionHelper.GetPositionModelWithSession(session)
+		_, err := positionModelWithSession.Insert(ctx, position)
+		if err != nil {
+			return err
+		}
+
+		// 如果提供了角色ID列表，批量创建职位角色关联
+		if len(req.RoleIds) > 0 {
+			positionRoleModelWithSession := l.svcCtx.TransactionHelper.GetPositionRoleModelWithSession(session)
+			userId, _ := utils.Common.GetCurrentUserID(ctx)
+
+			for _, roleId := range req.RoleIds {
+				// 验证角色是否存在
+				_, err := l.svcCtx.RoleModel.FindOne(ctx, roleId)
+				if err != nil {
+					logx.Errorf("角色不存在 roleId=%s: %v", roleId, err)
+					continue // 跳过不存在的角色，继续处理其他角色
+				}
+
+				// 检查是否已经存在关联
+				_, err = positionRoleModelWithSession.FindOneByPositionIdRoleId(ctx, positionID, roleId)
+				if err == nil {
+					logx.Infof("职位角色关联已存在 positionId=%s roleId=%s", positionID, roleId)
+					continue // 已存在，跳过
+				}
+
+				// 创建职位角色关联
+				positionRole := &role.PositionRole{
+					Id:         utils.Common.GenId("pr"),
+					PositionId: positionID,
+					RoleId:     roleId,
+					GrantBy:    sql.NullString{String: userId, Valid: userId != ""},
+					GrantTime:  time.Now(),
+					ExpireTime: sql.NullTime{Valid: false},
+					Status:     1,
+				}
+				_, err = positionRoleModelWithSession.Insert(ctx, positionRole)
+				if err != nil {
+					logx.Errorf("创建职位角色关联失败 positionId=%s roleId=%s: %v", positionID, roleId, err)
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		logx.Errorf("创建职位失败: %v", err)
 		return utils.Response.InternalError("创建职位失败"), err

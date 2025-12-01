@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/liuwu_test_data_final.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/model/sql/company.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/model/sql/role.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/model/sql/task.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/model/sql/user.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/model/sql/user_auth.sql" dialect="MySQL" />
     <file url="PROJECT" dialect="MySQL" />
   </component>
 </project>

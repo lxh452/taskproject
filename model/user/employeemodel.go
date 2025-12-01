@@ -45,6 +45,9 @@ type (
 		GetEmployeeCountByStatus(ctx context.Context, status int) (int64, error)
 		GetEmployeesByRoleTags(ctx context.Context, roleTags string) ([]*Employee, error)
 		GetEmployeesBySkills(ctx context.Context, skills string) ([]*Employee, error)
+
+		// 选择性更新方法
+		SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error
 	}
 
 	customEmployeeModel struct {
@@ -362,4 +365,39 @@ func (m *customEmployeeModel) GetEmployeesBySkills(ctx context.Context, skills s
 	var resp []*Employee
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, "%"+skills+"%")
 	return resp, err
+}
+
+// SelectiveUpdate 选择性更新员工信息
+// 只更新 map 中存在的字段，其他字段保持不变
+func (m *customEmployeeModel) SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error {
+	if len(updateData) == 0 {
+		return nil
+	}
+
+	// 构建动态 SQL
+	var setParts []string
+	var args []interface{}
+
+	for field, value := range updateData {
+		if field == "id" || field == "create_time" || field == "delete_time" {
+			continue // 跳过不能更新的字段
+		}
+		setParts = append(setParts, fmt.Sprintf("`%s` = ?", field))
+		args = append(args, value)
+	}
+
+	if len(setParts) == 0 {
+		return nil
+	}
+
+	// 添加更新时间 - 使用 NOW() 函数而不是字符串
+	setParts = append(setParts, "`update_time` = NOW()")
+
+	// 添加 ID 参数
+	args = append(args, id)
+
+	// 执行更新
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE `id` = ?", m.table, strings.Join(setParts, ", "))
+	_, err := m.conn.ExecCtx(ctx, query, args...)
+	return err
 }

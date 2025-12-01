@@ -34,6 +34,9 @@ type (
 		GetCompanyCountByOwner(ctx context.Context, owner string) (int64, error)
 		GetCompanyCountByAttributes(ctx context.Context, attributes int) (int64, error)
 		GetCompanyCountByBusiness(ctx context.Context, business int) (int64, error)
+
+		// 选择性更新方法
+		SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error
 	}
 
 	customCompanyModel struct {
@@ -208,4 +211,39 @@ func (m *customCompanyModel) GetCompanyCountByBusiness(ctx context.Context, busi
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, query, business)
 	return count, err
+}
+
+// SelectiveUpdate 选择性更新公司信息
+// 只更新 map 中存在的字段，其他字段保持不变
+func (m *customCompanyModel) SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error {
+	if len(updateData) == 0 {
+		return nil
+	}
+
+	// 构建动态 SQL
+	var setParts []string
+	var args []interface{}
+
+	for field, value := range updateData {
+		if field == "id" || field == "create_time" || field == "delete_time" {
+			continue // 跳过不能更新的字段
+		}
+		setParts = append(setParts, fmt.Sprintf("`%s` = ?", field))
+		args = append(args, value)
+	}
+
+	if len(setParts) == 0 {
+		return nil
+	}
+
+	// 添加更新时间 - 使用 NOW() 函数而不是字符串
+	setParts = append(setParts, "`update_time` = NOW()")
+
+	// 添加 ID 参数
+	args = append(args, id)
+
+	// 执行更新
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE `id` = ?", m.table, strings.Join(setParts, ", "))
+	_, err := m.conn.ExecCtx(ctx, query, args...)
+	return err
 }

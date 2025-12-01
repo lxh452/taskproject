@@ -6,6 +6,7 @@ package position
 import (
 	"context"
 
+	"task_Project/model/company"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -31,32 +32,32 @@ func NewGetPositionListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 func (l *GetPositionListLogic) GetPositionList(req *types.PositionListRequest) (resp *types.BaseResponse, err error) {
 	// 参数验证
 	validator := utils.NewValidator()
-	if _, _, errors := validator.ValidatePageParams(req.Page, req.PageSize); err != nil {
+	var errors []string
+	if req.Page, req.PageSize, errors = validator.ValidatePageParams(req.Page, req.PageSize); len(errors) > 0 {
 		return utils.Response.ValidationError(errors[0]), nil
 	}
 
-	// 设置默认分页参数
-	page := req.Page
-	pageSize := req.PageSize
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
+	var positions []*company.Position
+	var total int64
+
+	// 根据条件查询职位列表
+	if req.DepartmentID != "" && req.Name != "" {
+		// 按部门ID和名称搜索
+		positions, total, err = l.svcCtx.PositionModel.SearchPositionsByDepartment(l.ctx, req.DepartmentID, req.Name, req.Page, req.PageSize)
+	} else if req.DepartmentID != "" {
+		// 按部门ID查询
+		positions, total, err = l.svcCtx.PositionModel.FindByDepartmentPage(l.ctx, req.DepartmentID, req.Page, req.PageSize)
+	} else if req.Name != "" {
+		// 按名称搜索
+		positions, total, err = l.svcCtx.PositionModel.SearchPositions(l.ctx, req.Name, req.Page, req.PageSize)
+	} else {
+		// 查询所有职位列表
+		positions, total, err = l.svcCtx.PositionModel.FindByPage(l.ctx, req.Page, req.PageSize)
 	}
 
-	// 查询职位列表
-	positions, err := l.svcCtx.PositionModel.FindByPage(l.ctx, page, pageSize, req.DepartmentID, req.Status)
 	if err != nil {
 		logx.Errorf("查询职位列表失败: %v", err)
 		return utils.Response.InternalError("查询职位列表失败"), err
-	}
-
-	// 获取总数
-	total, err := l.svcCtx.PositionModel.GetPositionCount(l.ctx, req.DepartmentID, req.Status)
-	if err != nil {
-		logx.Errorf("查询职位总数失败: %v", err)
-		return utils.Response.InternalError("查询职位总数失败"), err
 	}
 
 	// 转换为响应格式
@@ -64,7 +65,7 @@ func (l *GetPositionListLogic) GetPositionList(req *types.PositionListRequest) (
 	positionList := converter.ToPositionInfoList(positions)
 
 	// 构建分页响应
-	pageResp := utils.NewConverter().ToPageResponse(positionList, total, page, pageSize)
+	pageResp := utils.NewConverter().ToPageResponse(positionList, int(total), req.Page, req.PageSize)
 
-	return utils.Response.SuccessWithKey("positions", pageResp), nil
+	return utils.Response.SuccessWithKey("list", pageResp), nil
 }

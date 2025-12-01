@@ -6,11 +6,11 @@ package employee
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"task_Project/model/company"
 	"task_Project/model/user"
-	"task_Project/task/internal/middleware"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -140,7 +140,18 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 
 		// 更新职位的当前员工数
 		err = positionModelWithSession.UpdateCurrentEmployees(ctx, req.PositionID, int(positionInfo.CurrentEmployees)+1)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// 同步员工权限（通过职位->角色->权限）
+		permissionSyncService := svc.NewPermissionSyncService(l.svcCtx)
+		if err := permissionSyncService.SyncEmployeePermissions(ctx, req.UserID, employeeID, req.PositionID); err != nil {
+			logx.Errorf("同步员工权限失败: %v", err)
+			// 权限同步失败不影响员工创建，只记录日志
+		}
+
+		return nil
 	})
 
 	if err != nil {
@@ -148,17 +159,63 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 		return utils.Response.InternalError("创建员工失败"), nil
 	}
 
-	// 发送入职通知邮件
+	// 发送入职通知邮件（通过消息队列）
 	go func() {
-		if req.WorkEmail != "" {
-			emailMsg := middleware.EmailMessage{
-				To:      []string{req.WorkEmail},
-				Subject: "入职通知",
-				Body:    "欢迎加入" + companyInfo.Name + "！您已成功入职，部门：" + departmentInfo.DepartmentName + "，职位：" + positionInfo.PositionName,
-				IsHTML:  false,
-			}
-			if err := l.svcCtx.EmailMiddleware.SendEmail(context.Background(), emailMsg); err != nil {
+		ctx := context.Background()
+		// 发送入职邮件给新员工
+		if req.WorkEmail != "" && l.svcCtx.EmailService != nil {
+			onboardingTime := time.Now().Format("2006-01-02 15:04:05")
+			if err := l.svcCtx.EmailService.SendOnboardingEmail(ctx, req.WorkEmail, req.RealName, companyInfo.Name, departmentInfo.DepartmentName, positionInfo.PositionName, onboardingTime); err != nil {
 				logx.Errorf("发送入职通知邮件失败: %v", err)
+			}
+		}
+
+		// 查询该公司所有员工，发送新员工入职通知
+		employees, err := l.svcCtx.EmployeeModel.FindByCompanyID(ctx, req.CompanyID)
+		if err != nil {
+			logx.Errorf("查询公司员工失败: %v", err)
+			return
+		}
+
+		employeeIDs := make([]string, 0, len(employees))
+		emails := make([]string, 0, len(employees))
+		for _, emp := range employees {
+			// 排除新入职的员工本人
+			if emp.Id == employeeID {
+				continue
+			}
+			employeeIDs = append(employeeIDs, emp.Id)
+			if emp.Email.Valid && emp.Email.String != "" {
+				emails = append(emails, emp.Email.String)
+			}
+		}
+
+		// 发布通知事件 - 通知公司其他员工有新同事入职
+		if l.svcCtx.NotificationMQService != nil && len(employeeIDs) > 0 {
+			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+				svc.EmployeeCreated,
+				employeeIDs,
+				employeeID,
+			)
+			notificationEvent.Title = "新员工入职通知"
+			notificationEvent.Content = fmt.Sprintf("欢迎新同事 %s 加入 %s 部门，职位：%s", req.RealName, departmentInfo.DepartmentName, positionInfo.PositionName)
+			notificationEvent.Category = "employee"
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, notificationEvent); err != nil {
+				logx.Errorf("发布新员工入职通知事件失败: %v", err)
+			}
+		}
+
+		// 发布邮件事件 - 通知公司其他员工有新同事入职
+		if l.svcCtx.EmailMQService != nil && len(emails) > 0 {
+			emailEvent := &svc.EmailEvent{
+				EventType: svc.EmployeeCreated,
+				To:        emails,
+				Subject:   "新员工入职通知",
+				Body:      fmt.Sprintf("欢迎新同事 %s 加入 %s 部门，职位：%s。请各位同事多多关照！", req.RealName, departmentInfo.DepartmentName, positionInfo.PositionName),
+				IsHTML:    false,
+			}
+			if err := l.svcCtx.EmailMQService.PublishEmailEvent(ctx, emailEvent); err != nil {
+				logx.Errorf("发布新员工入职邮件事件失败: %v", err)
 			}
 		}
 	}()

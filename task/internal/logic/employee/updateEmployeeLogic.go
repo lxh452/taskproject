@@ -5,8 +5,6 @@ package employee
 
 import (
 	"context"
-	"errors"
-	"task_Project/model/user"
 	"time"
 
 	"task_Project/task/internal/svc"
@@ -40,46 +38,27 @@ func (l *UpdateEmployeeLogic) UpdateEmployee(req *types.UpdateEmployeeRequest) (
 	}
 
 	// 检查员工是否存在
-	if _, err = l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ID); err != nil {
+	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ID)
+	if err != nil {
 		logx.Errorf("查询员工失败: %v", err)
 		return utils.Response.ErrorWithKey("employee_not_found"), nil
 	}
 
-	updateData, err := l.updateData(req)
-	if err != nil {
-		logx.Errorf("格式错误: %v", err)
-		return utils.Response.InternalError("格式错误"), err
+	// 记录旧职位ID，用于判断是否需要同步权限
+	oldPositionID := ""
+	if employee.PositionId.Valid {
+		oldPositionID = employee.PositionId.String
 	}
 
-	if len(updateData) == 0 {
-		return utils.Response.ValidationError("没有需要更新的字段"), nil
-	}
-
-	updateData["update_time"] = time.Now()
-	var employee user.Employee
-	err = utils.Common.MapToStructWithMapstructure(updateData, &employee)
-	if err != nil {
-		logx.Errorf("格式错误: %v", err)
-		return utils.Response.InternalError("格式错误"), err
-	}
-	employee.Id = req.ID
-	err = l.svcCtx.EmployeeModel.Update(l.ctx, &employee)
-	if err != nil {
-		logx.Errorf("更新员工信息失败: %v", err)
-		return utils.Response.InternalError("更新员工信息失败"), err
-	}
-
-	return utils.Response.Success("更新员工信息成功"), nil
-}
-
-func (l *UpdateEmployeeLogic) updateData(req *types.UpdateEmployeeRequest) (map[string]interface{}, error) {
-	// 更新员工信息
+	// 构建更新数据
 	updateData := make(map[string]interface{})
 	if !utils.Validator.IsEmpty(req.DepartmentID) {
 		updateData["department_id"] = req.DepartmentID
 	}
+	positionChanged := false
 	if !utils.Validator.IsEmpty(req.PositionID) {
 		updateData["position_id"] = req.PositionID
+		positionChanged = (req.PositionID != oldPositionID)
 	}
 	if !utils.Validator.IsEmpty(req.EmployeeID) {
 		updateData["employee_id"] = req.EmployeeID
@@ -88,10 +67,10 @@ func (l *UpdateEmployeeLogic) updateData(req *types.UpdateEmployeeRequest) (map[
 		updateData["real_name"] = req.RealName
 	}
 	if !utils.Validator.IsEmpty(req.WorkEmail) {
-		updateData["work_email"] = req.WorkEmail
+		updateData["email"] = req.WorkEmail
 	}
 	if !utils.Validator.IsEmpty(req.WorkPhone) {
-		updateData["work_phone"] = req.WorkPhone
+		updateData["phone"] = req.WorkPhone
 	}
 	if !utils.Validator.IsEmpty(req.Skills) {
 		updateData["skills"] = req.Skills
@@ -102,16 +81,40 @@ func (l *UpdateEmployeeLogic) updateData(req *types.UpdateEmployeeRequest) (map[
 	if !utils.Validator.IsEmpty(req.HireDate) {
 		hireDate, err := time.Parse("2006-01-02", req.HireDate)
 		if err != nil {
-			return nil, errors.New("入职日期格式错误")
+			logx.Errorf("入职日期格式错误: %v", err)
+			return utils.Response.InternalError("入职日期格式错误"), err
 		}
 		updateData["hire_date"] = hireDate
 	}
 	if !utils.Validator.IsEmpty(req.LeaveDate) {
 		leaveDate, err := time.Parse("2006-01-02", req.LeaveDate)
 		if err != nil {
-			return nil, errors.New("离职日期格式错误")
+			logx.Errorf("离职日期格式错误: %v", err)
+			return utils.Response.InternalError("离职日期格式错误"), err
 		}
 		updateData["leave_date"] = leaveDate
 	}
-	return updateData, nil
+
+	if len(updateData) == 0 {
+		return utils.Response.ValidationError("没有需要更新的字段"), nil
+	}
+
+	// 使用选择性更新
+	err = l.svcCtx.EmployeeModel.SelectiveUpdate(l.ctx, req.ID, updateData)
+	if err != nil {
+		logx.Errorf("更新员工信息失败: %v", err)
+		return utils.Response.InternalError("更新员工信息失败"), err
+	}
+
+	// 如果职位改变，同步员工权限
+	if positionChanged {
+		newPositionID := req.PositionID
+		permissionSyncService := svc.NewPermissionSyncService(l.svcCtx)
+		if err := permissionSyncService.SyncEmployeePermissions(l.ctx, employee.UserId, req.ID, newPositionID); err != nil {
+			logx.Errorf("同步员工权限失败: %v", err)
+			// 权限同步失败不影响员工更新，只记录日志
+		}
+	}
+
+	return utils.Response.Success("更新员工信息成功"), nil
 }

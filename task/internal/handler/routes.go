@@ -13,8 +13,11 @@ import (
 	handover "task_Project/task/internal/handler/handover"
 	notification "task_Project/task/internal/handler/notification"
 	position "task_Project/task/internal/handler/position"
+	role "task_Project/task/internal/handler/role"
 	task "task_Project/task/internal/handler/task"
 	tasknode "task_Project/task/internal/handler/tasknode"
+	upload "task_Project/task/internal/handler/upload"
+	user "task_Project/task/internal/handler/user"
 	"task_Project/task/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -144,10 +147,22 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: employee.EmployeeLeaveHandler(serverCtx),
 			},
 			{
+				// 确认离职审批
+				Method:  http.MethodPost,
+				Path:    "/leave/approve",
+				Handler: employee.ConfirmLeaveApprovalHandler(serverCtx),
+			},
+			{
 				// 获取员工列表
 				Method:  http.MethodPost,
 				Path:    "/list",
 				Handler: employee.GetEmployeeListHandler(serverCtx),
+			},
+			{
+				// 获取当前登录员工信息
+				Method:  http.MethodGet,
+				Path:    "/me",
+				Handler: employee.GetSelfEmployeeHandler(serverCtx),
 			},
 			{
 				// 更新员工信息
@@ -190,6 +205,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/list",
 				Handler: handover.GetHandoverListHandler(serverCtx),
+			},
+			{
+				// 接收人拒绝交接
+				Method:  http.MethodPost,
+				Path:    "/reject",
+				Handler: handover.RejectHandoverHandler(serverCtx),
+			},
+			{
+				// 获取可交接的任务列表
+				Method:  http.MethodGet,
+				Path:    "/tasks",
+				Handler: handover.GetHandoverableTasksHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/v1/handover"),
@@ -264,6 +291,66 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// 员工赋予角色
+				Method:  http.MethodPost,
+				Path:    "/assign",
+				Handler: role.AssignRoleHandler(serverCtx),
+			},
+			{
+				// 创建角色
+				Method:  http.MethodPost,
+				Path:    "/create",
+				Handler: role.CreateRoleHandler(serverCtx),
+			},
+			{
+				// 删除角色
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: role.DeleteRoleHandler(serverCtx),
+			},
+			{
+				// 查询员工的角色列表
+				Method:  http.MethodPost,
+				Path:    "/employeeRoles",
+				Handler: role.EmployeeRolesHandler(serverCtx),
+			},
+			{
+				// 角色列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: role.RoleListHandler(serverCtx),
+			},
+			{
+				// 查询职位的角色列表
+				Method:  http.MethodPost,
+				Path:    "/positionRoles",
+				Handler: role.PositionRolesHandler(serverCtx),
+			},
+			{
+				// 员工撤销角色
+				Method:  http.MethodPost,
+				Path:    "/revoke",
+				Handler: role.RevokeRoleHandler(serverCtx),
+			},
+			{
+				// 更新角色
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: role.UpdateRoleHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/role"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 创建任务评论
+				Method:  http.MethodPost,
+				Path:    "/comment",
+				Handler: task.CreateTaskDetailCommentHandler(serverCtx),
+			},
+			{
 				// 任务完成
 				Method:  http.MethodPost,
 				Path:    "/complete",
@@ -280,6 +367,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/delete",
 				Handler: task.DeleteTaskHandler(serverCtx),
+			},
+			{
+				// 更新任务详情（添加文件）
+				Method:  http.MethodPut,
+				Path:    "/detail",
+				Handler: task.UpdateTaskDetailHandler(serverCtx),
 			},
 			{
 				// 任务自动派发
@@ -353,7 +446,37 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/update",
 				Handler: tasknode.UpdateTaskNodeHandler(serverCtx),
 			},
+			{
+				// 更新前置节点（专门用于更新前置节点关系）
+				Method:  http.MethodPut,
+				Path:    "/update/prerequisites",
+				Handler: tasknode.UpdatePrerequisiteNodesHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/v1/tasknode"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 文件上传（支持图片、PDF、Markdown等文件）
+				Method:  http.MethodPost,
+				Path:    "/file",
+				Handler: upload.UploadInfoHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/upload"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 更新用户信息
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: user.UpdateInfoHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/user"),
 	)
 }

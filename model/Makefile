@@ -20,12 +20,3 @@ user_auth:
 # 任务表（依赖company和user）
 task:
 	goctl model mysql ddl -src="./sql/task.sql" -dir="./task"
-
-# 清理生成的文件
-clean:
-	rm -rf ./user ./company ./role ./user_auth ./task
-
-
-
-# 重新生成所有表
-rebuild: clean all

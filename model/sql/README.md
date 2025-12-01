@@ -9,7 +9,7 @@
 4. **user** - 用户表（登录认证）
 5. **employee** - 员工表（业务信息）
 6. **role** - 角色表
-7. **employee_role** - 员工角色关联表
+7. **position_role** - 职位角色关联表（员工通过职位获得角色权限）
 
 ### 任务相关表
 8. **task** - 任务表
@@ -40,7 +40,8 @@ department (1) ←→ (1) department (parent_id)
 user (1) ←→ (1) employee
 user (1) ←→ (N) user_permission
 
-employee (N) ←→ (N) role (通过 employee_role)
+position (N) ←→ (N) role (通过 position_role)
+employee (1) ←→ (1) position (通过 employee.position_id，员工通过职位获得角色权限)
 employee (1) ←→ (N) task (creator/assigner)
 employee (1) ←→ (N) task_node (executor/leader)
 employee (1) ←→ (N) task_log
@@ -88,7 +89,7 @@ task (1) ←→ (N) task_handover
 company → department → position → user → employee
 
 -- 2. 权限表  
-role → employee_role
+role → position_role
 
 -- 3. 任务表
 task → task_node → task_log → task_handover
@@ -107,3 +108,8 @@ notification → user_permission → system_config → operation_log
 - 使用外键约束保证数据一致性
 - 软删除设计，保留历史数据
 - 级联删除和更新策略合理配置
+
+
+
+
+

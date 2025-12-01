@@ -2,8 +2,11 @@ package employee
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
+	"task_Project/model/task"
+	"task_Project/model/user"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -27,7 +30,7 @@ func NewEmployeeLeaveLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Emp
 }
 
 func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (resp *types.BaseResponse, err error) {
-	// 参数验证
+	// 1. 参数验证
 	validator := utils.NewValidator()
 	if validator.IsEmpty(req.EmployeeID) {
 		return utils.Response.ValidationError("员工ID不能为空"), nil
@@ -36,34 +39,25 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 		return utils.Response.ValidationError("离职原因不能为空"), nil
 	}
 
-	// 获取当前用户信息
+	// 2. 获取当前操作用户信息
 	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
 
-	// 查询员工信息
+	// 3. 查询员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.EmployeeID)
 	if err != nil {
 		logx.Errorf("查询员工失败: %v", err)
 		return utils.Response.ErrorWithKey("employee_not_found"), nil
 	}
 
-	// 检查权限（只有员工本人或HR可以操作离职）
-	if employee.UserId != currentUserID {
-		// 检查是否为HR或管理员
-		// 这里可以添加角色检查逻辑
-		// 暂时允许所有用户操作
-
-		// todo
-	}
-
-	// 检查员工状态
+	// 4. 检查员工状态
 	if employee.Status == 0 { // 已离职
 		return utils.Response.BusinessError("员工已离职"), nil
 	}
 
-	// 解析离职时间
+	// 5. 解析离职时间
 	var leaveDate time.Time
 	if req.LeaveDate != "" {
 		leaveDate, err = time.Parse("2006-01-02", req.LeaveDate)
@@ -74,42 +68,150 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 		leaveDate = time.Now()
 	}
 
-	// 更新员工状态为离职
-	updateData := map[string]interface{}{
-		"status":      0, // 离职
-		"leave_date":  leaveDate,
-		"update_time": time.Now(),
-	}
-
-	err = l.svcCtx.EmployeeModel.Update(l.ctx, req.EmployeeID, updateData)
+	// 6. 判断离职类型和权限
+	leaveType, err := l.determineLeaveType(currentUserID, employee)
 	if err != nil {
-		logx.Errorf("更新员工离职状态失败: %v", err)
-		return utils.Response.InternalError("更新员工离职状态失败"), nil
+		logx.Errorf("判断离职类型失败: %v", err)
+		return utils.Response.BusinessError("权限验证失败"), nil
 	}
 
-	// 更新用户状态为离职
-	userUpdateData := map[string]interface{}{
-		"status":      0, // 离职
-		"update_time": time.Now(),
+	// 7. 根据离职类型执行不同逻辑
+	switch leaveType {
+	case "hr_initiated":
+		return l.handleHRInitiatedLeave(employee, req, leaveDate)
+	case "employee_initiated":
+		return l.handleEmployeeInitiatedLeave(employee, req, leaveDate)
+	default:
+		return utils.Response.BusinessError("无效的离职类型"), nil
+	}
+}
+
+// determineLeaveType 判断离职类型
+func (l *EmployeeLeaveLogic) determineLeaveType(currentUserID string, employee *user.Employee) (string, error) {
+	// 如果是员工本人操作，则为主动离职
+	if employee.UserId == currentUserID {
+		return "employee_initiated", nil
 	}
 
-	err = l.svcCtx.UserModel.Update(l.ctx, employee.UserId, userUpdateData)
+	// 如果是HR操作，则为HR协商离职
+	// TODO: 这里需要检查当前用户是否为HR角色
+	// 暂时假设非员工本人操作的都是HR操作
+	return "hr_initiated", nil
+}
+
+// handleHRInitiatedLeave 处理HR协商离职
+func (l *EmployeeLeaveLogic) handleHRInitiatedLeave(employee *user.Employee, req *types.EmployeeLeaveRequest, leaveDate time.Time) (*types.BaseResponse, error) {
+	logx.Infof("HR为员工 %s 办理离职", employee.RealName)
+
+	// 1. 创建离职审批记录
+	approvalID := utils.Common.GenId("leave_approval")
+	approval := &task.TaskHandover{
+		HandoverId:     approvalID,
+		TaskId:         "", // 离职审批不关联具体任务
+		FromEmployeeId: employee.Id,
+		ToEmployeeId:   "", // 待审批
+		HandoverReason: sql.NullString{String: req.LeaveReason, Valid: true},
+		HandoverNote:   sql.NullString{String: "HR协商离职，等待员工确认", Valid: true},
+		HandoverStatus: 1, // 待处理
+		CreateTime:     time.Now(),
+		UpdateTime:     time.Now(),
+	}
+
+	_, err := l.svcCtx.TaskHandoverModel.Insert(l.ctx, approval)
 	if err != nil {
-		logx.Errorf("更新用户离职状态失败: %v", err)
-		// 不影响主流程，只记录错误
+		logx.Errorf("创建离职审批记录失败: %v", err)
+		return utils.Response.InternalError("创建离职审批记录失败"), err
 	}
 
-	// 发送离职通知给相关管理人员
-	notificationService := svc.NewNotificationService(l.svcCtx)
+	// 2. 发送通知给员工（通过消息队列）
+	// 获取员工当前负责的任务节点
+	taskNodes := []string{} // TODO: 实现获取任务节点逻辑
+	recipientEmail := ""
 
-	//todo 这里需要区分人事还是自己离职，需要告知离职原因 这里要修改一下方法
-	err = notificationService.SendEmployeeLeaveNotification(req.EmployeeID, req.LeaveReason)
+	// 优先发给部门负责人；若无部门或无负责人邮箱，则发给员工本人
+	if employee.DepartmentId.Valid && employee.DepartmentId.String != "" {
+		department, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
+		if err == nil && department.ManagerId.Valid && department.ManagerId.String != "" {
+			manager, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, department.ManagerId.String)
+			if err == nil && manager.Email.Valid && manager.Email.String != "" {
+				recipientEmail = manager.Email.String
+			}
+		}
+	}
+
+	if recipientEmail == "" && employee.Email.Valid && employee.Email.String != "" {
+		recipientEmail = employee.Email.String
+	}
+
+	if recipientEmail != "" && l.svcCtx.EmailService != nil {
+		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, recipientEmail, employee.RealName, taskNodes); err != nil {
+			logx.Errorf("发送离职邮件失败: %v", err)
+		}
+	}
+
+	return utils.Response.Success(map[string]interface{}{
+		"message":      "HR协商离职通知已发送",
+		"approvalId":   approvalID,
+		"employeeName": employee.RealName,
+		"leaveDate":    leaveDate.Format("2006-01-02"),
+		"status":       "pending_employee_confirmation",
+	}), nil
+}
+
+// handleEmployeeInitiatedLeave 处理员工主动离职
+func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employee, req *types.EmployeeLeaveRequest, leaveDate time.Time) (*types.BaseResponse, error) {
+	logx.Infof("员工 %s 主动申请离职", employee.RealName)
+
+	// 1. 创建离职审批记录
+	approvalID := utils.Common.GenId("leave_approval")
+	approval := &task.TaskHandover{
+		HandoverId:     approvalID,
+		TaskId:         "", // 离职审批不关联具体任务
+		FromEmployeeId: employee.Id,
+		ToEmployeeId:   "", // 待审批
+		HandoverReason: sql.NullString{String: req.LeaveReason, Valid: true},
+		HandoverNote:   sql.NullString{String: "员工主动离职申请，等待HR和部门负责人审批", Valid: true},
+		HandoverStatus: 1, // 待处理
+		CreateTime:     time.Now(),
+		UpdateTime:     time.Now(),
+	}
+
+	_, err := l.svcCtx.TaskHandoverModel.Insert(l.ctx, approval)
 	if err != nil {
-		logx.Errorf("发送离职通知失败: %v", err)
-		// 不影响主流程，只记录错误
+		logx.Errorf("创建离职审批记录失败: %v", err)
+		return utils.Response.InternalError("创建离职审批记录失败"), err
 	}
 
-	//todo 离职的时候需要将手头的工作递交通知到上级  and   找到交接人，并将手头的任务交付到他手里
+	// 2. 发送通知给HR和部门负责人（通过消息队列）
+	taskNodes := []string{} // TODO: 实现获取任务节点逻辑
+	recipientEmail := ""
 
-	return utils.Response.Success("员工离职处理成功"), nil
+	// 优先发给部门负责人
+	if employee.DepartmentId.Valid && employee.DepartmentId.String != "" {
+		department, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
+		if err == nil && department.ManagerId.Valid && department.ManagerId.String != "" {
+			manager, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, department.ManagerId.String)
+			if err == nil && manager.Email.Valid && manager.Email.String != "" {
+				recipientEmail = manager.Email.String
+			}
+		}
+	}
+
+	if recipientEmail == "" && employee.Email.Valid && employee.Email.String != "" {
+		recipientEmail = employee.Email.String
+	}
+
+	if recipientEmail != "" && l.svcCtx.EmailService != nil {
+		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, recipientEmail, employee.RealName, taskNodes); err != nil {
+			logx.Errorf("发送离职邮件失败: %v", err)
+		}
+	}
+
+	return utils.Response.Success(map[string]interface{}{
+		"message":      "离职申请已提交，等待审批",
+		"approvalId":   approvalID,
+		"employeeName": employee.RealName,
+		"leaveDate":    leaveDate.Format("2006-01-02"),
+		"status":       "pending_approval",
+	}), nil
 }

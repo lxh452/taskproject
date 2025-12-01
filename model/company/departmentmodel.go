@@ -22,7 +22,7 @@ type (
 		FindByParentID(ctx context.Context, parentID string) ([]*Department, error)
 		FindByManagerID(ctx context.Context, managerID string) ([]*Department, error)
 		FindByStatus(ctx context.Context, status int) ([]*Department, error)
-		FindByPage(ctx context.Context, page, pageSize int) ([]*Department, int64, error)
+		FindByPageCompany(ctx context.Context, companyId string, page, pageSize int) ([]*Department, int64, error)
 		FindByCompanyPage(ctx context.Context, companyID string, page, pageSize int) ([]*Department, int64, error)
 		SearchDepartments(ctx context.Context, keyword string, page, pageSize int) ([]*Department, int64, error)
 		SearchDepartmentsByCompany(ctx context.Context, companyID, keyword string, page, pageSize int) ([]*Department, int64, error)
@@ -39,6 +39,9 @@ type (
 		GetDepartmentCountByManager(ctx context.Context, managerID string) (int64, error)
 		GetDepartmentTree(ctx context.Context, companyID string) ([]*Department, error)
 		GetSubDepartments(ctx context.Context, parentID string) ([]*Department, error)
+
+		// 选择性更新方法
+		SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error
 	}
 
 	customDepartmentModel struct {
@@ -90,21 +93,21 @@ func (m *customDepartmentModel) FindByStatus(ctx context.Context, status int) ([
 }
 
 // FindByPage 分页查找部门
-func (m *customDepartmentModel) FindByPage(ctx context.Context, page, pageSize int) ([]*Department, int64, error) {
+func (m *customDepartmentModel) FindByPageCompany(ctx context.Context, companyId string, page, pageSize int) ([]*Department, int64, error) {
 	offset := (page - 1) * pageSize
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE `delete_time` IS NULL", m.table)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE `company_id` = ? and `delete_time` IS NULL", m.table)
 	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, countQuery)
+	err := m.conn.QueryRowCtx(ctx, &total, countQuery, companyId)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// 查询数据
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE `delete_time` IS NULL ORDER BY `create_time` DESC LIMIT ? OFFSET ?", departmentRows, m.table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE `company_id` = ? and`delete_time` IS NULL ORDER BY `create_time` DESC LIMIT ? OFFSET ?", departmentRows, m.table)
 	var resp []*Department
-	err = m.conn.QueryRowsCtx(ctx, &resp, query, pageSize, offset)
+	err = m.conn.QueryRowsCtx(ctx, &resp, query, companyId, pageSize, offset)
 	return resp, total, err
 }
 
@@ -286,4 +289,39 @@ func (m *customDepartmentModel) GetSubDepartments(ctx context.Context, parentID 
 	var resp []*Department
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, parentID)
 	return resp, err
+}
+
+// SelectiveUpdate 选择性更新部门信息
+// 只更新 map 中存在的字段，其他字段保持不变
+func (m *customDepartmentModel) SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error {
+	if len(updateData) == 0 {
+		return nil
+	}
+
+	// 构建动态 SQL
+	var setParts []string
+	var args []interface{}
+
+	for field, value := range updateData {
+		if field == "id" || field == "create_time" || field == "delete_time" {
+			continue // 跳过不能更新的字段
+		}
+		setParts = append(setParts, fmt.Sprintf("`%s` = ?", field))
+		args = append(args, value)
+	}
+
+	if len(setParts) == 0 {
+		return nil
+	}
+
+	// 添加更新时间 - 使用 NOW() 函数而不是字符串
+	setParts = append(setParts, "`update_time` = NOW()")
+
+	// 添加 ID 参数
+	args = append(args, id)
+
+	// 执行更新
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE `id` = ?", m.table, strings.Join(setParts, ", "))
+	_, err := m.conn.ExecCtx(ctx, query, args...)
+	return err
 }

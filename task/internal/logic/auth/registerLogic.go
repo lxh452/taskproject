@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"task_Project/model/user"
-	"task_Project/task/internal/middleware"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -136,16 +135,11 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		return utils.Response.InternalError("注册失败"), nil
 	}
 
-	// 发送注册成功邮件
+	// 发送注册成功邮件（通过消息队列）
 	go func() {
-		if req.Email != "" {
-			emailMsg := middleware.EmailMessage{
-				To:      []string{req.Email},
-				Subject: "注册成功通知",
-				Body:    "欢迎注册企业任务系统！您的账户已成功创建，用户名：" + req.Username,
-				IsHTML:  false,
-			}
-			if err := l.svcCtx.EmailMiddleware.SendEmail(context.Background(), emailMsg); err != nil {
+		if req.Email != "" && l.svcCtx.EmailService != nil {
+			registerTime := time.Now().Format("2006-01-02 15:04:05")
+			if err := l.svcCtx.EmailService.SendRegisterSuccessEmail(context.Background(), req.Email, req.Username, registerTime); err != nil {
 				logx.Errorf("发送注册成功邮件失败: %v", err)
 			}
 		}

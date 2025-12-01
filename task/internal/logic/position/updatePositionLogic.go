@@ -5,8 +5,6 @@ package position
 
 import (
 	"context"
-	"task_Project/model/company"
-	"time"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -43,31 +41,7 @@ func (l *UpdatePositionLogic) UpdatePosition(req *types.UpdatePositionRequest) (
 		return utils.Response.ErrorWithKey("position_not_found"), nil
 	}
 
-	// 更新职位信息
-	updateData := l.updateData(req)
-
-	if len(updateData) == 0 {
-		return utils.Response.ValidationError("没有需要更新的字段"), nil
-	}
-
-	updateData["update_time"] = time.Now()
-	var position company.Position
-	err = utils.Common.MapToStructWithMapstructure(updateData, &position)
-	if err != nil {
-		logx.Errorf("转换结构体失败: %v", err)
-		return utils.Response.ErrorWithKey("position_not_found"), nil
-	}
-	position.Id = req.ID
-	err = l.svcCtx.PositionModel.Update(l.ctx, &position)
-	if err != nil {
-		logx.Errorf("更新职位信息失败: %v", err)
-		return utils.Response.InternalError("更新职位信息失败"), err
-	}
-
-	return utils.Response.Success("更新职位信息成功"), nil
-}
-
-func (l *UpdatePositionLogic) updateData(req *types.UpdatePositionRequest) map[string]interface{} {
+	// 构建更新数据
 	updateData := make(map[string]interface{})
 	if !utils.Validator.IsEmpty(req.PositionName) {
 		updateData["position_name"] = req.PositionName
@@ -102,5 +76,17 @@ func (l *UpdatePositionLogic) updateData(req *types.UpdatePositionRequest) map[s
 	if req.MaxEmployees > 0 {
 		updateData["max_employees"] = req.MaxEmployees
 	}
-	return updateData
+
+	if len(updateData) == 0 {
+		return utils.Response.ValidationError("没有需要更新的字段"), nil
+	}
+
+	// 使用选择性更新
+	err = l.svcCtx.PositionModel.SelectiveUpdate(l.ctx, req.ID, updateData)
+	if err != nil {
+		logx.Errorf("更新职位信息失败: %v", err)
+		return utils.Response.InternalError("更新职位信息失败"), err
+	}
+
+	return utils.Response.Success("更新职位信息成功"), nil
 }

@@ -5,8 +5,6 @@ package department
 
 import (
 	"context"
-	"task_Project/model/company"
-	"time"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -43,32 +41,7 @@ func (l *UpdateDepartmentLogic) UpdateDepartment(req *types.UpdateDepartmentRequ
 		return utils.Response.ErrorWithKey("department_not_found"), nil
 	}
 
-	// 更新部门信息
-	updateData := l.updateData(req)
-
-	if len(updateData) == 0 {
-		return utils.Response.ValidationError("没有需要更新的字段"), nil
-	}
-
-	updateData["update_time"] = time.Now()
-	var updateDepartment company.Department
-	err = utils.Common.MapToStructWithMapstructure(updateData, &updateDepartment)
-	if err != nil {
-		logx.Errorf("转换结构体失败: %v", err)
-		return utils.Response.InternalError("转换结构体失败"), err
-	}
-	updateDepartment.Id = req.ID
-	err = l.svcCtx.DepartmentModel.Update(l.ctx, &updateDepartment)
-	if err != nil {
-		logx.Errorf("更新部门信息失败: %v", err)
-		return utils.Response.InternalError("更新部门信息失败"), err
-	}
-
-	return utils.Response.Success("更新部门信息成功"), nil
-}
-
-func (l *UpdateDepartmentLogic) updateData(req *types.UpdateDepartmentRequest) map[string]interface{} {
-	// 更新部门信息
+	// 构建更新数据
 	updateData := make(map[string]interface{})
 	if !utils.Validator.IsEmpty(req.DepartmentName) {
 		updateData["department_name"] = req.DepartmentName
@@ -85,5 +58,17 @@ func (l *UpdateDepartmentLogic) updateData(req *types.UpdateDepartmentRequest) m
 	if !utils.Validator.IsEmpty(req.Description) {
 		updateData["description"] = req.Description
 	}
-	return updateData
+
+	if len(updateData) == 0 {
+		return utils.Response.ValidationError("没有需要更新的字段"), nil
+	}
+
+	// 使用选择性更新
+	err = l.svcCtx.DepartmentModel.SelectiveUpdate(l.ctx, req.ID, updateData)
+	if err != nil {
+		logx.Errorf("更新部门信息失败: %v", err)
+		return utils.Response.InternalError("更新部门信息失败"), err
+	}
+
+	return utils.Response.Success("更新部门信息成功"), nil
 }

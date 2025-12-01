@@ -5,6 +5,7 @@ package department
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"task_Project/model/company"
@@ -86,6 +87,55 @@ func (l *CreateDepartmentLogic) CreateDepartment(req *types.CreateDepartmentRequ
 		logx.Errorf("创建部门失败: %v", err)
 		return utils.Response.InternalError("创建部门失败"), err
 	}
+
+	// 发送通知和邮件给公司所有员工 - 创建了新的部门
+	go func() {
+		ctx := context.Background()
+		// 查询该公司所有员工
+		employees, err := l.svcCtx.EmployeeModel.FindByCompanyID(ctx, req.CompanyID)
+		if err != nil {
+			logx.Errorf("查询公司员工失败: %v", err)
+			return
+		}
+
+		employeeIDs := make([]string, 0, len(employees))
+		emails := make([]string, 0, len(employees))
+		for _, emp := range employees {
+			employeeIDs = append(employeeIDs, emp.Id)
+			if emp.Email.Valid && emp.Email.String != "" {
+				emails = append(emails, emp.Email.String)
+			}
+		}
+
+		// 发布通知事件
+		if l.svcCtx.NotificationMQService != nil && len(employeeIDs) > 0 {
+			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+				svc.DepartmentCreated,
+				employeeIDs,
+				departmentID,
+			)
+			notificationEvent.Title = "新部门创建通知"
+			notificationEvent.Content = fmt.Sprintf("公司新创建了部门：%s", req.DepartmentName)
+			notificationEvent.Category = "department"
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, notificationEvent); err != nil {
+				logx.Errorf("发布部门创建通知事件失败: %v", err)
+			}
+		}
+
+		// 发布邮件事件
+		if l.svcCtx.EmailMQService != nil && len(emails) > 0 {
+			emailEvent := &svc.EmailEvent{
+				EventType: svc.DepartmentCreated,
+				To:        emails,
+				Subject:   "新部门创建通知",
+				Body:      fmt.Sprintf("公司新创建了部门：%s，如有需要请联系管理员了解详情。", req.DepartmentName),
+				IsHTML:    false,
+			}
+			if err := l.svcCtx.EmailMQService.PublishEmailEvent(ctx, emailEvent); err != nil {
+				logx.Errorf("发布部门创建邮件事件失败: %v", err)
+			}
+		}
+	}()
 
 	return utils.Response.SuccessWithKey("departmentId", departmentID), nil
 }

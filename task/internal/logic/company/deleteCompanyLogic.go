@@ -40,6 +40,7 @@ func (l *DeleteCompanyLogic) DeleteCompany(req *types.DeleteCompanyRequest) (res
 		logx.Errorf("查询公司失败: %v", err)
 		return utils.Response.ErrorWithKey("company_not_found"), nil
 	}
+	// todo 这里还要校验该公司是否是该用户的公司 后续有权限表后，会根据是否是系统管理员进行操作，目前先判断公司是不是该用户的，否则不能删除
 
 	// 检查公司是否有员工
 	employeeCount, err := l.svcCtx.EmployeeModel.GetEmployeeCountByCompany(l.ctx, req.CompanyID)

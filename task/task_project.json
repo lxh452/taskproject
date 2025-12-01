@@ -1,0 +1,3324 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "",
+    "version": ""
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "用户登录",
+        "operationId": "Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 用户登录请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "用户登出",
+        "operationId": "Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "用户注册",
+        "operationId": "Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 用户注册请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/company/create": {
+      "post": {
+        "summary": "创建公司",
+        "operationId": "CreateCompany",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建公司请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateCompanyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/delete": {
+      "post": {
+        "summary": "删除公司",
+        "operationId": "DeleteCompany",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除公司请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeleteCompanyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/get": {
+      "post": {
+        "summary": "获取公司信息",
+        "operationId": "GetCompany",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取公司信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetCompanyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/list": {
+      "post": {
+        "summary": "获取公司列表",
+        "operationId": "GetCompanyList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 公司列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CompanyListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/update": {
+      "put": {
+        "summary": "更新公司信息",
+        "operationId": "UpdateCompany",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新公司请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateCompanyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/department/create": {
+      "post": {
+        "summary": "创建部门",
+        "operationId": "CreateDepartment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建部门请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateDepartmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "department"
+        ]
+      }
+    },
+    "/api/v1/department/delete": {
+      "post": {
+        "summary": "删除部门",
+        "operationId": "DeleteDepartment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除部门请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeleteDepartmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "department"
+        ]
+      }
+    },
+    "/api/v1/department/get": {
+      "post": {
+        "summary": "获取部门信息",
+        "operationId": "GetDepartment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取部门请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDepartmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "department"
+        ]
+      }
+    },
+    "/api/v1/department/list": {
+      "post": {
+        "summary": "获取部门列表",
+        "operationId": "GetDepartmentList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 部门列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DepartmentListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "department"
+        ]
+      }
+    },
+    "/api/v1/department/update": {
+      "put": {
+        "summary": "更新部门信息",
+        "operationId": "UpdateDepartment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新部门请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateDepartmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "department"
+        ]
+      }
+    },
+    "/api/v1/employee/create": {
+      "post": {
+        "summary": "创建员工",
+        "operationId": "CreateEmployee",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建员工请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateEmployeeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/delete": {
+      "post": {
+        "summary": "删除员工",
+        "operationId": "DeleteEmployee",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除员工请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeleteEmployeeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/get": {
+      "post": {
+        "summary": "获取员工信息",
+        "operationId": "GetEmployee",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取员工信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetEmployeeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/leave": {
+      "post": {
+        "summary": "员工离职",
+        "operationId": "EmployeeLeave",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 员工离职请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeLeaveRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/leave/approve": {
+      "post": {
+        "summary": "确认离职审批",
+        "operationId": "ConfirmLeaveApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 确认离职审批请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ConfirmLeaveApprovalRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/list": {
+      "post": {
+        "summary": "获取员工列表",
+        "operationId": "GetEmployeeList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 员工列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/employee/update": {
+      "put": {
+        "summary": "更新员工信息",
+        "operationId": "UpdateEmployee",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新员工请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateEmployeeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "employee"
+        ]
+      }
+    },
+    "/api/v1/handover/approve": {
+      "post": {
+        "summary": "审批任务交接",
+        "operationId": "ApproveHandover",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 审批交接请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ApproveHandoverRequest"
+            }
+          }
+        ],
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/confirm": {
+      "post": {
+        "summary": "确认交接",
+        "operationId": "ConfirmHandover",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 确认交接请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ConfirmHandoverRequest"
+            }
+          }
+        ],
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/create": {
+      "post": {
+        "summary": "创建任务交接",
+        "operationId": "CreateHandover",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建交接请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateHandoverRequest"
+            }
+          }
+        ],
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/get": {
+      "post": {
+        "summary": "获取交接信息",
+        "operationId": "GetHandover",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取交接信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetHandoverRequest"
+            }
+          }
+        ],
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/list": {
+      "post": {
+        "summary": "获取交接列表",
+        "operationId": "GetHandoverList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 交接列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HandoverListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/notification/create": {
+      "post": {
+        "summary": "创建通知",
+        "operationId": "CreateNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建通知请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "notification"
+        ]
+      }
+    },
+    "/api/v1/notification/get": {
+      "post": {
+        "summary": "获取通知信息",
+        "operationId": "GetNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取通知信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "notification"
+        ]
+      }
+    },
+    "/api/v1/notification/list": {
+      "post": {
+        "summary": "获取通知列表",
+        "operationId": "GetNotificationList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 通知列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NotificationListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "notification"
+        ]
+      }
+    },
+    "/api/v1/notification/read": {
+      "put": {
+        "summary": "标记通知为已读",
+        "operationId": "MarkNotificationRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 标记通知为已读请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MarkNotificationReadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "notification"
+        ]
+      }
+    },
+    "/api/v1/position/create": {
+      "post": {
+        "summary": "创建职位",
+        "operationId": "CreatePosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建职位请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreatePositionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "position"
+        ]
+      }
+    },
+    "/api/v1/position/delete": {
+      "post": {
+        "summary": "删除职位",
+        "operationId": "DeletePosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除职位请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeletePositionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "position"
+        ]
+      }
+    },
+    "/api/v1/position/get": {
+      "post": {
+        "summary": "获取职位信息",
+        "operationId": "GetPosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取职位信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetPositionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "position"
+        ]
+      }
+    },
+    "/api/v1/position/list": {
+      "post": {
+        "summary": "获取职位列表",
+        "operationId": "GetPositionList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 职位列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PositionListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "position"
+        ]
+      }
+    },
+    "/api/v1/position/update": {
+      "put": {
+        "summary": "更新职位信息",
+        "operationId": "UpdatePosition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新职位请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdatePositionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "position"
+        ]
+      }
+    },
+    "/api/v1/task/complete": {
+      "post": {
+        "summary": "任务完成",
+        "operationId": "CompleteTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 完成任务请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CompleteTaskRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/create": {
+      "post": {
+        "summary": "创建任务",
+        "operationId": "CreateTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建任务请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateTaskRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/delete": {
+      "post": {
+        "summary": "删除任务",
+        "operationId": "DeleteTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除任务请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeleteTaskRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/dispatch": {
+      "post": {
+        "summary": "任务自动派发",
+        "operationId": "AutoDispatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 自动派发请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AutoDispatchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/get": {
+      "post": {
+        "summary": "获取任务信息",
+        "operationId": "GetTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取任务信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetTaskRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/list": {
+      "post": {
+        "summary": "获取任务列表",
+        "operationId": "GetTaskList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 任务列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TaskListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/progress": {
+      "put": {
+        "summary": "任务进度更新",
+        "operationId": "UpdateTaskProgress",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新任务进度请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateTaskProgressRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/task/update": {
+      "put": {
+        "summary": "更新任务信息",
+        "operationId": "UpdateTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新任务请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateTaskRequest"
+            }
+          }
+        ],
+        "tags": [
+          "task"
+        ]
+      }
+    },
+    "/api/v1/tasknode/create": {
+      "post": {
+        "summary": "创建任务节点",
+        "operationId": "CreateTaskNode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 创建任务节点请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateTaskNodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    },
+    "/api/v1/tasknode/delete": {
+      "post": {
+        "summary": "删除任务节点",
+        "operationId": "DeleteTaskNode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 删除任务节点请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeleteTaskNodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    },
+    "/api/v1/tasknode/get": {
+      "post": {
+        "summary": "获取任务节点信息",
+        "operationId": "GetTaskNode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 获取任务节点信息请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetTaskNodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    },
+    "/api/v1/tasknode/get/user": {
+      "get": {
+        "summary": "获取用户的任务节点信息",
+        "operationId": "GetUserTaskNode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    },
+    "/api/v1/tasknode/list": {
+      "post": {
+        "summary": "获取任务节点列表",
+        "operationId": "GetTaskNodeList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 任务节点列表请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TaskNodeListRequest"
+            }
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    },
+    "/api/v1/tasknode/update": {
+      "put": {
+        "summary": "更新任务节点",
+        "operationId": "UpdateTaskNode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": " 更新任务节点请求",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateTaskNodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "tasknode"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ApproveHandoverRequest": {
+      "type": "object",
+      "properties": {
+        "handoverId": {
+          "type": "string"
+        },
+        "approved": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "title": "ApproveHandoverRequest",
+      "required": [
+        "handoverId",
+        "approved"
+      ]
+    },
+    "AutoDispatchRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        }
+      },
+      "title": "AutoDispatchRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "BaseResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "title": "BaseResponse",
+      "required": [
+        "code",
+        "msg"
+      ]
+    },
+    "CompanyInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "companyAttributes": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyBusiness": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "CompanyInfo",
+      "required": [
+        "id",
+        "name",
+        "companyAttributes",
+        "companyBusiness",
+        "owner",
+        "description",
+        "address",
+        "phone",
+        "email",
+        "status",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "CompanyListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "CompanyListRequest"
+    },
+    "CompleteTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "actualHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "completionNote": {
+          "type": "string"
+        }
+      },
+      "title": "CompleteTaskRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "ConfirmHandoverRequest": {
+      "type": "object",
+      "properties": {
+        "handoverId": {
+          "type": "string"
+        }
+      },
+      "title": "ConfirmHandoverRequest",
+      "required": [
+        "handoverId"
+      ]
+    },
+    "ConfirmLeaveApprovalRequest": {
+      "type": "object",
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "approved": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "title": "ConfirmLeaveApprovalRequest",
+      "required": [
+        "approvalId",
+        "approved"
+      ]
+    },
+    "CreateCompanyRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "companyAttributes": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyBusiness": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "description": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "title": "CreateCompanyRequest",
+      "required": [
+        "name",
+        "companyAttributes",
+        "companyBusiness"
+      ]
+    },
+    "CreateDepartmentRequest": {
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "departmentName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "departmentCode": {
+          "type": "string"
+        },
+        "managerId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "title": "CreateDepartmentRequest",
+      "required": [
+        "companyId",
+        "departmentName",
+        "departmentCode"
+      ]
+    },
+    "CreateEmployeeRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "positionId": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "realName": {
+          "type": "string"
+        },
+        "workEmail": {
+          "type": "string"
+        },
+        "workPhone": {
+          "type": "string"
+        },
+        "skills": {
+          "type": "string"
+        },
+        "roleTags": {
+          "type": "string"
+        },
+        "hireDate": {
+          "type": "string"
+        }
+      },
+      "title": "CreateEmployeeRequest",
+      "required": [
+        "userId",
+        "companyId",
+        "employeeId",
+        "realName"
+      ]
+    },
+    "CreateHandoverRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "fromEmployeeId": {
+          "type": "string"
+        },
+        "toEmployeeId": {
+          "type": "string"
+        },
+        "handoverReason": {
+          "type": "string"
+        },
+        "handoverNote": {
+          "type": "string"
+        },
+        "approverId": {
+          "type": "string"
+        }
+      },
+      "title": "CreateHandoverRequest",
+      "required": [
+        "taskId",
+        "fromEmployeeId",
+        "toEmployeeId",
+        "handoverReason"
+      ]
+    },
+    "CreateNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "relatedId": {
+          "type": "string"
+        },
+        "relatedType": {
+          "type": "string"
+        }
+      },
+      "title": "CreateNotificationRequest",
+      "required": [
+        "employeeId",
+        "title",
+        "content",
+        "type"
+      ]
+    },
+    "CreatePositionRequest": {
+      "type": "object",
+      "properties": {
+        "departmentId": {
+          "type": "string"
+        },
+        "positionName": {
+          "type": "string"
+        },
+        "positionCode": {
+          "type": "string"
+        },
+        "positionLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "requiredSkills": {
+          "type": "string"
+        },
+        "jobDescription": {
+          "type": "string"
+        },
+        "responsibilities": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "string"
+        },
+        "salaryRangeMin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "salaryRangeMax": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isManagement": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxEmployees": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "CreatePositionRequest",
+      "required": [
+        "departmentId",
+        "positionName",
+        "positionCode",
+        "positionLevel"
+      ]
+    },
+    "CreateTaskNodeRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "description": " 总任务id"
+        },
+        "nodeName": {
+          "type": "string",
+          "description": " 节点名字"
+        },
+        "nodeDetail": {
+          "type": "string",
+          "description": " 该节点的详情"
+        },
+        "nodeType": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 该节点的优先级"
+        },
+        "departmentId": {
+          "type": "string",
+          "description": " 该节点的所属部门"
+        },
+        "leaderId": {
+          "type": "string",
+          "description": " 该任务节点的负责人"
+        },
+        "executorId": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": " 执行者们的id"
+        },
+        "estimatedHours": {
+          "type": "integer",
+          "format": "int64",
+          "description": " 预期完成时间"
+        }
+      },
+      "title": "CreateTaskNodeRequest",
+      "required": [
+        "taskId",
+        "nodeName",
+        "nodeDetail",
+        "nodeType",
+        "departmentId",
+        "leaderId"
+      ]
+    },
+    "CreateTaskRequest": {
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "taskTitle": {
+          "type": "string"
+        },
+        "taskDetail": {
+          "type": "string"
+        },
+        "taskPriority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "taskType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "responsibleEmployeeIds": {
+          "type": "string"
+        },
+        "nodeEmployeeIds": {
+          "type": "string"
+        },
+        "departmentIds": {
+          "type": "string"
+        },
+        "taskDeadline": {
+          "type": "string"
+        },
+        "attachmentUrl": {
+          "type": "string"
+        }
+      },
+      "title": "CreateTaskRequest",
+      "required": [
+        "companyId",
+        "taskTitle",
+        "taskDetail",
+        "taskPriority",
+        "taskType",
+        "taskDeadline"
+      ]
+    },
+    "DeleteCompanyRequest": {
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteCompanyRequest",
+      "required": [
+        "companyId"
+      ]
+    },
+    "DeleteDepartmentRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteDepartmentRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "DeleteEmployeeRequest": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteEmployeeRequest",
+      "required": [
+        "employeeId"
+      ]
+    },
+    "DeletePositionRequest": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "string"
+        }
+      },
+      "title": "DeletePositionRequest",
+      "required": [
+        "positionId"
+      ]
+    },
+    "DeleteTaskNodeRequest": {
+      "type": "object",
+      "properties": {
+        "taskNodeId": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteTaskNodeRequest",
+      "required": [
+        "taskNodeId"
+      ]
+    },
+    "DeleteTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "deleteReason": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteTaskRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "DepartmentInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "departmentCode": {
+          "type": "string"
+        },
+        "managerId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "DepartmentInfo",
+      "required": [
+        "id",
+        "companyId",
+        "departmentName",
+        "parentId",
+        "departmentCode",
+        "managerId",
+        "description",
+        "status",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "DepartmentListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "DepartmentListRequest",
+      "required": [
+        "companyId"
+      ]
+    },
+    "DispatchTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskNodeId": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string",
+          "description": " 如果为空则自动派发"
+        }
+      },
+      "title": "DispatchTaskRequest",
+      "required": [
+        "taskNodeId"
+      ]
+    },
+    "EmployeeInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "positionId": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "realName": {
+          "type": "string"
+        },
+        "workEmail": {
+          "type": "string"
+        },
+        "workPhone": {
+          "type": "string"
+        },
+        "skills": {
+          "type": "string"
+        },
+        "roleTags": {
+          "type": "string"
+        },
+        "hireDate": {
+          "type": "string"
+        },
+        "leaveDate": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "EmployeeInfo",
+      "required": [
+        "id",
+        "userId",
+        "companyId",
+        "departmentId",
+        "positionId",
+        "employeeId",
+        "realName",
+        "workEmail",
+        "workPhone",
+        "skills",
+        "roleTags",
+        "hireDate",
+        "leaveDate",
+        "status",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "EmployeeLeaveRequest": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string"
+        },
+        "leaveReason": {
+          "type": "string"
+        },
+        "leaveDate": {
+          "type": "string"
+        }
+      },
+      "title": "EmployeeLeaveRequest",
+      "required": [
+        "employeeId",
+        "leaveReason"
+      ]
+    },
+    "EmployeeListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "EmployeeListRequest",
+      "required": [
+        "companyId"
+      ]
+    },
+    "GetCompanyRequest": {
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        }
+      },
+      "title": "GetCompanyRequest",
+      "required": [
+        "companyId"
+      ]
+    },
+    "GetDepartmentRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "title": "GetDepartmentRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "GetEmployeeRequest": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string"
+        }
+      },
+      "title": "GetEmployeeRequest",
+      "required": [
+        "employeeId"
+      ]
+    },
+    "GetHandoverRequest": {
+      "type": "object",
+      "properties": {
+        "handoverId": {
+          "type": "string"
+        }
+      },
+      "title": "GetHandoverRequest",
+      "required": [
+        "handoverId"
+      ]
+    },
+    "GetNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string"
+        }
+      },
+      "title": "GetNotificationRequest",
+      "required": [
+        "notificationId"
+      ]
+    },
+    "GetPositionRequest": {
+      "type": "object",
+      "properties": {
+        "positionId": {
+          "type": "string"
+        }
+      },
+      "title": "GetPositionRequest",
+      "required": [
+        "positionId"
+      ]
+    },
+    "GetTaskNodeRequest": {
+      "type": "object",
+      "properties": {
+        "taskNodeId": {
+          "type": "string"
+        }
+      },
+      "title": "GetTaskNodeRequest",
+      "required": [
+        "taskNodeId"
+      ]
+    },
+    "GetTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        }
+      },
+      "title": "GetTaskRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "HandoverInfo": {
+      "type": "object",
+      "properties": {
+        "handoverId": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "fromEmployeeId": {
+          "type": "string"
+        },
+        "toEmployeeId": {
+          "type": "string"
+        },
+        "handoverReason": {
+          "type": "string"
+        },
+        "handoverNote": {
+          "type": "string"
+        },
+        "handoverStatus": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "approverId": {
+          "type": "string"
+        },
+        "approved": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "approvalNote": {
+          "type": "string"
+        },
+        "handoverTime": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "HandoverInfo",
+      "required": [
+        "handoverId",
+        "taskId",
+        "fromEmployeeId",
+        "toEmployeeId",
+        "handoverReason",
+        "handoverNote",
+        "handoverStatus",
+        "approverId",
+        "approved",
+        "approvalNote",
+        "handoverTime",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "HandoverListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "fromEmployeeId": {
+          "type": "string"
+        },
+        "toEmployeeId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "HandoverListRequest"
+    },
+    "HandoverTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskNodeId": {
+          "type": "string"
+        },
+        "toEmployeeId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "title": "HandoverTaskRequest",
+      "required": [
+        "taskNodeId",
+        "reason",
+        "description"
+      ]
+    },
+    "LoginRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "title": "LoginRequest",
+      "required": [
+        "username",
+        "password"
+      ]
+    },
+    "LoginResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "realName": {
+          "type": "string"
+        }
+      },
+      "title": "LoginResponse",
+      "required": [
+        "token",
+        "userId",
+        "username",
+        "realName"
+      ]
+    },
+    "MarkNotificationReadRequest": {
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string"
+        }
+      },
+      "title": "MarkNotificationReadRequest",
+      "required": [
+        "notificationId"
+      ]
+    },
+    "MyTasksRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "MyTasksRequest"
+    },
+    "NotificationInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isRead": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "relatedId": {
+          "type": "string"
+        },
+        "relatedType": {
+          "type": "string"
+        },
+        "readTime": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "NotificationInfo",
+      "required": [
+        "id",
+        "employeeId",
+        "title",
+        "content",
+        "type",
+        "priority",
+        "isRead",
+        "senderId",
+        "relatedId",
+        "relatedType",
+        "readTime",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "NotificationListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "category": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isRead": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "NotificationListRequest",
+      "required": [
+        "employeeId"
+      ]
+    },
+    "PageReq": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "PageReq"
+    },
+    "PageResp": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "list": {
+          "type": "object"
+        }
+      },
+      "title": "PageResp",
+      "required": [
+        "total",
+        "list"
+      ]
+    },
+    "PositionInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "positionName": {
+          "type": "string"
+        },
+        "positionCode": {
+          "type": "string"
+        },
+        "positionLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "requiredSkills": {
+          "type": "string"
+        },
+        "jobDescription": {
+          "type": "string"
+        },
+        "responsibilities": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "string"
+        },
+        "salaryRangeMin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "salaryRangeMax": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isManagement": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxEmployees": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentEmployees": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "PositionInfo",
+      "required": [
+        "id",
+        "departmentId",
+        "positionName",
+        "positionCode",
+        "positionLevel",
+        "requiredSkills",
+        "jobDescription",
+        "responsibilities",
+        "requirements",
+        "salaryRangeMin",
+        "salaryRangeMax",
+        "isManagement",
+        "maxEmployees",
+        "currentEmployees",
+        "status",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "PositionListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "PositionListRequest",
+      "required": [
+        "departmentId"
+      ]
+    },
+    "RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "realName": {
+          "type": "string"
+        }
+      },
+      "title": "RegisterRequest",
+      "required": [
+        "username",
+        "password",
+        "realName"
+      ]
+    },
+    "TaskDetailInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "taskTitle": {
+          "type": "string"
+        },
+        "taskDescription": {
+          "type": "string"
+        },
+        "taskType": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "creatorId": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string"
+        },
+        "deadline": {
+          "type": "string"
+        },
+        "estimatedHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "actualHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskNodeInfo"
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskLogInfo"
+          }
+        }
+      },
+      "title": "TaskDetailInfo"
+    },
+    "TaskDetailRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        }
+      },
+      "title": "TaskDetailRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "TaskInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "taskTitle": {
+          "type": "string"
+        },
+        "taskDescription": {
+          "type": "string"
+        },
+        "taskType": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "creatorId": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string"
+        },
+        "deadline": {
+          "type": "string"
+        },
+        "estimatedHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "actualHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskNodeInfo"
+          }
+        }
+      },
+      "title": "TaskInfo",
+      "required": [
+        "id",
+        "taskTitle",
+        "taskDescription",
+        "taskType",
+        "priority",
+        "status",
+        "companyId",
+        "departmentId",
+        "creatorId",
+        "startTime",
+        "deadline",
+        "estimatedHours",
+        "actualHours",
+        "progress",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "TaskListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "keyword": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "taskType": {
+          "type": "string"
+        }
+      },
+      "title": "TaskListRequest"
+    },
+    "TaskListResponse": {
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskInfo"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "TaskListResponse",
+      "required": [
+        "list",
+        "total",
+        "page",
+        "pageSize"
+      ]
+    },
+    "TaskLogInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "taskNodeId": {
+          "type": "string"
+        },
+        "logType": {
+          "type": "string"
+        },
+        "logContent": {
+          "type": "string"
+        },
+        "operatorId": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string"
+        }
+      },
+      "title": "TaskLogInfo",
+      "required": [
+        "id",
+        "taskId",
+        "taskNodeId",
+        "logType",
+        "logContent",
+        "operatorId",
+        "createTime"
+      ]
+    },
+    "TaskNodeInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "nodeDetail": {
+          "type": "string"
+        },
+        "nodeType": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "leaderId": {
+          "type": "string"
+        },
+        "executorId": {
+          "type": "string"
+        },
+        "nodeDeadline": {
+          "type": "string"
+        },
+        "estimatedHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "actualHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "prerequisiteNodes": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string"
+        },
+        "updateTime": {
+          "type": "string"
+        }
+      },
+      "title": "TaskNodeInfo",
+      "required": [
+        "id",
+        "taskId",
+        "nodeName",
+        "nodeDetail",
+        "nodeType",
+        "status",
+        "departmentId",
+        "leaderId",
+        "executorId",
+        "nodeDeadline",
+        "estimatedHours",
+        "actualHours",
+        "progress",
+        "prerequisiteNodes",
+        "createTime",
+        "updateTime"
+      ]
+    },
+    "TaskNodeListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "TaskNodeListRequest",
+      "required": [
+        "taskId"
+      ]
+    },
+    "UpdateCompanyRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "companyAttributes": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "companyBusiness": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "description": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateCompanyRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "UpdateDepartmentRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "departmentName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "departmentCode": {
+          "type": "string"
+        },
+        "managerId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateDepartmentRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "UpdateEmployeeRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "positionId": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "realName": {
+          "type": "string"
+        },
+        "workEmail": {
+          "type": "string"
+        },
+        "workPhone": {
+          "type": "string"
+        },
+        "skills": {
+          "type": "string"
+        },
+        "roleTags": {
+          "type": "string"
+        },
+        "hireDate": {
+          "type": "string"
+        },
+        "leaveDate": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateEmployeeRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "UpdatePositionRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "positionName": {
+          "type": "string"
+        },
+        "positionCode": {
+          "type": "string"
+        },
+        "positionLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "requiredSkills": {
+          "type": "string"
+        },
+        "jobDescription": {
+          "type": "string"
+        },
+        "responsibilities": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "string"
+        },
+        "salaryRangeMin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "salaryRangeMax": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isManagement": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxEmployees": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "UpdatePositionRequest",
+      "required": [
+        "id"
+      ]
+    },
+    "UpdateTaskNodeRequest": {
+      "type": "object",
+      "properties": {
+        "nodeId": {
+          "type": "string"
+        },
+        "nodeName": {
+          "type": "string",
+          "description": " 任务名称"
+        },
+        "nodeDetail": {
+          "type": "string",
+          "description": " 任务节点详情"
+        },
+        "executorId": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": " 执行人id"
+        },
+        "lastExecutorId": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": " 上一位执行人的id 如果这个不为空即为更换，为空则为新增"
+        },
+        "leaderId": {
+          "type": "string",
+          "description": " 更换节点状态人的状态"
+        },
+        "nodeStatus": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": " 节点状态"
+        },
+        "nodeDeadline": {
+          "type": "string",
+          "description": " 节点截至时间"
+        },
+        "nodeFinishTime": {
+          "type": "string",
+          "description": " 节点完成时间"
+        },
+        "prerequisiteNodes": {
+          "type": "string",
+          "description": " 前置条件"
+        },
+        "progress": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "任务节点进度"
+        }
+      },
+      "title": "UpdateTaskNodeRequest",
+      "required": [
+        "nodeId",
+        "progress"
+      ]
+    },
+    "UpdateTaskProgressRequest": {
+      "type": "object",
+      "properties": {
+        "taskNodeId": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "actualHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "progressNote": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateTaskProgressRequest",
+      "required": [
+        "taskNodeId",
+        "progress"
+      ]
+    },
+    "UpdateTaskRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "taskTitle": {
+          "type": "string"
+        },
+        "taskDescription": {
+          "type": "string"
+        },
+        "deadline": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "updateNote": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateTaskRequest",
+      "required": [
+        "taskId"
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "apiKey": {
+      "type": "apiKey",
+      "description": "Enter JWT Bearer token **_only_**",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

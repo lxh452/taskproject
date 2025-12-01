@@ -96,6 +96,7 @@ var BusinessErrorMessages = map[string]string{
 	// 任务相关错误
 	"task_not_found":      "任务不存在",
 	"task_node_not_found": "任务节点不存在",
+	"taskProgress":        "无权限更新此任务节点的进度",
 }
 
 // ResponseHelper 响应工具类

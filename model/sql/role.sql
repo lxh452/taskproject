@@ -23,10 +23,10 @@ CREATE TABLE `role` (
     -- 外键约束在init.sql中统一添加
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
 
--- 员工角色关联表
-CREATE TABLE `employee_role` (
+-- 职位角色关联表（职位通过角色获得权限，员工通过职位获得权限）
+CREATE TABLE `position_role` (
     `id` VARCHAR(32) NOT NULL COMMENT '关联id',
-    `employee_id` VARCHAR(32) NOT NULL COMMENT '员工id',
+    `position_id` VARCHAR(32) NOT NULL COMMENT '职位id',
     `role_id` VARCHAR(32) NOT NULL COMMENT '角色id',
     `grant_by` VARCHAR(32) COMMENT '授权人id',
     `grant_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '授权时间',
@@ -36,15 +36,15 @@ CREATE TABLE `employee_role` (
     `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_employee_role` (`employee_id`, `role_id`),
-    KEY `idx_employee_role_employee` (`employee_id`),
-    KEY `idx_employee_role_role` (`role_id`),
-    KEY `idx_employee_role_grant_by` (`grant_by`),
-    KEY `idx_employee_role_status` (`status`),
+    UNIQUE KEY `uk_position_role` (`position_id`, `role_id`),
+    KEY `idx_position_role_position` (`position_id`),
+    KEY `idx_position_role_role` (`role_id`),
+    KEY `idx_position_role_grant_by` (`grant_by`),
+    KEY `idx_position_role_status` (`status`),
     KEY `idx_grant_time` (`grant_time`)
     
     -- 外键约束在init.sql中统一添加
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工角色关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='职位角色关联表';
 
 -- 系统配置表
 CREATE TABLE `system_config` (

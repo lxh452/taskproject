@@ -44,6 +44,54 @@ type (
 	}
 )
 
+// 用户信息更新和文件上传相关类型
+type (
+	// 更新用户信息请求
+	UpdateInfoRequest {
+		UserId   string             `json:"userId,optional"` // 用户id
+		NickName string             `json:"nickname,optional"` // 昵称
+		Avatar   UploadInfoResponse `json:"avatar,optional"` // 头像URL
+		Bio      string             `json:"bio,optional"` // 个人简介
+		Address  string             `json:"address,optional"` // 地址
+	}
+	// 添加任务详情
+	UpdateTaskDetailRequest {
+		TaskId string               `json:"taskId"` // 任务对应的Id
+		File   []UploadInfoResponse `json:"file"` // 返回响应
+	}
+	// 创建任务评论，当评论图片或者文件的时候传一个文件id，后面需要加载的时候在下载下来
+	CreateTaskDetailComment {
+		EmployeeId       string   `json:"employeeId"` // 员工ID
+		Comment          string   `json:"comment"` // 评论内容
+		TaskId           string   `json:"taskId"` // 任务ID
+		TaskNodeID       string   `json:"taskNodeId"` // 任务节点ID
+		UserID           string   `json:"userId"` // 用户ID
+		TaskDetailFileId string   `json:"taskDetailFileId"` // 任务节点的详情上传的文件ID
+		FileID           []string `json:"fileId,optional"` // 返回响应的文件id
+		AtEmployeeId     []string `json:"atEmployeeId,optional"` // @的员工userid，用于消息通知
+	}
+	// 文件上传请求（统一上传接口，支持图片、PDF、Markdown等文件，需要做一个文件类型的区分查看这个文件或者图片是属于什么模块的，方便后续查询）
+	// 注意：此接口使用 multipart/form-data 格式，文件通过 form 表单上传
+	// 文件字段需要在 handler 中通过 http.Request.FormFile("file") 获取，不能通过结构体自动绑定
+	UploadInfoRequest {
+		Module      string `form:"module"` // 所属业务模块：task/employee/company/department/position/handover/notification/user等
+		FileType    string `form:"fileType,optional"` // 文件类型：image/pdf/markdown/document/excel/word等（如果前端不传，后端可从文件扩展名推断）
+		Category    string `form:"category,optional"` // 文件分类：avatar/document/attachment/cover/icon等
+		RelatedID   string `form:"relatedId,optional"` // 关联的业务ID（如任务ID、用户ID、公司ID等）
+		Description string `form:"description,optional"` // 文件描述或备注
+		Tags        string `form:"tags,optional"` // 文件标签，多个标签用逗号分隔
+	}
+	// 文件上传响应
+	UploadInfoResponse {
+		RelatedID string `json:"relatedId,optional"` // 根据对应id进行存储
+		FileID    string `json:"fileId"` // 文件存储ID
+		FileURL   string `json:"fileUrl"` // 文件访问URL
+		FileName  string `json:"fileName"` // 存储后的文件名
+		FileSize  int64  `json:"fileSize"` // 文件大小
+		FileType  string `json:"fileType"` // 文件类型
+	}
+)
+
 // 公司管理相关类型
 type (
 	// 创建公司请求
@@ -150,18 +198,19 @@ type (
 type (
 	// 创建职位请求
 	CreatePositionRequest {
-		DepartmentID     string `json:"departmentId"`
-		PositionName     string `json:"positionName"`
-		PositionCode     string `json:"positionCode"`
-		PositionLevel    int    `json:"positionLevel"`
-		RequiredSkills   string `json:"requiredSkills,optional"`
-		JobDescription   string `json:"jobDescription,optional"`
-		Responsibilities string `json:"responsibilities,optional"`
-		Requirements     string `json:"requirements,optional"`
-		SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
-		SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
-		IsManagement     int    `json:"isManagement,optional"`
-		MaxEmployees     int    `json:"maxEmployees,optional"`
+		DepartmentID     string   `json:"departmentId"`
+		PositionName     string   `json:"positionName"`
+		PositionCode     string   `json:"positionCode"`
+		PositionLevel    int      `json:"positionLevel"`
+		RequiredSkills   string   `json:"requiredSkills,optional"`
+		JobDescription   string   `json:"jobDescription,optional"`
+		Responsibilities string   `json:"responsibilities,optional"`
+		Requirements     string   `json:"requirements,optional"`
+		SalaryRangeMin   int      `json:"salaryRangeMin,optional"`
+		SalaryRangeMax   int      `json:"salaryRangeMax,optional"`
+		IsManagement     int      `json:"isManagement,optional"`
+		MaxEmployees     int      `json:"maxEmployees,optional"`
+		RoleIds          []string `json:"roleIds,optional"` // 角色ID列表，创建职位时同时绑定角色
 	}
 	// 更新职位请求
 	UpdatePositionRequest {
@@ -201,7 +250,7 @@ type (
 	// 职位列表请求
 	PositionListRequest {
 		PageReq
-		DepartmentID string `json:"departmentId"`
+		DepartmentID string `json:"departmentId,optional"`
 		Name         string `json:"name,optional"`
 	}
 	// 获取职位信息请求
@@ -276,6 +325,12 @@ type (
 		LeaveReason string `json:"leaveReason"`
 		LeaveDate   string `json:"leaveDate,optional"`
 	}
+	// 确认离职审批请求
+	ConfirmLeaveApprovalRequest {
+		ApprovalID string `json:"approvalId"`
+		Approved   bool   `json:"approved"`
+		Note       string `json:"note,optional"`
+	}
 	// 获取员工信息请求
 	GetEmployeeRequest {
 		EmployeeID string `json:"employeeId"`
@@ -290,16 +345,16 @@ type (
 type (
 	// 创建任务请求
 	CreateTaskRequest {
-		CompanyID              string `json:"companyId"`
-		TaskTitle              string `json:"taskTitle"`
-		TaskDetail             string `json:"taskDetail"`
-		TaskPriority           int    `json:"taskPriority"`
-		TaskType               int    `json:"taskType"`
-		ResponsibleEmployeeIDs string `json:"responsibleEmployeeIds,optional"`
-		NodeEmployeeIDs        string `json:"nodeEmployeeIds,optional"`
-		DepartmentIDs          string `json:"departmentIds,optional"`
-		TaskDeadline           string `json:"taskDeadline"`
-		AttachmentURL          string `json:"attachmentUrl,optional"`
+		CompanyID              string   `json:"companyId"`
+		TaskTitle              string   `json:"taskTitle"`
+		TaskDetail             string   `json:"taskDetail"`
+		TaskPriority           int      `json:"taskPriority"`
+		TaskType               int      `json:"taskType"`
+		ResponsibleEmployeeIDs []string `json:"responsibleEmployeeIds,optional"`
+		NodeEmployeeIDs        []string `json:"nodeEmployeeIds,optional"`
+		DepartmentIDs          []string `json:"departmentIds,optional"`
+		TaskDeadline           string   `json:"taskDeadline"`
+		AttachmentURL          []string `json:"attachmentUrl,optional"`
 	}
 	// 更新任务请求
 	UpdateTaskRequest {
@@ -421,22 +476,29 @@ type (
 		NodePriority  int64    `json:"nodeType"` // 该节点的优先级
 		DepartmentID  string   `json:"departmentId"` // 该节点的所属部门
 		LeaderID      string   `json:"leaderId"` // 该任务节点的负责人
-		ExecutorIDs   []string `json:"executorId,optional"` // 执行者们的id
-		EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间
+		ExecutorIDs   []string `json:"executorIds,optional"` // 执行者们的id
+		EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间（小时）
+		NodeStartTime string   `json:"nodeStartTime,optional"` // 节点开始时间
+		NodeDeadline  string   `json:"nodeDeadline,optional"` // 节点截止时间
 	}
 	// 更新任务节点请求
 	UpdateTaskNodeRequest {
 		NodeID            string   `json:"nodeId"`
 		NodeName          string   `json:"nodeName,optional"` // 任务名称
 		NodeDetail        string   `json:"nodeDetail,optional"` // 任务节点详情
-		ExecutorID        []string `json:"executorId,optional"` // 执行人id
+		ExecutorID        []string `json:"executorIds,optional"` // 执行人id
 		LastExecutorID    []string `json:"lastExecutorId,optional"` // 上一位执行人的id 如果这个不为空即为更换，为空则为新增
 		LeaderID          string   `json:"leaderId,optional"` // 更换节点状态人的状态
 		NodeStatus        []int    `json:"nodeStatus,optional"` // 节点状态
 		NodeDeadline      string   `json:"nodeDeadline,optional"` // 节点截至时间
 		NodeFinishTime    string   `json:"nodeFinishTime,optional"` // 节点完成时间
 		PrerequisiteNodes string   `json:"prerequisiteNodes,optional"` // 前置条件
-		progress          []int    `json:"progress"` //任务节点进度
+		Progress          []int    `json:"progress,optional"` //任务节点进度
+	}
+	// 更新前置节点请求（专门用于更新前置节点）
+	UpdatePrerequisiteNodesRequest {
+		NodeID            string `json:"nodeId"` // 任务节点ID
+		PrerequisiteNodes string `json:"prerequisiteNodes"` // 前置节点ID列表，逗号分隔，支持"start"
 	}
 	// 任务节点信息响应
 	TaskNodeInfo {
@@ -560,7 +622,7 @@ type (
 	// 通知列表请求
 	NotificationListRequest {
 		PageReq
-		EmployeeID string `json:"employeeId"`
+		EmployeeID string `json:"employeeId,optional"`
 		Category   int    `json:"category,optional"`
 		IsRead     int    `json:"isRead,optional"`
 	}
@@ -587,6 +649,97 @@ service taskprojectapi {
 	@doc "用户登出"
 	@handler Logout
 	post /logout returns (BaseResponse)
+}
+
+// ===== Role & PositionRole API =====
+type (
+	RoleInfo {
+		id          string `json:"id"`
+		companyId   string `json:"companyId"`
+		roleName    string `json:"roleName"`
+		roleCode    string `json:"roleCode"`
+		description string `json:"description"`
+		permissions string `json:"permissions"`
+		status      int    `json:"status"`
+		createTime  string `json:"createTime"`
+		updateTime  string `json:"updateTime"`
+	}
+	CreateRoleRequest {
+		companyId   string `json:"companyId"`
+		roleName    string `json:"roleName"`
+		roleCode    string `json:"roleCode"`
+		description string `json:"description,optional"`
+		permissions string `json:"permissions,optional"`
+	}
+	UpdateRoleRequest {
+		id          string `json:"id"`
+		roleName    string `json:"roleName,optional"`
+		roleCode    string `json:"roleCode,optional"`
+		description string `json:"description,optional"`
+		permissions string `json:"permissions,optional"`
+		status      int    `json:"status,optional"`
+	}
+	DeleteRoleRequest {
+		id string `json:"id"`
+	}
+	RoleListRequest {
+		PageReq
+		companyId string `json:"companyId,optional"`
+		keyword   string `json:"keyword,optional"`
+	}
+	AssignRoleRequest {
+		positionId string `json:"positionId"` // 职位ID（改为给职位分配角色）
+		roleId     string `json:"roleId"`
+		expireTime string `json:"expireTime,optional"`
+	}
+	RevokeRoleRequest {
+		positionId string `json:"positionId"` // 职位ID（改为从职位撤销角色）
+		roleId     string `json:"roleId"`
+	}
+	EmployeeRolesRequest {
+		employeeId string `json:"employeeId"` // 查询员工通过职位获得的角色
+	}
+	PositionRolesRequest {
+		positionId string `json:"positionId"` // 查询职位关联的角色
+	}
+)
+
+@server (
+	group:  role
+	prefix: /api/v1/role
+)
+service taskprojectapi {
+	@doc "创建角色"
+	@handler CreateRole
+	post /create (CreateRoleRequest) returns (BaseResponse)
+
+	@doc "更新角色"
+	@handler UpdateRole
+	put /update (UpdateRoleRequest) returns (BaseResponse)
+
+	@doc "删除角色"
+	@handler DeleteRole
+	post /delete (DeleteRoleRequest) returns (BaseResponse)
+
+	@doc "角色列表"
+	@handler RoleList
+	post /list (RoleListRequest) returns (BaseResponse)
+
+	@doc "员工赋予角色"
+	@handler AssignRole
+	post /assign (AssignRoleRequest) returns (BaseResponse)
+
+	@doc "员工撤销角色"
+	@handler RevokeRole
+	post /revoke (RevokeRoleRequest) returns (BaseResponse)
+
+	@doc "查询员工的角色列表"
+	@handler EmployeeRoles
+	post /employeeRoles (EmployeeRolesRequest) returns (BaseResponse)
+
+	@doc "查询职位的角色列表"
+	@handler PositionRoles
+	post /positionRoles (PositionRolesRequest) returns (BaseResponse)
 }
 
 @server (
@@ -688,6 +841,10 @@ service taskprojectapi {
 	@handler GetEmployee
 	post /get (GetEmployeeRequest) returns (BaseResponse)
 
+	@doc "获取当前登录员工信息"
+	@handler GetSelfEmployee
+	get /me returns (BaseResponse)
+
 	@doc "获取员工列表"
 	@handler GetEmployeeList
 	post /list (EmployeeListRequest) returns (BaseResponse)
@@ -695,6 +852,10 @@ service taskprojectapi {
 	@doc "员工离职"
 	@handler EmployeeLeave
 	post /leave (EmployeeLeaveRequest) returns (BaseResponse)
+
+	@doc "确认离职审批"
+	@handler ConfirmLeaveApproval
+	post /leave/approve (ConfirmLeaveApprovalRequest) returns (BaseResponse)
 }
 
 @server (
@@ -733,6 +894,14 @@ service taskprojectapi {
 	@doc "任务进度更新"
 	@handler UpdateTaskProgress
 	put /progress (UpdateTaskProgressRequest) returns (BaseResponse)
+
+	@doc "更新任务详情（添加文件）"
+	@handler UpdateTaskDetail
+	put /detail (UpdateTaskDetailRequest) returns (BaseResponse)
+
+	@doc "创建任务评论"
+	@handler CreateTaskDetailComment
+	post /comment (CreateTaskDetailComment) returns (BaseResponse)
 }
 
 @server (
@@ -747,6 +916,10 @@ service taskprojectapi {
 	@doc "更新任务节点"
 	@handler UpdateTaskNode
 	put /update (UpdateTaskNodeRequest) returns (BaseResponse)
+
+	@doc "更新前置节点（专门用于更新前置节点关系）"
+	@handler UpdatePrerequisiteNodes
+	put /update/prerequisites (UpdatePrerequisiteNodesRequest) returns (BaseResponse)
 
 	@doc "删除任务节点"
 	@handler DeleteTaskNode
@@ -811,5 +984,25 @@ service taskprojectapi {
 	@doc "标记通知为已读"
 	@handler MarkNotificationRead
 	put /read (MarkNotificationReadRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  user
+	prefix: /api/v1/user
+)
+service taskprojectapi {
+	@doc "更新用户信息"
+	@handler UpdateInfo
+	put /update (UpdateInfoRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  upload
+	prefix: /api/v1/upload
+)
+service taskprojectapi {
+	@doc "文件上传（支持图片、PDF、Markdown等文件）"
+	@handler UploadInfo
+	post /file (UploadInfoRequest) returns (BaseResponse)
 }
 

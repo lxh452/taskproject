@@ -6,16 +6,24 @@ package employee
 import (
 	"net/http"
 
-	"github.com/zeromicro/go-zero/rest/httpx"
 	"task_Project/task/internal/logic/employee"
 	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
+
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 // 获取员工信息
 func GetEmployeeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.GetEmployeeRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
 		l := employee.NewGetEmployeeLogic(r.Context(), svcCtx)
-		resp, err := l.GetEmployee()
+		resp, err := l.GetEmployee(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

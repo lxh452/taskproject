@@ -5,11 +5,14 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
 	"task_Project/task/internal/middleware"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 var Common = NewCommon()
@@ -220,11 +223,19 @@ func (c *common) MapToStructWithMapstructure(data map[string]interface{}, result
 	config := &mapstructure.DecoderConfig{
 		Metadata: nil,
 		Result:   result,
-		TagName:  "json", // 使用json标签
+		TagName:  "db", // 使用db标签匹配数据库模型
 		// 可以添加更多配置
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			// 字符串转时间
 			mapstructure.StringToTimeHookFunc(time.RFC3339),
+			mapstructure.StringToTimeHookFunc("2006-01-02 15:04:05"),
+			mapstructure.StringToTimeHookFunc("2006-01-02"),
+			// 处理sql.NullString
+			c.stringToSqlNullStringHook(),
+			// 处理sql.NullTime
+			c.stringToSqlNullTimeHook(),
+			// 处理int到int64的转换
+			c.stringToInt64Hook(),
 		),
 	}
 
@@ -234,6 +245,62 @@ func (c *common) MapToStructWithMapstructure(data map[string]interface{}, result
 	}
 
 	return decoder.Decode(data)
+}
+
+// stringToSqlNullStringHook 字符串转sql.NullString的钩子函数
+func (c *common) stringToSqlNullStringHook() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() == reflect.String && t == reflect.TypeOf(sql.NullString{}) {
+			str := data.(string)
+			if str == "" {
+				return sql.NullString{Valid: false}, nil
+			}
+			return sql.NullString{String: str, Valid: true}, nil
+		}
+		return data, nil
+	}
+}
+
+// stringToSqlNullTimeHook 字符串转sql.NullTime的钩子函数
+func (c *common) stringToSqlNullTimeHook() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() == reflect.String && t == reflect.TypeOf(sql.NullTime{}) {
+			str := data.(string)
+			if str == "" {
+				return sql.NullTime{Valid: false}, nil
+			}
+			// 尝试解析时间
+			timeFormats := []string{
+				"2006-01-02 15:04:05",
+				"2006-01-02",
+				time.RFC3339,
+			}
+			for _, format := range timeFormats {
+				if parsedTime, err := time.Parse(format, str); err == nil {
+					return sql.NullTime{Time: parsedTime, Valid: true}, nil
+				}
+			}
+			return sql.NullTime{Valid: false}, nil
+		}
+		return data, nil
+	}
+}
+
+// stringToInt64Hook 字符串转int64的钩子函数
+func (c *common) stringToInt64Hook() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() == reflect.String && t.Kind() == reflect.Int64 {
+			str := data.(string)
+			if str == "" {
+				return int64(0), nil
+			}
+			// 使用strconv.ParseInt解析
+			if val, err := strconv.ParseInt(str, 10, 64); err == nil {
+				return val, nil
+			}
+		}
+		return data, nil
+	}
 }
 
 func (c *common) GenId(name string) string {

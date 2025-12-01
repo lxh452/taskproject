@@ -66,6 +66,7 @@ func (c *converter) ToCompanyInfo(company *company.Company) types.CompanyInfo {
 		Address:     getStringValue(company.Address),
 		Description: getStringValue(company.Description),
 		Status:      int(company.Status),
+		Owner:       company.Owner,
 		CreateTime:  formatTime(&company.CreateTime),
 		UpdateTime:  formatTime(&company.UpdateTime),
 	}

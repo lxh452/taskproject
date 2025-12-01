@@ -3,9 +3,14 @@ Host: 0.0.0.0
 Port: 8888
 Mode: dev
 
+# 系统配置（用于拼接前端链接，例如邮件中的跳转地址）
+System:
+  # 这里建议填前端访问地址，后续你买域名后改成 https://your-domain.com 即可
+  BaseURL: "http://localhost:5173"
+
 # 数据库配置
 MySQL:
-  DataSource: "root:password@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local"
+  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local"
 
 # Redis配置
 Redis:
@@ -16,18 +21,23 @@ Redis:
 
 # JWT配置
 JWT:
-  SecretKey: "your-secret-key-here-change-in-production"
+  SecretKey: "A_terrible_and_irresponsible_Supervisor_yfzhou"
   ExpireTime: "24h"
   RefreshTime: "1h"
   Issuer: "task-project-api"
   Audience: "task-project-client"
 
 # 邮件配置
+# 注意：QQ 邮箱推荐使用 587 端口（STARTTLS），比 465 端口更稳定
+# 如果 587 端口仍有问题，请检查：
+# 1. QQ 邮箱是否已开启 SMTP 服务
+# 2. 授权码是否正确（不是邮箱密码）
+# 3. 网络连接和防火墙设置
 Email:
   Host: "smtp.qq.com"
-  Port: 587
-  Username: "your-email@qq.com"
-  Password: "your-email-password-or-auth-code"
+  Port: 587  # 改为 587 端口（STARTTLS），比 465 更稳定
+  Username: "1844554263@qq.com"
+  Password: "zzykyhnrubibdhif"
   From: "企业任务系统"
   UseTLS: true
 
@@ -46,3 +56,18 @@ RabbitMQ:
   URL: "amqp://guest:guest@localhost:5672/"
   Exchange: "task.exchange"
   Queue: "task.queue"
+
+  #加入mongodb
+Mongo:
+  Host: 0.0.0.0
+  Port: 27017
+  Database: task_project
+  Username: root
+  Password: "123456"
+  AuthSource: admin
+  Collection: task_project
+  Timeout: 10s
+  MaxIdleConns: 10
+  MaxOpenConns: 100
+  MaxConnLifetime: 10s
+  MaxConnIdleTime: 10s

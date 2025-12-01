@@ -6,16 +6,17 @@ package tasknode
 import (
 	"net/http"
 
-	"github.com/zeromicro/go-zero/rest/httpx"
 	"task_Project/task/internal/logic/tasknode"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
+
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 // 获取用户的任务节点信息
 func GetUserTaskNodeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.GetUserTaskNodeRequset
+		var req types.PageReq
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return

@@ -9,6 +9,12 @@ type ApproveHandoverRequest struct {
 	Comment    string `json:"comment,optional"`
 }
 
+type AssignRoleRequest struct {
+	PositionId string `json:"positionId"` // 职位ID（改为给职位分配角色）
+	RoleId     string `json:"roleId"`
+	ExpireTime string `json:"expireTime,optional"`
+}
+
 type AutoDispatchRequest struct {
 	TaskID string `json:"taskId"`
 }
@@ -47,6 +53,12 @@ type CompleteTaskRequest struct {
 
 type ConfirmHandoverRequest struct {
 	HandoverID string `json:"handoverId"`
+}
+
+type ConfirmLeaveApprovalRequest struct {
+	ApprovalID string `json:"approvalId"`
+	Approved   bool   `json:"approved"`
+	Note       string `json:"note,optional"`
 }
 
 type CreateCompanyRequest struct {
@@ -102,18 +114,38 @@ type CreateNotificationRequest struct {
 }
 
 type CreatePositionRequest struct {
-	DepartmentID     string `json:"departmentId"`
-	PositionName     string `json:"positionName"`
-	PositionCode     string `json:"positionCode"`
-	PositionLevel    int    `json:"positionLevel"`
-	RequiredSkills   string `json:"requiredSkills,optional"`
-	JobDescription   string `json:"jobDescription,optional"`
-	Responsibilities string `json:"responsibilities,optional"`
-	Requirements     string `json:"requirements,optional"`
-	SalaryRangeMin   int    `json:"salaryRangeMin,optional"`
-	SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
-	IsManagement     int    `json:"isManagement,optional"`
-	MaxEmployees     int    `json:"maxEmployees,optional"`
+	DepartmentID     string   `json:"departmentId"`
+	PositionName     string   `json:"positionName"`
+	PositionCode     string   `json:"positionCode"`
+	PositionLevel    int      `json:"positionLevel"`
+	RequiredSkills   string   `json:"requiredSkills,optional"`
+	JobDescription   string   `json:"jobDescription,optional"`
+	Responsibilities string   `json:"responsibilities,optional"`
+	Requirements     string   `json:"requirements,optional"`
+	SalaryRangeMin   int      `json:"salaryRangeMin,optional"`
+	SalaryRangeMax   int      `json:"salaryRangeMax,optional"`
+	IsManagement     int      `json:"isManagement,optional"`
+	MaxEmployees     int      `json:"maxEmployees,optional"`
+	RoleIds          []string `json:"roleIds,optional"` // 角色ID列表，创建职位时同时绑定角色
+}
+
+type CreateRoleRequest struct {
+	CompanyId   string `json:"companyId"`
+	RoleName    string `json:"roleName"`
+	RoleCode    string `json:"roleCode"`
+	Description string `json:"description,optional"`
+	Permissions string `json:"permissions,optional"`
+}
+
+type CreateTaskDetailComment struct {
+	EmployeeId       string   `json:"employeeId"`            // 员工ID
+	Comment          string   `json:"comment"`               // 评论内容
+	TaskId           string   `json:"taskId"`                // 任务ID
+	TaskNodeID       string   `json:"taskNodeId"`            // 任务节点ID
+	UserID           string   `json:"userId"`                // 用户ID
+	TaskDetailFileId string   `json:"taskDetailFileId"`      // 任务节点的详情上传的文件ID
+	FileID           []string `json:"fileId,optional"`       // 返回响应的文件id
+	AtEmployeeId     []string `json:"atEmployeeId,optional"` // @的员工userid，用于消息通知
 }
 
 type CreateTaskNodeRequest struct {
@@ -123,21 +155,23 @@ type CreateTaskNodeRequest struct {
 	NodePriority  int64    `json:"nodeType"`                // 该节点的优先级
 	DepartmentID  string   `json:"departmentId"`            // 该节点的所属部门
 	LeaderID      string   `json:"leaderId"`                // 该任务节点的负责人
-	ExecutorIDs   []string `json:"executorId,optional"`     // 执行者们的id
-	EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间
+	ExecutorIDs   []string `json:"executorIds,optional"`    // 执行者们的id
+	EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间（小时）
+	NodeStartTime string   `json:"nodeStartTime,optional"`  // 节点开始时间
+	NodeDeadline  string   `json:"nodeDeadline,optional"`   // 节点截止时间
 }
 
 type CreateTaskRequest struct {
-	CompanyID              string `json:"companyId"`
-	TaskTitle              string `json:"taskTitle"`
-	TaskDetail             string `json:"taskDetail"`
-	TaskPriority           int    `json:"taskPriority"`
-	TaskType               int    `json:"taskType"`
-	ResponsibleEmployeeIDs string `json:"responsibleEmployeeIds,optional"`
-	NodeEmployeeIDs        string `json:"nodeEmployeeIds,optional"`
-	DepartmentIDs          string `json:"departmentIds,optional"`
-	TaskDeadline           string `json:"taskDeadline"`
-	AttachmentURL          string `json:"attachmentUrl,optional"`
+	CompanyID              string   `json:"companyId"`
+	TaskTitle              string   `json:"taskTitle"`
+	TaskDetail             string   `json:"taskDetail"`
+	TaskPriority           int      `json:"taskPriority"`
+	TaskType               int      `json:"taskType"`
+	ResponsibleEmployeeIDs []string `json:"responsibleEmployeeIds,optional"`
+	NodeEmployeeIDs        []string `json:"nodeEmployeeIds,optional"`
+	DepartmentIDs          []string `json:"departmentIds,optional"`
+	TaskDeadline           string   `json:"taskDeadline"`
+	AttachmentURL          []string `json:"attachmentUrl,optional"`
 }
 
 type DeleteCompanyRequest struct {
@@ -154,6 +188,10 @@ type DeleteEmployeeRequest struct {
 
 type DeletePositionRequest struct {
 	PositionID string `json:"positionId"`
+}
+
+type DeleteRoleRequest struct {
+	Id string `json:"id"`
 }
 
 type DeleteTaskNodeRequest struct {
@@ -219,6 +257,10 @@ type EmployeeListRequest struct {
 	CompanyID    string `json:"companyId"`
 	DepartmentID string `json:"departmentId,optional"`
 	Name         string `json:"name,optional"`
+}
+
+type EmployeeRolesRequest struct {
+	EmployeeId string `json:"employeeId"` // 查询员工通过职位获得的角色
 }
 
 type GetCompanyRequest struct {
@@ -323,7 +365,7 @@ type NotificationInfo struct {
 
 type NotificationListRequest struct {
 	PageReq
-	EmployeeID string `json:"employeeId"`
+	EmployeeID string `json:"employeeId,optional"`
 	Category   int    `json:"category,optional"`
 	IsRead     int    `json:"isRead,optional"`
 }
@@ -360,8 +402,12 @@ type PositionInfo struct {
 
 type PositionListRequest struct {
 	PageReq
-	DepartmentID string `json:"departmentId"`
+	DepartmentID string `json:"departmentId,optional"`
 	Name         string `json:"name,optional"`
+}
+
+type PositionRolesRequest struct {
+	PositionId string `json:"positionId"` // 查询职位关联的角色
 }
 
 type RegisterRequest struct {
@@ -370,6 +416,29 @@ type RegisterRequest struct {
 	Email    string `json:"email,optional"`
 	Phone    string `json:"phone,optional"`
 	RealName string `json:"realName"`
+}
+
+type RevokeRoleRequest struct {
+	PositionId string `json:"positionId"` // 职位ID（改为从职位撤销角色）
+	RoleId     string `json:"roleId"`
+}
+
+type RoleInfo struct {
+	Id          string `json:"id"`
+	CompanyId   string `json:"companyId"`
+	RoleName    string `json:"roleName"`
+	RoleCode    string `json:"roleCode"`
+	Description string `json:"description"`
+	Permissions string `json:"permissions"`
+	Status      int    `json:"status"`
+	CreateTime  string `json:"createTime"`
+	UpdateTime  string `json:"updateTime"`
+}
+
+type RoleListRequest struct {
+	PageReq
+	CompanyId string `json:"companyId,optional"`
+	Keyword   string `json:"keyword,optional"`
 }
 
 type TaskDetailInfo struct {
@@ -488,6 +557,14 @@ type UpdateEmployeeRequest struct {
 	LeaveDate    string `json:"leaveDate,optional"`
 }
 
+type UpdateInfoRequest struct {
+	UserId   string             `json:"userId,optional"`   // 用户id
+	NickName string             `json:"nickname,optional"` // 昵称
+	Avatar   UploadInfoResponse `json:"avatar,optional"`   // 头像URL
+	Bio      string             `json:"bio,optional"`      // 个人简介
+	Address  string             `json:"address,optional"`  // 地址
+}
+
 type UpdatePositionRequest struct {
 	ID               string `json:"id"`
 	PositionName     string `json:"positionName,optional"`
@@ -503,18 +580,37 @@ type UpdatePositionRequest struct {
 	MaxEmployees     int    `json:"maxEmployees,optional"`
 }
 
+type UpdatePrerequisiteNodesRequest struct {
+	NodeID            string `json:"nodeId"`            // 任务节点ID
+	PrerequisiteNodes string `json:"prerequisiteNodes"` // 前置节点ID列表，逗号分隔，支持"start"
+}
+
+type UpdateRoleRequest struct {
+	Id          string `json:"id"`
+	RoleName    string `json:"roleName,optional"`
+	RoleCode    string `json:"roleCode,optional"`
+	Description string `json:"description,optional"`
+	Permissions string `json:"permissions,optional"`
+	Status      int    `json:"status,optional"`
+}
+
+type UpdateTaskDetailRequest struct {
+	TaskId string               `json:"taskId"` // 任务对应的Id
+	File   []UploadInfoResponse `json:"file"`   // 返回响应
+}
+
 type UpdateTaskNodeRequest struct {
 	NodeID            string   `json:"nodeId"`
 	NodeName          string   `json:"nodeName,optional"`          // 任务名称
 	NodeDetail        string   `json:"nodeDetail,optional"`        // 任务节点详情
-	ExecutorID        []string `json:"executorId,optional"`        // 执行人id
+	ExecutorID        []string `json:"executorIds,optional"`       // 执行人id
 	LastExecutorID    []string `json:"lastExecutorId,optional"`    // 上一位执行人的id 如果这个不为空即为更换，为空则为新增
 	LeaderID          string   `json:"leaderId,optional"`          // 更换节点状态人的状态
 	NodeStatus        []int    `json:"nodeStatus,optional"`        // 节点状态
 	NodeDeadline      string   `json:"nodeDeadline,optional"`      // 节点截至时间
 	NodeFinishTime    string   `json:"nodeFinishTime,optional"`    // 节点完成时间
 	PrerequisiteNodes string   `json:"prerequisiteNodes,optional"` // 前置条件
-	Progress          []int    `json:"progress"`                   //任务节点进度
+	Progress          []int    `json:"progress,optional"`          //任务节点进度
 }
 
 type UpdateTaskProgressRequest struct {
@@ -531,4 +627,22 @@ type UpdateTaskRequest struct {
 	Deadline        string `json:"deadline,optional"`
 	Status          int    `json:"status,optional"`
 	UpdateNote      string `json:"updateNote,optional"`
+}
+
+type UploadInfoRequest struct {
+	Module      string `form:"module"`               // 所属业务模块：task/employee/company/department/position/handover/notification/user等
+	FileType    string `form:"fileType,optional"`    // 文件类型：image/pdf/markdown/document/excel/word等（如果前端不传，后端可从文件扩展名推断）
+	Category    string `form:"category,optional"`    // 文件分类：avatar/document/attachment/cover/icon等
+	RelatedID   string `form:"relatedId,optional"`   // 关联的业务ID（如任务ID、用户ID、公司ID等）
+	Description string `form:"description,optional"` // 文件描述或备注
+	Tags        string `form:"tags,optional"`        // 文件标签，多个标签用逗号分隔
+}
+
+type UploadInfoResponse struct {
+	RelatedID string `json:"relatedId,optional"` // 根据对应id进行存储
+	FileID    string `json:"fileId"`             // 文件存储ID
+	FileURL   string `json:"fileUrl"`            // 文件访问URL
+	FileName  string `json:"fileName"`           // 存储后的文件名
+	FileSize  int64  `json:"fileSize"`           // 文件大小
+	FileType  string `json:"fileType"`           // 文件类型
 }

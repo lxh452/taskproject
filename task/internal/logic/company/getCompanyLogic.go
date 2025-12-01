@@ -5,7 +5,6 @@ package company
 
 import (
 	"context"
-
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -19,7 +18,7 @@ type GetCompanyLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// 获取公司信息
+// todo 获取用户登录的公司信息
 func NewGetCompanyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetCompanyLogic {
 	return &GetCompanyLogic{
 		Logger: logx.WithContext(ctx),
@@ -41,10 +40,8 @@ func (l *GetCompanyLogic) GetCompany(req *types.GetCompanyRequest) (resp *types.
 		logx.Errorf("查询公司失败: %v", err)
 		return utils.Response.ErrorWithKey("company_not_found"), nil
 	}
-
 	// 转换为响应格式
 	converter := utils.NewConverter()
 	companyInfo := converter.ToCompanyInfo(company)
-
 	return utils.Response.SuccessWithKey("company", companyInfo), nil
 }

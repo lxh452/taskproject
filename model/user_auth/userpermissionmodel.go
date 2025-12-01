@@ -1,6 +1,11 @@
 package user_auth
 
-import "github.com/zeromicro/go-zero/core/stores/sqlx"
+import (
+	"context"
+	"fmt"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+)
 
 var _ UserPermissionModel = (*customUserPermissionModel)(nil)
 
@@ -10,6 +15,7 @@ type (
 	UserPermissionModel interface {
 		userPermissionModel
 		withSession(session sqlx.Session) UserPermissionModel
+		DeleteByUserIdAndGrantType(ctx context.Context, userId string, grantType int64) error
 	}
 
 	customUserPermissionModel struct {
@@ -26,4 +32,11 @@ func NewUserPermissionModel(conn sqlx.SqlConn) UserPermissionModel {
 
 func (m *customUserPermissionModel) withSession(session sqlx.Session) UserPermissionModel {
 	return NewUserPermissionModel(sqlx.NewSqlConnFromSession(session))
+}
+
+// DeleteByUserIdAndGrantType 根据用户ID和授权类型删除权限
+func (m *customUserPermissionModel) DeleteByUserIdAndGrantType(ctx context.Context, userId string, grantType int64) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE `user_id` = ? AND `grant_type` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, userId, grantType)
+	return err
 }

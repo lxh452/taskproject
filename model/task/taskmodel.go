@@ -25,6 +25,8 @@ type (
 		FindByPriority(ctx context.Context, priority int) ([]*Task, error)
 		FindByType(ctx context.Context, taskType string) ([]*Task, error)
 		FindByPage(ctx context.Context, page, pageSize int) ([]*Task, int64, error)
+		// 用户参与的任务（创建者/负责人/节点执行人）
+		FindByInvolved(ctx context.Context, employeeID string, page, pageSize int) ([]*Task, int64, error)
 		SearchTasks(ctx context.Context, keyword string, page, pageSize int) ([]*Task, int64, error)
 		UpdateStatus(ctx context.Context, id string, status int) error
 		UpdateProgress(ctx context.Context, id string, progress int) error
@@ -81,7 +83,8 @@ func (m *customTaskModel) FindByDepartment(ctx context.Context, departmentID str
 	var total int64
 
 	// 查询总数
-	countQuery := `SELECT COUNT(*) FROM task WHERE department_id = ? AND delete_time IS NULL`
+	// 支持多部门存储（department_ids 为逗号分隔）
+	countQuery := `SELECT COUNT(*) FROM task WHERE FIND_IN_SET(?, department_ids) AND delete_time IS NULL`
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, departmentID)
 	if err != nil {
 		return nil, 0, err
@@ -89,9 +92,33 @@ func (m *customTaskModel) FindByDepartment(ctx context.Context, departmentID str
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	query := `SELECT * FROM task WHERE department_id = ? AND delete_time IS NULL ORDER BY create_time DESC LIMIT ? OFFSET ?`
+	query := `SELECT * FROM task WHERE FIND_IN_SET(?, department_ids) AND delete_time IS NULL ORDER BY create_time DESC LIMIT ? OFFSET ?`
 	err = m.conn.QueryRowsCtx(ctx, &tasks, query, departmentID, pageSize, offset)
 	return tasks, total, err
+}
+
+// FindByInvolved 根据员工是否参与（创建者/负责人/节点执行人）查找任务
+func (m *customTaskModel) FindByInvolved(ctx context.Context, employeeID string, page, pageSize int) ([]*Task, int64, error) {
+	var tasks []*Task
+	var total int64
+
+	// 统计总数
+	countQuery := `SELECT COUNT(*) FROM task 
+        WHERE (task_creator = ? OR FIND_IN_SET(?, responsible_employee_ids) OR FIND_IN_SET(?, node_employee_ids))
+        AND delete_time IS NULL`
+	if err := m.conn.QueryRowCtx(ctx, &total, countQuery, employeeID, employeeID, employeeID); err != nil {
+		return nil, 0, err
+	}
+
+	// 分页
+	offset := (page - 1) * pageSize
+	query := `SELECT * FROM task 
+        WHERE (task_creator = ? OR FIND_IN_SET(?, responsible_employee_ids) OR FIND_IN_SET(?, node_employee_ids))
+        AND delete_time IS NULL ORDER BY create_time DESC LIMIT ? OFFSET ?`
+	if err := m.conn.QueryRowsCtx(ctx, &tasks, query, employeeID, employeeID, employeeID, pageSize, offset); err != nil {
+		return nil, 0, err
+	}
+	return tasks, total, nil
 }
 
 // FindByCreator 根据创建者ID查找任务
