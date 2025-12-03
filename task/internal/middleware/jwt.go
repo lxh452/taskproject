@@ -14,19 +14,21 @@ import (
 
 // JWTConfig JWT配置
 type JWTConfig struct {
-	SecretKey     string        `json:"secretKey"`     // 密钥
-	ExpireTime    time.Duration `json:"expireTime"`    // 过期时间
-	RefreshTime   time.Duration `json:"refreshTime"`   // 刷新时间
-	Issuer        string        `json:"issuer"`        // 签发者
-	Audience      string        `json:"audience"`      // 受众
+	SecretKey   string        `json:"secretKey"`   // 密钥
+	ExpireTime  time.Duration `json:"expireTime"`  // 过期时间
+	RefreshTime time.Duration `json:"refreshTime"` // 刷新时间
+	Issuer      string        `json:"issuer"`      // 签发者
+	Audience    string        `json:"audience"`    // 受众
 }
 
 // Claims JWT声明
 type Claims struct {
-	UserID   string `json:"userId"`
-	Username string `json:"username"`
-	RealName string `json:"realName"`
-	Role     string `json:"role"`
+	UserID     string `json:"userId"`
+	Username   string `json:"username"`
+	RealName   string `json:"realName"`
+	Role       string `json:"role"`
+	EmployeeID string `json:"employeeId"` // 员工ID（如果已加入公司）
+	CompanyID  string `json:"companyId"`  // 公司ID（如果已加入公司）
 	jwt.RegisteredClaims
 }
 
@@ -44,12 +46,19 @@ func NewJWTMiddleware(config JWTConfig) *JWTMiddleware {
 
 // GenerateToken 生成JWT令牌
 func (j *JWTMiddleware) GenerateToken(userID, username, realName, role string) (string, error) {
+	return j.GenerateTokenWithEmployee(userID, username, realName, role, "", "")
+}
+
+// GenerateTokenWithEmployee 生成带员工信息的JWT令牌
+func (j *JWTMiddleware) GenerateTokenWithEmployee(userID, username, realName, role, employeeID, companyID string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		RealName: realName,
-		Role:     role,
+		UserID:     userID,
+		Username:   username,
+		RealName:   realName,
+		Role:       role,
+		EmployeeID: employeeID,
+		CompanyID:  companyID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.config.Issuer,
 			Audience:  []string{j.config.Audience},
@@ -97,8 +106,8 @@ func (j *JWTMiddleware) RefreshToken(tokenString string) (string, error) {
 		return "", errors.New("token not ready for refresh")
 	}
 
-	// 生成新令牌
-	return j.GenerateToken(claims.UserID, claims.Username, claims.RealName, claims.Role)
+	// 生成新令牌（包含员工信息）
+	return j.GenerateTokenWithEmployee(claims.UserID, claims.Username, claims.RealName, claims.Role, claims.EmployeeID, claims.CompanyID)
 }
 
 // ValidateToken 验证JWT令牌
@@ -151,6 +160,8 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		ctx = context.WithValue(ctx, "username", claims.Username)
 		ctx = context.WithValue(ctx, "realName", claims.RealName)
 		ctx = context.WithValue(ctx, "role", claims.Role)
+		ctx = context.WithValue(ctx, "employeeId", claims.EmployeeID)
+		ctx = context.WithValue(ctx, "companyId", claims.CompanyID)
 		ctx = context.WithValue(ctx, "claims", claims)
 
 		// 继续处理请求
@@ -188,13 +199,25 @@ func GetClaims(ctx context.Context) (*Claims, bool) {
 	return claims, ok
 }
 
+// GetEmployeeID 从上下文中获取员工ID
+func GetEmployeeID(ctx context.Context) (string, bool) {
+	employeeID, ok := ctx.Value("employeeId").(string)
+	return employeeID, ok
+}
+
+// GetCompanyID 从上下文中获取公司ID
+func GetCompanyID(ctx context.Context) (string, bool) {
+	companyID, ok := ctx.Value("companyId").(string)
+	return companyID, ok
+}
+
 // RequireRole 要求特定角色的中间件
 func (j *JWTMiddleware) RequireRole(requiredRole string) rest.Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			// 先执行JWT验证
 			j.Handle(next)(w, r)
-			
+
 			// 检查角色
 			role, ok := GetRole(r.Context())
 			if !ok || role != requiredRole {
@@ -212,7 +235,7 @@ func (j *JWTMiddleware) RequireAnyRole(requiredRoles ...string) rest.Middleware 
 		return func(w http.ResponseWriter, r *http.Request) {
 			// 先执行JWT验证
 			j.Handle(next)(w, r)
-			
+
 			// 检查角色
 			role, ok := GetRole(r.Context())
 			if !ok {

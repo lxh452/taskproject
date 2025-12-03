@@ -109,11 +109,31 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		return utils.Response.ValidationError("您没有审批此交接的权限，只有指定审批人或相关部门经理可以审批"), nil
 	}
 
-	// 6. 更新交接状态
+	// 6. 处理指定交接人（对于离职申请或ToEmployeeId为空的情况）
+	// 如果审批通过且指定了交接人，更新ToEmployeeId
+	if req.Approved == 1 && req.ToEmployeeID != "" {
+		// 验证指定的交接人是否存在
+		toEmployee, toErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ToEmployeeID)
+		if toErr != nil {
+			return utils.Response.ValidationError("指定的交接人不存在"), nil
+		}
+		if toEmployee.Status == 0 {
+			return utils.Response.ValidationError("指定的交接人已离职，无法交接"), nil
+		}
+		// 更新交接人
+		handover.ToEmployeeId = req.ToEmployeeID
+		l.Logger.Infof("审批时指定交接人: %s -> %s", handover.FromEmployeeId, req.ToEmployeeID)
+	}
+
+	// 7. 更新交接状态
 	var newStatus int64
 	var statusText string
 	var approvalType int64
 	if req.Approved == 1 {
+		// 如果ToEmployeeId仍然为空，不允许通过
+		if handover.ToEmployeeId == "" {
+			return utils.Response.ValidationError("审批通过前必须指定交接人"), nil
+		}
 		newStatus = 2 // 已通过
 		statusText = "已通过"
 		approvalType = 1 // 同意
@@ -121,6 +141,17 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		newStatus = 3 // 已拒绝
 		statusText = "已拒绝"
 		approvalType = 2 // 拒绝
+		// 如果拒绝时建议了交接人，记录在Comment中
+		if req.ToEmployeeID != "" {
+			suggestedEmployee, sugErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ToEmployeeID)
+			if sugErr == nil {
+				if req.Comment != "" {
+					req.Comment = fmt.Sprintf("%s（建议交接给：%s）", req.Comment, suggestedEmployee.RealName)
+				} else {
+					req.Comment = fmt.Sprintf("建议交接给：%s", suggestedEmployee.RealName)
+				}
+			}
+		}
 	}
 
 	// 更新状态和审批时间
@@ -132,7 +163,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		return nil, err
 	}
 
-	// 7. 插入审批记录到数据库
+	// 8. 插入审批记录到数据库
 	comment := req.Comment
 	if comment == "" && approvalType == 1 {
 		comment = "上级审批通过"
@@ -152,101 +183,201 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		l.Logger.Errorf("插入审批记录失败: %v", err)
 	}
 
-	// 8. 如果通过，更新任务和任务节点的相关人员
+	// 9. 如果通过，更新任务和任务节点的相关人员
 	if newStatus == 2 {
-		l.Logger.Infof("开始更新任务相关人员: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
+		if handover.TaskId != "" {
+			// 普通任务交接：更新指定任务的相关人员
+			l.Logger.Infof("开始更新任务相关人员: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
 
-		// 8.1 更新任务的负责人
-		taskInfo, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
-		if taskErr == nil {
-			needUpdateTask := false
+			// 9.1 更新任务的负责人
+			taskInfo, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
+			if taskErr == nil {
+				needUpdateTask := false
 
-			// 检查并更新任务创建者
-			if taskInfo.TaskCreator == handover.FromEmployeeId {
-				taskInfo.TaskCreator = handover.ToEmployeeId
-				needUpdateTask = true
-				l.Logger.Infof("更新任务创建者: %s -> %s", handover.FromEmployeeId, handover.ToEmployeeId)
-			}
-
-			// 检查并更新任务负责人列表
-			if taskInfo.ResponsibleEmployeeIds.Valid && taskInfo.ResponsibleEmployeeIds.String != "" {
-				oldIds := taskInfo.ResponsibleEmployeeIds.String
-				newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
-				if oldIds != newIds {
-					taskInfo.ResponsibleEmployeeIds = sql.NullString{String: newIds, Valid: true}
+				// 检查并更新任务创建者
+				if taskInfo.TaskCreator == handover.FromEmployeeId {
+					taskInfo.TaskCreator = handover.ToEmployeeId
 					needUpdateTask = true
-					l.Logger.Infof("更新任务负责人: %s -> %s", oldIds, newIds)
-				}
-			}
-
-			// 检查并更新任务节点员工列表
-			if taskInfo.NodeEmployeeIds.Valid && taskInfo.NodeEmployeeIds.String != "" {
-				oldIds := taskInfo.NodeEmployeeIds.String
-				newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
-				if oldIds != newIds {
-					taskInfo.NodeEmployeeIds = sql.NullString{String: newIds, Valid: true}
-					needUpdateTask = true
-					l.Logger.Infof("更新任务节点员工: %s -> %s", oldIds, newIds)
-				}
-			}
-
-			if needUpdateTask {
-				taskInfo.UpdateTime = time.Now()
-				if updateErr := l.svcCtx.TaskModel.Update(l.ctx, taskInfo); updateErr != nil {
-					l.Logger.Errorf("更新任务信息失败: %v", updateErr)
-				} else {
-					l.Logger.Infof("任务信息更新成功")
-				}
-			}
-		}
-
-		// 8.2 更新任务节点的执行人和负责人
-		nodes, nodeErr := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, handover.TaskId)
-		if nodeErr != nil {
-			l.Logger.Errorf("获取任务节点失败: %v", nodeErr)
-		} else {
-			for _, node := range nodes {
-				needUpdateNode := false
-
-				// 更新执行人
-				if node.ExecutorId == handover.FromEmployeeId {
-					node.ExecutorId = handover.ToEmployeeId
-					needUpdateNode = true
-					l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					l.Logger.Infof("更新任务创建者: %s -> %s", handover.FromEmployeeId, handover.ToEmployeeId)
 				}
 
-				// 更新负责人
-				if node.LeaderId == handover.FromEmployeeId {
-					node.LeaderId = handover.ToEmployeeId
-					needUpdateNode = true
-					l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+				// 检查并更新任务负责人列表
+				if taskInfo.ResponsibleEmployeeIds.Valid && taskInfo.ResponsibleEmployeeIds.String != "" {
+					oldIds := taskInfo.ResponsibleEmployeeIds.String
+					newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
+					if oldIds != newIds {
+						taskInfo.ResponsibleEmployeeIds = sql.NullString{String: newIds, Valid: true}
+						needUpdateTask = true
+						l.Logger.Infof("更新任务负责人: %s -> %s", oldIds, newIds)
+					}
 				}
 
-				if needUpdateNode {
-					node.UpdateTime = time.Now()
-					if updateErr := l.svcCtx.TaskNodeModel.Update(l.ctx, node); updateErr != nil {
-						l.Logger.Errorf("更新任务节点失败: %v", updateErr)
+				// 检查并更新任务节点员工列表
+				if taskInfo.NodeEmployeeIds.Valid && taskInfo.NodeEmployeeIds.String != "" {
+					oldIds := taskInfo.NodeEmployeeIds.String
+					newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
+					if oldIds != newIds {
+						taskInfo.NodeEmployeeIds = sql.NullString{String: newIds, Valid: true}
+						needUpdateTask = true
+						l.Logger.Infof("更新任务节点员工: %s -> %s", oldIds, newIds)
+					}
+				}
+
+				if needUpdateTask {
+					taskInfo.UpdateTime = time.Now()
+					if updateErr := l.svcCtx.TaskModel.Update(l.ctx, taskInfo); updateErr != nil {
+						l.Logger.Errorf("更新任务信息失败: %v", updateErr)
+					} else {
+						l.Logger.Infof("任务信息更新成功")
 					}
 				}
 			}
+
+			// 9.2 更新任务节点的执行人和负责人
+			nodes, nodeErr := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, handover.TaskId)
+			if nodeErr != nil {
+				l.Logger.Errorf("获取任务节点失败: %v", nodeErr)
+			} else {
+				for _, node := range nodes {
+					needUpdateNode := false
+
+					// 更新执行人
+					if node.ExecutorId == handover.FromEmployeeId {
+						node.ExecutorId = handover.ToEmployeeId
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					}
+
+					// 更新负责人
+					if node.LeaderId == handover.FromEmployeeId {
+						node.LeaderId = handover.ToEmployeeId
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					}
+
+					if needUpdateNode {
+						node.UpdateTime = time.Now()
+						if updateErr := l.svcCtx.TaskNodeModel.Update(l.ctx, node); updateErr != nil {
+							l.Logger.Errorf("更新任务节点失败: %v", updateErr)
+						}
+					}
+				}
+			}
+
+			l.Logger.Infof("任务相关人员更新完成")
+		} else {
+			// 离职申请：处理离职员工的所有任务节点交接
+			l.Logger.Infof("开始处理离职员工任务交接: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
+
+			// 9.3 查找离职员工负责的所有任务节点（作为执行人和负责人）
+			executorNodes, _, executorErr := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, handover.FromEmployeeId, 1, 1000)
+			leaderNodes, _, leaderErr := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, handover.FromEmployeeId, 1, 1000)
+
+			// 合并节点列表（去重）
+			nodeMap := make(map[string]*taskModel.TaskNode)
+			if executorErr == nil {
+				for _, node := range executorNodes {
+					nodeMap[node.TaskNodeId] = node
+				}
+			}
+			if leaderErr == nil {
+				for _, node := range leaderNodes {
+					nodeMap[node.TaskNodeId] = node
+				}
+			}
+
+			if len(nodeMap) > 0 {
+				updatedCount := 0
+				for _, node := range nodeMap {
+					needUpdateNode := false
+
+					// 更新执行人（支持多执行人，使用字符串替换）
+					if node.ExecutorId != "" && strings.Contains(node.ExecutorId, handover.FromEmployeeId) {
+						// 处理多执行人的情况
+						executorIds := strings.Split(node.ExecutorId, ",")
+						newExecutorIds := make([]string, 0, len(executorIds))
+						for _, id := range executorIds {
+							if strings.TrimSpace(id) != handover.FromEmployeeId {
+								newExecutorIds = append(newExecutorIds, strings.TrimSpace(id))
+							}
+						}
+						// 添加新的交接人
+						newExecutorIds = append(newExecutorIds, handover.ToEmployeeId)
+						node.ExecutorId = strings.Join(newExecutorIds, ",")
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, handover.ToEmployeeId)
+					} else if node.ExecutorId == handover.FromEmployeeId {
+						// 单执行人情况
+						node.ExecutorId = handover.ToEmployeeId
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					}
+
+					// 更新负责人（支持多负责人）
+					if node.LeaderId != "" && strings.Contains(node.LeaderId, handover.FromEmployeeId) {
+						// 处理多负责人的情况
+						leaderIds := strings.Split(node.LeaderId, ",")
+						newLeaderIds := make([]string, 0, len(leaderIds))
+						for _, id := range leaderIds {
+							if strings.TrimSpace(id) != handover.FromEmployeeId {
+								newLeaderIds = append(newLeaderIds, strings.TrimSpace(id))
+							}
+						}
+						// 添加新的交接人
+						newLeaderIds = append(newLeaderIds, handover.ToEmployeeId)
+						node.LeaderId = strings.Join(newLeaderIds, ",")
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, handover.ToEmployeeId)
+					} else if node.LeaderId == handover.FromEmployeeId {
+						// 单负责人情况
+						node.LeaderId = handover.ToEmployeeId
+						needUpdateNode = true
+						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					}
+
+					if needUpdateNode {
+						node.UpdateTime = time.Now()
+						if updateErr := l.svcCtx.TaskNodeModel.Update(l.ctx, node); updateErr != nil {
+							l.Logger.Errorf("更新任务节点失败: %v", updateErr)
+						} else {
+							updatedCount++
+						}
+					}
+				}
+				l.Logger.Infof("离职员工任务节点交接完成，共更新 %d 个节点", updatedCount)
+			} else {
+				l.Logger.Infof("离职员工没有需要交接的任务节点")
+			}
+
+			// 9.4 更新员工状态为离职
+			updateData := map[string]interface{}{
+				"status":     0, // 离职
+				"leave_date": time.Now(),
+			}
+			err = l.svcCtx.EmployeeModel.SelectiveUpdate(l.ctx, handover.FromEmployeeId, updateData)
+			if err != nil {
+				l.Logger.Errorf("更新员工离职状态失败: %v", err)
+			} else {
+				l.Logger.Infof("员工 %s 状态已更新为离职", handover.FromEmployeeId)
+			}
 		}
-
-		l.Logger.Infof("任务相关人员更新完成")
 	}
 
-	// 9. 创建任务日志
-	taskLog := &taskModel.TaskLog{
-		LogId:   utils.Common.GenerateID(),
-		TaskId:  handover.TaskId,
-		LogType: 6, // 交接审批
-		LogContent: fmt.Sprintf("上级审批交接: %s -> %s, 审批结果: %s, 审批人: %s",
-			handover.FromEmployeeId, handover.ToEmployeeId, statusText, approverName),
-		EmployeeId: currentEmployeeID,
-		CreateTime: time.Now(),
-	}
-	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
-	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+	// 10. 创建任务日志（离职申请可能没有任务，需要判断）
+	if handover.TaskId != "" {
+		taskLog := &taskModel.TaskLog{
+			LogId:   utils.Common.GenerateID(),
+			TaskId:  handover.TaskId,
+			LogType: 6, // 交接审批
+			LogContent: fmt.Sprintf("上级审批交接: %s -> %s, 审批结果: %s, 审批人: %s",
+				handover.FromEmployeeId, handover.ToEmployeeId, statusText, approverName),
+			EmployeeId: currentEmployeeID,
+			CreateTime: time.Now(),
+		}
+		_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+		if err != nil {
+			l.Logger.Errorf("创建任务日志失败: %v", err)
+		}
 	}
 
 	// 10. 发送通知给发起人和接收人

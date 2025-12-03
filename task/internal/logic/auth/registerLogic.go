@@ -111,15 +111,16 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 
 	// 创建用户
 	userInfo := &user.User{
-		Id:           userID,
-		Username:     req.Username,
-		PasswordHash: string(hashedPassword),
-		Email:        utils.Common.ToSqlNullString(req.Email),
-		Phone:        utils.Common.ToSqlNullString(req.Phone),
-		RealName:     utils.Common.ToSqlNullString(req.RealName),
-		Status:       1, // 正常状态
-		CreateTime:   time.Now(),
-		UpdateTime:   time.Now(),
+		Id:               userID,
+		Username:         req.Username,
+		PasswordHash:     string(hashedPassword),
+		Email:            utils.Common.ToSqlNullString(req.Email),
+		Phone:            utils.Common.ToSqlNullString(req.Phone),
+		RealName:         utils.Common.ToSqlNullString(req.RealName),
+		Status:           1, // 正常状态
+		HasJoinedCompany: 0, // 未加入公司
+		CreateTime:       time.Now(),
+		UpdateTime:       time.Now(),
 	}
 
 	// 使用事务创建用户

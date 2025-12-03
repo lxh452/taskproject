@@ -41,12 +41,18 @@ type (
 		GetTaskNodeCountByTask(ctx context.Context, taskID string) (int64, error)
 		GetTaskNodeCountByDepartment(ctx context.Context, departmentID string) (int64, error)
 		GetTaskNodeCountByExecutor(ctx context.Context, executorID string) (int64, error)
+		GetTaskNodeCountByLeader(ctx context.Context, leaderID string) (int64, error)
+		GetTaskNodeCountByEmployee(ctx context.Context, employeeID string) (int64, error) // 统计员工参与的所有任务节点（去重）
 		// FindOneSafe 单条查询（对 ex_node_ids 做 COALESCE 防止 NULL 扫描错误）
 		FindOneSafe(ctx context.Context, taskNodeID string) (*TaskNode, error)
 		// UpdateExNodeIds 单独更新前置节点集合
 		UpdateExNodeIds(ctx context.Context, taskNodeID string, exNodeIds string) error
 		// InsertTask
 		InsertTask(ctx context.Context, data *TaskNode) (sql.Result, error)
+		// UpdateChecklistCount 更新任务节点的清单统计数
+		UpdateChecklistCount(ctx context.Context, taskNodeId string, totalCount, completedCount int64) error
+		// GetCompletedNodeCountByTask 获取任务下已完成的节点数
+		GetCompletedNodeCountByTask(ctx context.Context, taskID string) (int64, error)
 	}
 
 	customTaskNodeModel struct {
@@ -380,6 +386,27 @@ func (m *customTaskNodeModel) GetTaskNodeCountByExecutor(ctx context.Context, ex
 	return count, err
 }
 
+// GetTaskNodeCountByLeader 根据负责人获取任务节点数量
+func (m *customTaskNodeModel) GetTaskNodeCountByLeader(ctx context.Context, leaderID string) (int64, error) {
+	var count int64
+	// 支持多负责人
+	query := `SELECT COUNT(*) FROM task_node WHERE FIND_IN_SET(?, leader_id) AND delete_time IS NULL`
+	err := m.conn.QueryRowCtx(ctx, &count, query, leaderID)
+	return count, err
+}
+
+// GetTaskNodeCountByEmployee 统计员工参与的所有任务节点数量（去重）
+// 包括作为执行人和负责人的任务节点，但每个任务节点只计算一次
+func (m *customTaskNodeModel) GetTaskNodeCountByEmployee(ctx context.Context, employeeID string) (int64, error) {
+	var count int64
+	// 使用 DISTINCT 去重，统计该员工作为执行人或负责人的所有任务节点
+	query := `SELECT COUNT(DISTINCT task_node_id) FROM task_node 
+		WHERE (FIND_IN_SET(?, executor_id) OR FIND_IN_SET(?, leader_id)) 
+		AND delete_time IS NULL`
+	err := m.conn.QueryRowCtx(ctx, &count, query, employeeID, employeeID)
+	return count, err
+}
+
 // UpdateExNodeIds 单独更新前置节点集合
 func (m *customTaskNodeModel) UpdateExNodeIds(ctx context.Context, taskNodeID string, exNodeIds string) error {
 	query := `UPDATE task_node SET ex_node_ids = ?, update_time = NOW() WHERE task_node_id = ? AND delete_time IS NULL`
@@ -417,4 +444,20 @@ func (m *customTaskNodeModel) InsertTask(ctx context.Context, data *TaskNode) (s
 		data.DeleteTime,     // 17
 	)
 	return ret, err
+}
+
+// UpdateChecklistCount 更新任务节点的清单统计数
+// 注意：需要先在数据库中添加 total_checklist_count 和 completed_checklist_count 字段
+func (m *customTaskNodeModel) UpdateChecklistCount(ctx context.Context, taskNodeId string, totalCount, completedCount int64) error {
+	query := `UPDATE task_node SET total_checklist_count = ?, completed_checklist_count = ?, update_time = NOW() WHERE task_node_id = ? AND delete_time IS NULL`
+	_, err := m.conn.ExecCtx(ctx, query, totalCount, completedCount, taskNodeId)
+	return err
+}
+
+// GetCompletedNodeCountByTask 获取任务下已完成的节点数
+func (m *customTaskNodeModel) GetCompletedNodeCountByTask(ctx context.Context, taskID string) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM task_node WHERE task_id = ? AND node_status = 2 AND delete_time IS NULL`
+	err := m.conn.QueryRowCtx(ctx, &count, query, taskID)
+	return count, err
 }

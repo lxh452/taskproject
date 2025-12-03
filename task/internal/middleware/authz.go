@@ -41,7 +41,8 @@ func NewAuthzMiddleware(deps AuthzDeps) *AuthzMiddleware {
 		"POST /api/v1/handover/approve": PermHandoverApprove,
 		"POST /api/v1/handover/reject":  PermHandoverReject,
 		// company
-		"POST /api/v1/company/create": PermCompanyCreate,
+		// 注意：company/create 不需要权限校验，允许新注册用户创建公司
+		// "POST /api/v1/company/create": PermCompanyCreate,
 		"PUT /api/v1/company/update":  PermCompanyUpdate,
 		"POST /api/v1/company/delete": PermCompanyDelete,
 		// department
@@ -63,6 +64,8 @@ func NewAuthzMiddleware(deps AuthzDeps) *AuthzMiddleware {
 		"PUT /api/v1/employee/update":  PermEmployeeUpdate,
 		"POST /api/v1/employee/delete": PermEmployeeDelete,
 		"POST /api/v1/employee/leave":  PermEmployeeLeave,
+		// 注意：employee/join 不需要权限校验，允许新注册用户加入公司
+		// "POST /api/v1/employee/join": PermEmployeeCreate,
 		// notification
 		"POST /api/v1/notification/create": PermNotificationCreate,
 		"POST /api/v1/notification/delete": PermNotificationDelete,
@@ -78,7 +81,10 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		path := r.URL.Path
-		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" {
+		// 白名单：这些路径不需要员工记录即可访问
+		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" ||
+			path == "/api/v1/company/create" || path == "/api/v1/employee/join" ||
+			path == "/api/v1/company/list" || path == "/api/v1/department/list" || path == "/api/v1/position/list" {
 			next(w, r)
 			return
 		}

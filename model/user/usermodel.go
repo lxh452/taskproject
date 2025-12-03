@@ -30,6 +30,7 @@ type (
 		UpdatePassword(ctx context.Context, id, passwordHash string) error
 		UpdateProfile(ctx context.Context, id, realName, avatar string, gender int, birthday string) error
 		UpdateStatus(ctx context.Context, id string, status int) error
+		UpdateHasJoinedCompany(ctx context.Context, id string, hasJoined bool) error
 		SoftDelete(ctx context.Context, id string) error
 		BatchUpdateStatus(ctx context.Context, ids []string, status int) error
 		GetUserCount(ctx context.Context) (int64, error)
@@ -226,4 +227,15 @@ func (m *customUserModel) GetUserCountByStatus(ctx context.Context, status int) 
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, query, status)
 	return count, err
+}
+
+// UpdateHasJoinedCompany 更新用户是否已加入公司
+func (m *customUserModel) UpdateHasJoinedCompany(ctx context.Context, id string, hasJoined bool) error {
+	value := 0
+	if hasJoined {
+		value = 1
+	}
+	query := fmt.Sprintf("UPDATE %s SET `has_joined_company` = ?, `update_time` = NOW() WHERE `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, value, id)
+	return err
 }

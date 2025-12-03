@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -56,9 +57,9 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 		l.Logger.Errorf("查询通知失败: %v", err)
 		return nil, err
 	}
-
+	fmt.Println("notification:", notification, employee.Id)
 	// 5. 验证权限：只能标记自己的通知为已读
-	if notification.EmployeeId != employee.EmployeeId {
+	if notification.EmployeeId != employee.Id {
 		return utils.Response.BusinessError("无权操作其他员工的通知"), nil
 	}
 

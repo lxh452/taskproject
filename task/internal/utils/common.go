@@ -42,9 +42,17 @@ func (c *common) GetCurrentRealName(ctx context.Context) (string, bool) {
 
 // GetCurrentUserRole 获取当前用户角色
 func (c *common) GetCurrentUserRole(ctx context.Context) (string, bool) {
-	// 这里需要根据实际的middleware实现来获取用户角色
-	// 暂时返回空字符串和false
-	return "", false
+	return middleware.GetRole(ctx)
+}
+
+// GetCurrentEmployeeID 获取当前员工ID
+func (c *common) GetCurrentEmployeeID(ctx context.Context) (string, bool) {
+	return middleware.GetEmployeeID(ctx)
+}
+
+// GetCurrentCompanyID 获取当前公司ID
+func (c *common) GetCurrentCompanyID(ctx context.Context) (string, bool) {
+	return middleware.GetCompanyID(ctx)
 }
 
 // GenerateID 生成ID

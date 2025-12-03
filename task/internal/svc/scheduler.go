@@ -536,7 +536,7 @@ func (s *SchedulerService) notifyLeftEmployee(ctx context.Context, employee *use
 			Category:    "task",
 			Priority:    2, // 中优先级
 			RelatedID:   node.TaskNodeId,
-			RelatedType: "task_node",
+			RelatedType: "task",
 		}
 		if err := s.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
 			logx.Errorf("发布通知事件失败: %v", err)

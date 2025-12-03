@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"task_Project/model/task"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -56,11 +57,20 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 		return nil, err
 	}
 
-	// 5. 获取任务信息
-	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
-	if err != nil {
-		l.Logger.Errorf("获取任务信息失败: %v", err)
-		return utils.Response.ValidationError("任务不存在"), nil
+	// 5. 获取任务信息（离职申请的taskId可能为空）
+	var taskInfo *task.Task
+	taskTitle := ""
+	if handover.TaskId != "" {
+		task, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
+		if err != nil {
+			l.Logger.Errorf("获取任务信息失败: %v", err)
+			return utils.Response.ValidationError("任务不存在"), nil
+		}
+		taskInfo = task
+		taskTitle = task.TaskTitle
+	} else {
+		// 离职申请没有关联任务
+		taskTitle = "离职审批"
 	}
 
 	// 6. 验证用户权限（发起人、接收人、审批人或任务创建者可以查看）
@@ -72,8 +82,12 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 
 	if handover.FromEmployeeId == currentEmployeeID ||
 		handover.ToEmployeeId == currentEmployeeID ||
-		approverId == currentEmployeeID ||
-		taskInfo.TaskCreator == currentEmployeeID {
+		approverId == currentEmployeeID {
+		hasPermission = true
+	}
+
+	// 如果有任务，检查是否是任务创建者
+	if taskInfo != nil && taskInfo.TaskCreator == currentEmployeeID {
 		hasPermission = true
 	}
 
@@ -91,8 +105,12 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 
 	// 7. 获取发起人和接收人信息
 	fromEmployeeName := ""
+	fromEmployeePositionId := ""
 	if fromEmp, fromErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.FromEmployeeId); fromErr == nil {
 		fromEmployeeName = fromEmp.RealName
+		if fromEmp.PositionId.Valid {
+			fromEmployeePositionId = fromEmp.PositionId.String
+		}
 	}
 
 	toEmployeeName := ""
@@ -120,22 +138,27 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 	// 9. 转换为响应格式
 	converter := utils.NewConverter()
 	handoverDetail := map[string]interface{}{
-		"handoverId":       handover.HandoverId,
-		"taskId":           handover.TaskId,
-		"taskTitle":        taskInfo.TaskTitle,
-		"fromEmployeeId":   handover.FromEmployeeId,
-		"fromEmployeeName": fromEmployeeName,
-		"toEmployeeId":     handover.ToEmployeeId,
-		"toEmployeeName":   toEmployeeName,
-		"approverId":       approverId,
-		"approverName":     approverName,
-		"handoverType":     handover.HandoverType,
-		"handoverStatus":   handover.HandoverStatus,
-		"handoverReason":   handoverReason,
-		"handoverNote":     handoverNote,
-		"createTime":       handover.CreateTime.Format("2006-01-02 15:04:05"),
-		"updateTime":       handover.UpdateTime.Format("2006-01-02 15:04:05"),
-		"task":             converter.ToTaskInfo(taskInfo),
+		"handoverId":            handover.HandoverId,
+		"taskId":                handover.TaskId,
+		"taskTitle":             taskTitle,
+		"fromEmployeeId":        handover.FromEmployeeId,
+		"fromEmployeeName":      fromEmployeeName,
+		"fromEmployeePositionId": fromEmployeePositionId,
+		"toEmployeeId":          handover.ToEmployeeId,
+		"toEmployeeName":        toEmployeeName,
+		"approverId":            approverId,
+		"approverName":          approverName,
+		"handoverType":          handover.HandoverType,
+		"handoverStatus":        handover.HandoverStatus,
+		"handoverReason":        handoverReason,
+		"handoverNote":          handoverNote,
+		"createTime":            handover.CreateTime.Format("2006-01-02 15:04:05"),
+		"updateTime":            handover.UpdateTime.Format("2006-01-02 15:04:05"),
+	}
+
+	// 如果有任务信息，添加到响应中
+	if taskInfo != nil {
+		handoverDetail["task"] = converter.ToTaskInfo(taskInfo)
 	}
 
 	if handover.ApproveTime.Valid {

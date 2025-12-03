@@ -40,23 +40,24 @@ type (
 	}
 
 	User struct {
-		Id               string         `db:"id"`                 // 用户id
-		Username         string         `db:"username"`           // 用户名
-		PasswordHash     string         `db:"password_hash"`      // 密码哈希
-		Email            sql.NullString `db:"email"`              // 邮箱
-		Phone            sql.NullString `db:"phone"`              // 手机号
-		Avatar           sql.NullString `db:"avatar"`             // 头像URL
-		RealName         sql.NullString `db:"real_name"`          // 真实姓名
-		Gender           sql.NullInt64  `db:"gender"`             // 性别 0-未知 1-男 2-女
-		Birthday         sql.NullTime   `db:"birthday"`           // 生日
-		Status           int64          `db:"status"`             // 状态 0-禁用 1-正常 2-锁定
-		LastLoginTime    sql.NullTime   `db:"last_login_time"`    // 最后登录时间
-		LastLoginIp      sql.NullString `db:"last_login_ip"`      // 最后登录IP
-		LoginFailedCount int64          `db:"login_failed_count"` // 登录失败次数
-		LockedUntil      sql.NullTime   `db:"locked_until"`       // 锁定到期时间
-		CreateTime       time.Time      `db:"create_time"`        // 创建时间
-		UpdateTime       time.Time      `db:"update_time"`        // 更新时间
-		DeleteTime       sql.NullTime   `db:"delete_time"`        // 删除时间
+		Id               string         `db:"id"`                  // 用户id
+		Username         string         `db:"username"`            // 用户名
+		PasswordHash     string         `db:"password_hash"`       // 密码哈希
+		Email            sql.NullString `db:"email"`               // 邮箱
+		Phone            sql.NullString `db:"phone"`               // 手机号
+		Avatar           sql.NullString `db:"avatar"`              // 头像URL
+		RealName         sql.NullString `db:"real_name"`           // 真实姓名
+		Gender           sql.NullInt64  `db:"gender"`              // 性别 0-未知 1-男 2-女
+		Birthday         sql.NullTime   `db:"birthday"`            // 生日
+		Status           int64          `db:"status"`              // 状态 0-禁用 1-正常 2-锁定
+		HasJoinedCompany int64          `db:"has_joined_company"`  // 是否已加入公司 0-否 1-是
+		LastLoginTime    sql.NullTime   `db:"last_login_time"`     // 最后登录时间
+		LastLoginIp      sql.NullString `db:"last_login_ip"`       // 最后登录IP
+		LoginFailedCount int64          `db:"login_failed_count"`  // 登录失败次数
+		LockedUntil      sql.NullTime   `db:"locked_until"`        // 锁定到期时间
+		CreateTime       time.Time      `db:"create_time"`         // 创建时间
+		UpdateTime       time.Time      `db:"update_time"`         // 更新时间
+		DeleteTime       sql.NullTime   `db:"delete_time"`         // 删除时间
 	}
 )
 
@@ -130,14 +131,14 @@ func (m *defaultUserModel) FindOneByUsername(ctx context.Context, username strin
 }
 
 func (m *defaultUserModel) Insert(ctx context.Context, data *User) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, userRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.Username, data.PasswordHash, data.Email, data.Phone, data.Avatar, data.RealName, data.Gender, data.Birthday, data.Status, data.LastLoginTime, data.LastLoginIp, data.LoginFailedCount, data.LockedUntil, data.DeleteTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, userRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.Username, data.PasswordHash, data.Email, data.Phone, data.Avatar, data.RealName, data.Gender, data.Birthday, data.Status, data.HasJoinedCompany, data.LastLoginTime, data.LastLoginIp, data.LoginFailedCount, data.LockedUntil, data.DeleteTime)
 	return ret, err
 }
 
 func (m *defaultUserModel) Update(ctx context.Context, newData *User) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, userRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Username, newData.PasswordHash, newData.Email, newData.Phone, newData.Avatar, newData.RealName, newData.Gender, newData.Birthday, newData.Status, newData.LastLoginTime, newData.LastLoginIp, newData.LoginFailedCount, newData.LockedUntil, newData.DeleteTime, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Username, newData.PasswordHash, newData.Email, newData.Phone, newData.Avatar, newData.RealName, newData.Gender, newData.Birthday, newData.Status, newData.HasJoinedCompany, newData.LastLoginTime, newData.LastLoginIp, newData.LoginFailedCount, newData.LockedUntil, newData.DeleteTime, newData.Id)
 	return err
 }
 

@@ -40,6 +40,8 @@ type (
 		GetTaskCountByCompany(ctx context.Context, companyID string) (int64, error)
 		GetTaskCountByDepartment(ctx context.Context, departmentID string) (int64, error)
 		GetTaskCountByCreator(ctx context.Context, creatorID string) (int64, error)
+		// UpdateNodeCount 更新任务的节点统计数
+		UpdateNodeCount(ctx context.Context, taskId string, totalCount, completedCount int64) error
 	}
 
 	customTaskModel struct {
@@ -304,4 +306,12 @@ func (m *customTaskModel) GetTaskCountByCreator(ctx context.Context, creatorID s
 	query := `SELECT COUNT(*) FROM task WHERE creator_id = ? AND delete_time IS NULL`
 	err := m.conn.QueryRowCtx(ctx, &count, query, creatorID)
 	return count, err
+}
+
+// UpdateNodeCount 更新任务的节点统计数
+// 注意：需要先在数据库中添加 total_node_count 和 completed_node_count 字段
+func (m *customTaskModel) UpdateNodeCount(ctx context.Context, taskId string, totalCount, completedCount int64) error {
+	query := `UPDATE task SET total_node_count = ?, completed_node_count = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
+	_, err := m.conn.ExecCtx(ctx, query, totalCount, completedCount, taskId)
+	return err
 }

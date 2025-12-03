@@ -317,6 +317,7 @@ type (
 		PageReq
 		CompanyID    string `json:"companyId"`
 		DepartmentID string `json:"departmentId,optional"`
+		PositionID   string `json:"positionId,optional"`
 		Name         string `json:"name,optional"`
 	}
 	// 员工离职请求
@@ -330,6 +331,12 @@ type (
 		ApprovalID string `json:"approvalId"`
 		Approved   bool   `json:"approved"`
 		Note       string `json:"note,optional"`
+	}
+	// 加入公司请求
+	JoinCompanyRequest {
+		CompanyID    string `json:"companyId"`
+		DepartmentID string `json:"departmentId,optional"` // 可选，不填则加入默认部门
+		PositionID   string `json:"positionId,optional"`   // 可选，不填则使用默认职位
 	}
 	// 获取员工信息请求
 	GetEmployeeRequest {
@@ -466,6 +473,80 @@ type (
 	}
 )
 
+// 任务清单相关类型
+type (
+	// 创建任务清单请求
+	CreateChecklistRequest {
+		TaskNodeID string `json:"taskNodeId"` // 任务节点ID
+		Content    string `json:"content"` // 清单内容
+		SortOrder  int64  `json:"sortOrder,optional"` // 排序顺序
+	}
+	// 更新任务清单请求
+	UpdateChecklistRequest {
+		ChecklistID string `json:"checklistId"` // 清单ID
+		Content     string `json:"content,optional"` // 清单内容
+		IsCompleted int64  `json:"isCompleted,optional"` // 是否已完成：0-未完成，1-已完成
+		SortOrder   int64  `json:"sortOrder,optional"` // 排序顺序
+	}
+	// 删除任务清单请求
+	DeleteChecklistRequest {
+		ChecklistID string `json:"checklistId"` // 清单ID
+	}
+	// 获取任务清单请求
+	GetChecklistRequest {
+		ChecklistID string `json:"checklistId"` // 清单ID
+	}
+	// 获取任务节点下的所有清单请求
+	GetChecklistListRequest {
+		PageReq
+		TaskNodeID string `json:"taskNodeId"` // 任务节点ID
+	}
+	// 批量完成清单请求
+	BatchCompleteChecklistRequest {
+		ChecklistIDs []string `json:"checklistIds"` // 清单ID列表
+		IsCompleted  int64    `json:"isCompleted"` // 是否已完成：0-未完成，1-已完成
+	}
+	// 任务清单信息响应
+	ChecklistInfo {
+		ID           string `json:"id"`
+		TaskNodeID   string `json:"taskNodeId"`
+		CreatorID    string `json:"creatorId"`
+		CreatorName  string `json:"creatorName,optional"`
+		Content      string `json:"content"`
+		IsCompleted  int64  `json:"isCompleted"`
+		CompleteTime string `json:"completeTime,optional"`
+		SortOrder    int64  `json:"sortOrder"`
+		CreateTime   string `json:"createTime"`
+		UpdateTime   string `json:"updateTime"`
+	}
+	// 任务节点清单统计
+	ChecklistStats {
+		TaskNodeID     string `json:"taskNodeId"`
+		TotalCount     int64  `json:"totalCount"`
+		CompletedCount int64  `json:"completedCount"`
+		Progress       int64  `json:"progress"` // 百分比进度 0-100
+	}
+	// 获取我的清单请求
+	GetMyChecklistRequest {
+		PageReq
+		IsCompleted int64 `json:"isCompleted,optional"` // 筛选完成状态：-1或不传-全部，0-未完成，1-已完成
+	}
+	// 我的清单项（包含任务和节点信息）
+	MyChecklistItem {
+		ID           string `json:"id"`
+		TaskNodeID   string `json:"taskNodeId"`
+		TaskNodeName string `json:"taskNodeName"`
+		TaskID       string `json:"taskId"`
+		TaskTitle    string `json:"taskTitle"`
+		Content      string `json:"content"`
+		IsCompleted  int64  `json:"isCompleted"`
+		CompleteTime string `json:"completeTime,optional"`
+		SortOrder    int64  `json:"sortOrder"`
+		CreateTime   string `json:"createTime"`
+		UpdateTime   string `json:"updateTime"`
+	}
+)
+
 // 任务节点相关类型
 type (
 	// 创建任务节点请求
@@ -549,9 +630,10 @@ type (
 	}
 	// 审批交接请求
 	ApproveHandoverRequest {
-		HandoverID string `json:"handoverId"`
-		Approved   int    `json:"approved"`
-		Comment    string `json:"comment,optional"`
+		HandoverID   string `json:"handoverId"`
+		Approved     int    `json:"approved"`
+		Comment      string `json:"comment,optional"`
+		ToEmployeeID string `json:"toEmployeeId,optional"` // 指定交接人（审批时可选）
 	}
 	// 交接信息响应
 	HandoverInfo {
@@ -856,6 +938,10 @@ service taskprojectapi {
 	@doc "确认离职审批"
 	@handler ConfirmLeaveApproval
 	post /leave/approve (ConfirmLeaveApprovalRequest) returns (BaseResponse)
+
+	@doc "加入公司"
+	@handler JoinCompany
+	post /join (JoinCompanyRequest) returns (BaseResponse)
 }
 
 @server (
@@ -936,6 +1022,40 @@ service taskprojectapi {
 	@doc "获取任务节点列表"
 	@handler GetTaskNodeList
 	post /list (TaskNodeListRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  checklist
+	prefix: /api/v1/checklist
+)
+service taskprojectapi {
+	@doc "创建任务清单"
+	@handler CreateChecklist
+	post /create (CreateChecklistRequest) returns (BaseResponse)
+
+	@doc "更新任务清单"
+	@handler UpdateChecklist
+	put /update (UpdateChecklistRequest) returns (BaseResponse)
+
+	@doc "删除任务清单"
+	@handler DeleteChecklist
+	post /delete (DeleteChecklistRequest) returns (BaseResponse)
+
+	@doc "获取任务清单信息"
+	@handler GetChecklist
+	post /get (GetChecklistRequest) returns (BaseResponse)
+
+	@doc "获取任务节点下的所有清单"
+	@handler GetChecklistList
+	post /list (GetChecklistListRequest) returns (BaseResponse)
+
+	@doc "批量完成/取消完成清单"
+	@handler BatchCompleteChecklist
+	post /batch/complete (BatchCompleteChecklistRequest) returns (BaseResponse)
+
+	@doc "获取我的清单列表"
+	@handler GetMyChecklist
+	post /my (GetMyChecklistRequest) returns (BaseResponse)
 }
 
 @server (

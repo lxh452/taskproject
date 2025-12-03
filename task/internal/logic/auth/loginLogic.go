@@ -81,8 +81,18 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		return utils.Response.BusinessError("login_failed"), nil
 	}
 
-	// 登录成功，生成JWT令牌
-	token, err := l.svcCtx.JWTMiddleware.GenerateToken(userInfo.Id, userInfo.Username, userInfo.RealName.String, "user")
+	// 如果用户已加入公司，查询员工ID
+	var employeeID, companyID string
+	if userInfo.HasJoinedCompany == 1 {
+		employee, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userInfo.Id)
+		if err == nil && employee != nil {
+			employeeID = employee.Id
+			companyID = employee.CompanyId
+		}
+	}
+
+	// 登录成功，生成JWT令牌（包含员工信息）
+	token, err := l.svcCtx.JWTMiddleware.GenerateTokenWithEmployee(userInfo.Id, userInfo.Username, userInfo.RealName.String, "user", employeeID, companyID)
 	if err != nil {
 		logx.Errorf("生成JWT令牌失败: %v", err)
 		return utils.Response.InternalError("生成JWT令牌失败"), nil
@@ -108,10 +118,11 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 
 	// 返回登录响应
 	loginResp := types.LoginResponse{
-		Token:    token,
-		UserID:   userInfo.Id,
-		Username: userInfo.Username,
-		RealName: userInfo.RealName.String,
+		Token:            token,
+		UserID:           userInfo.Id,
+		Username:         userInfo.Username,
+		RealName:         userInfo.RealName.String,
+		HasJoinedCompany: userInfo.HasJoinedCompany == 1,
 	}
 
 	return utils.Response.SuccessWithKey("login", loginResp), nil

@@ -159,6 +159,12 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 		return utils.Response.InternalError("创建员工失败"), nil
 	}
 
+	// 更新用户的加入公司状态
+	if updateErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, req.UserID, true); updateErr != nil {
+		logx.Errorf("更新用户加入公司状态失败: %v", updateErr)
+		// 不影响主流程，继续执行
+	}
+
 	// 发送入职通知邮件（通过消息队列）
 	go func() {
 		ctx := context.Background()

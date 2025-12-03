@@ -4,9 +4,10 @@
 package types
 
 type ApproveHandoverRequest struct {
-	HandoverID string `json:"handoverId"`
-	Approved   int    `json:"approved"`
-	Comment    string `json:"comment,optional"`
+	HandoverID   string `json:"handoverId"`
+	Approved     int    `json:"approved"`
+	Comment      string `json:"comment,optional"`
+	ToEmployeeID string `json:"toEmployeeId,optional"` // 指定交接人（审批时可选）
 }
 
 type AssignRoleRequest struct {
@@ -59,6 +60,12 @@ type ConfirmLeaveApprovalRequest struct {
 	ApprovalID string `json:"approvalId"`
 	Approved   bool   `json:"approved"`
 	Note       string `json:"note,optional"`
+}
+
+type JoinCompanyRequest struct {
+	CompanyID    string `json:"companyId"`
+	DepartmentID string `json:"departmentId,optional"`
+	PositionID   string `json:"positionId,optional"`
 }
 
 type CreateCompanyRequest struct {
@@ -256,6 +263,7 @@ type EmployeeListRequest struct {
 	PageReq
 	CompanyID    string `json:"companyId"`
 	DepartmentID string `json:"departmentId,optional"`
+	PositionID   string `json:"positionId,optional"`
 	Name         string `json:"name,optional"`
 }
 
@@ -332,10 +340,11 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token    string `json:"token"`
-	UserID   string `json:"userId"`
-	Username string `json:"username"`
-	RealName string `json:"realName"`
+	Token            string `json:"token"`
+	UserID           string `json:"userId"`
+	Username         string `json:"username"`
+	RealName         string `json:"realName"`
+	HasJoinedCompany bool   `json:"hasJoinedCompany"`
 }
 
 type MarkNotificationReadRequest struct {
@@ -645,4 +654,77 @@ type UploadInfoResponse struct {
 	FileName  string `json:"fileName"`           // 存储后的文件名
 	FileSize  int64  `json:"fileSize"`           // 文件大小
 	FileType  string `json:"fileType"`           // 文件类型
+}
+
+// 任务清单相关类型
+type CreateChecklistRequest struct {
+	TaskNodeID string `json:"taskNodeId"`          // 任务节点ID
+	Content    string `json:"content"`             // 清单内容
+	SortOrder  int64  `json:"sortOrder,optional"`  // 排序顺序
+}
+
+type UpdateChecklistRequest struct {
+	ChecklistID string `json:"checklistId"`          // 清单ID
+	Content     string `json:"content,optional"`     // 清单内容
+	IsCompleted int64  `json:"isCompleted,optional"` // 是否已完成：0-未完成，1-已完成
+	SortOrder   int64  `json:"sortOrder,optional"`   // 排序顺序
+}
+
+type DeleteChecklistRequest struct {
+	ChecklistID string `json:"checklistId"` // 清单ID
+}
+
+type GetChecklistRequest struct {
+	ChecklistID string `json:"checklistId"` // 清单ID
+}
+
+type GetChecklistListRequest struct {
+	PageReq
+	TaskNodeID string `json:"taskNodeId"` // 任务节点ID
+}
+
+type BatchCompleteChecklistRequest struct {
+	ChecklistIDs []string `json:"checklistIds"` // 清单ID列表
+	IsCompleted  int64    `json:"isCompleted"`  // 是否已完成：0-未完成，1-已完成
+}
+
+type ChecklistInfo struct {
+	ID           string `json:"id"`
+	TaskNodeID   string `json:"taskNodeId"`
+	CreatorID    string `json:"creatorId"`
+	CreatorName  string `json:"creatorName,optional"`
+	Content      string `json:"content"`
+	IsCompleted  int64  `json:"isCompleted"`
+	CompleteTime string `json:"completeTime,optional"`
+	SortOrder    int64  `json:"sortOrder"`
+	CreateTime   string `json:"createTime"`
+	UpdateTime   string `json:"updateTime"`
+}
+
+type ChecklistStats struct {
+	TaskNodeID     string `json:"taskNodeId"`
+	TotalCount     int64  `json:"totalCount"`
+	CompletedCount int64  `json:"completedCount"`
+	Progress       int64  `json:"progress"` // 百分比进度 0-100
+}
+
+// 获取我的清单请求
+type GetMyChecklistRequest struct {
+	PageReq
+	IsCompleted int64 `json:"isCompleted,optional"` // 筛选完成状态：-1或不传-全部，0-未完成，1-已完成
+}
+
+// 我的清单项（包含任务和节点信息）
+type MyChecklistItem struct {
+	ID           string `json:"id"`
+	TaskNodeID   string `json:"taskNodeId"`
+	TaskNodeName string `json:"taskNodeName"`
+	TaskID       string `json:"taskId"`
+	TaskTitle    string `json:"taskTitle"`
+	Content      string `json:"content"`
+	IsCompleted  int64  `json:"isCompleted"`
+	CompleteTime string `json:"completeTime,optional"`
+	SortOrder    int64  `json:"sortOrder"`
+	CreateTime   string `json:"createTime"`
+	UpdateTime   string `json:"updateTime"`
 }

@@ -135,7 +135,7 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 			Type:        1,
 			Priority:    req.TaskType,
 			RelatedID:   taskID,
-			RelatedType: "任务节点创建",
+			RelatedType: "task",
 		}
 		_, err = notificationLogic.CreateNotification(&note)
 

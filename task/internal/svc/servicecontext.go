@@ -49,6 +49,7 @@ type ServiceContext struct {
 	TaskLogModel          task.TaskLogModel
 	TaskHandoverModel     task.TaskHandoverModel
 	HandoverApprovalModel task.HandoverApprovalModel
+	TaskChecklistModel    task.TaskChecklistModel
 
 	// 通知相关模型
 	NotificationModel user_auth.NotificationModel
@@ -140,6 +141,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	taskLogModel := task.NewTaskLogModel(conn)
 	taskHandoverModel := task.NewTaskHandoverModel(conn)
 	handoverApprovalModel := task.NewHandoverApprovalModel(conn)
+	taskChecklistModel := task.NewTaskChecklistModel(conn)
 
 	// 初始化 RabbitMQ
 	var mqClient *MQClient
@@ -206,6 +208,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		TaskLogModel:          taskLogModel,
 		TaskHandoverModel:     taskHandoverModel,
 		HandoverApprovalModel: handoverApprovalModel,
+		TaskChecklistModel:    taskChecklistModel,
 
 		// 通知相关模型
 		NotificationModel: user_auth.NewNotificationModel(conn),

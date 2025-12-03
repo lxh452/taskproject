@@ -70,10 +70,15 @@ func (l *GetHandoverListLogic) GetHandoverList(req *types.HandoverListRequest) (
 	// 6. 转换为响应格式，包含更多详细信息
 	var handoverInfos []interface{}
 	for _, handover := range filteredHandovers {
-		// 获取任务信息
+		// 获取任务信息（离职申请的TaskId为空，不需要查询任务）
 		taskTitle := ""
-		if task, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId); taskErr == nil {
-			taskTitle = task.TaskTitle
+		if handover.TaskId != "" {
+			if task, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId); taskErr == nil {
+				taskTitle = task.TaskTitle
+			}
+		} else {
+			// 离职申请没有关联任务
+			taskTitle = "离职审批"
 		}
 
 		// 获取发起人姓名

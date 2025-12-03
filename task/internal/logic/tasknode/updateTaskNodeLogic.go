@@ -202,7 +202,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 				Category:    "handover",
 				Priority:    2,
 				RelatedID:   req.NodeID,
-				RelatedType: "tasknode",
+				RelatedType: "task",
 			}
 			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, event); err != nil {
 				l.Logger.Errorf("发布通知事件失败: %v", err)

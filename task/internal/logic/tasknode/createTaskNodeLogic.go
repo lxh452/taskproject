@@ -130,6 +130,22 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 		return nil, err
 	}
 
+	// 更新任务的总节点数
+	totalNodeCount, err := l.svcCtx.TaskNodeModel.GetTaskNodeCountByTask(l.ctx, req.TaskID)
+	if err != nil {
+		l.Logger.Errorf("获取任务节点总数失败：%v", err)
+	} else {
+		completedNodeCount, err := l.svcCtx.TaskNodeModel.GetCompletedNodeCountByTask(l.ctx, req.TaskID)
+		if err != nil {
+			l.Logger.Errorf("获取已完成节点数失败：%v", err)
+			completedNodeCount = 0
+		}
+		err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, req.TaskID, totalNodeCount, completedNodeCount)
+		if err != nil {
+			l.Logger.Errorf("更新任务节点统计失败：%v", err)
+		}
+	}
+
 	// 发送通知给执行人（异步处理，不阻塞主进程）
 	l.Logger.Infof("========== 通知发送检查 ==========")
 	l.Logger.Infof("req.ExecutorIDs = %v, 长度 = %d", req.ExecutorIDs, len(req.ExecutorIDs))
@@ -149,7 +165,7 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 			Type:        1, // 任务类型
 			Priority:    int(req.NodePriority),
 			RelatedID:   nodeID,
-			RelatedType: "任务节点分配",
+			RelatedType: "task",
 		})
 
 		// 发布邮件事件（如果邮件服务可用）

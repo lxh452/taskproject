@@ -205,8 +205,8 @@ func (v *validator) ValidatePageParams(page, pageSize int) (int, int, []string) 
 		pageSize = 10
 	}
 
-	if pageSize > 100 {
-		pageSize = 100
+	if pageSize > 1000 {
+		pageSize = 1000
 		errors = append(errors, "每页大小不能超过100")
 	}
 
