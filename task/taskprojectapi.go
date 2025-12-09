@@ -39,6 +39,9 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
+	// 环境变量覆盖配置（用于 Railway / Render / Fly.io 等云平台部署）
+	c.ApplyEnvOverrides()
+
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
 
