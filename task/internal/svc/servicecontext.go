@@ -4,6 +4,7 @@
 package svc
 
 import (
+	"context"
 	"fmt"
 	"task_Project/model/company"
 	"task_Project/model/role"
@@ -84,6 +85,9 @@ type ServiceContext struct {
 
 	// 文件存储服务
 	FileStorageService *FileStorageService
+
+	// SQL执行服务
+	SQLExecutorService *SQLExecutorService
 
 	Scheduler *SchedulerService
 }
@@ -279,6 +283,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 		// 文件存储服务
 		FileStorageService: fileStorageService,
+
+		// SQL执行服务
+		SQLExecutorService: NewSQLExecutorService(conn, "./model/sql"),
+	}
+
+	// 启动时自动执行数据库迁移
+	logx.Info("[ServiceContext] 开始自动执行数据库迁移...")
+	if err := s.SQLExecutorService.AutoMigrate(context.Background()); err != nil {
+		logx.Errorf("[ServiceContext] 数据库迁移失败: %v", err)
+	} else {
+		logx.Info("[ServiceContext] 数据库迁移完成")
 	}
 	s.Scheduler = NewSchedulerService(s)
 
