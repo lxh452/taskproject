@@ -15,6 +15,7 @@ import (
 	"task_Project/task/internal/middleware"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -25,6 +26,9 @@ type ServiceContext struct {
 	JWTMiddleware   *middleware.JWTMiddleware
 	EmailMiddleware *middleware.EmailMiddleware
 	SMSMiddleware   *middleware.SMSMiddleware
+
+	// Redis 客户端（用于Token存储和验证）
+	RedisClient *redis.Redis
 
 	// 事务服务
 	TransactionService *TransactionService
@@ -57,11 +61,17 @@ type ServiceContext struct {
 	// 权限相关模型
 	UserPermissionModel user_auth.UserPermissionModel
 
+	// 加入公司相关
+	JoinApplicationModel user.JoinApplicationModel
+	InviteCodeService    *InviteCodeService
+
 	// MongoDB 相关模型
-	MongoURL               string                        // MongoDB 连接 URL
-	MongoDB                string                        // MongoDB 数据库名
-	UploadFileModel        upload.Upload_fileModel       // 文件上传模型
-	TaskProjectDetailModel task.Task_project_detailModel // 任务详情模型
+	MongoURL               string                         // MongoDB 连接 URL
+	MongoDB                string                         // MongoDB 数据库名
+	UploadFileModel        upload.Upload_fileModel        // 文件上传模型
+	TaskProjectDetailModel task.Task_project_detailModel  // 任务详情模型
+	TaskCommentModel       task.Task_commentModel         // 任务评论模型(MongoDB)
+	AttachmentCommentModel upload.Attachment_commentModel // 附件评论标注模型(MongoDB)
 
 	// RabbitMQ 相关
 	MQClient              *MQClient              // RabbitMQ 客户端
@@ -71,6 +81,9 @@ type ServiceContext struct {
 	// 邮件模板和服务
 	EmailTemplateService *EmailTemplateService // 邮件模板服务
 	EmailService         *EmailService         // 邮件服务
+
+	// 文件存储服务
+	FileStorageService *FileStorageService
 
 	Scheduler *SchedulerService
 }
@@ -105,6 +118,16 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Endpoint:   c.SMS.Endpoint,
 		Region:     c.SMS.Region,
 	})
+
+	// 初始化 Redis 客户端
+	redisAddr := fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port)
+	redisClient := redis.MustNewRedis(redis.RedisConf{
+		Host: redisAddr,
+		Pass: c.Redis.Password,
+		Type: "node",
+	})
+	logx.Infof("[ServiceContext] Redis client initialized: addr=%s", redisAddr)
+
 	// 构建 MongoDB 连接 URL
 	// 格式: mongodb://[username:password@]host[:port]/[database][?authSource=admin]
 	mongoURL := fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
@@ -119,6 +142,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 初始化 MongoDB model
 	uploadFileModel := upload.NewUpload_fileModel(mongoURL, c.Mongo.Database, "file_upload")
 	taskProjectDetailModel := task.NewTask_project_detailModel(mongoURL, c.Mongo.Database, "task_project_detail")
+	taskCommentModel := task.NewTask_commentModel(mongoURL, c.Mongo.Database, "task_comment")
+	attachmentCommentModel := upload.NewAttachment_commentModel(mongoURL, c.Mongo.Database, "attachment_comment")
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
 
@@ -179,11 +204,26 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		emailService = NewEmailService(emailTemplateService, emailMQService, emailMiddleware, c.System.BaseURL)
 	}
 
+	// 初始化文件存储服务
+	storageRoot := c.FileStorage.StorageRoot
+	if storageRoot == "" {
+		storageRoot = "./uploads"
+	}
+	urlPrefix := c.FileStorage.URLPrefix
+	if urlPrefix == "" {
+		urlPrefix = "http://localhost:8888/static"
+	}
+	fileStorageService := NewFileStorageService(storageRoot, urlPrefix)
+	logx.Infof("[ServiceContext] FileStorageService initialized: root=%s, urlPrefix=%s", storageRoot, urlPrefix)
+
 	s := &ServiceContext{
 		Config:          c,
 		JWTMiddleware:   jwtMiddleware,
 		EmailMiddleware: emailMiddleware,
 		SMSMiddleware:   smsMiddleware,
+
+		// Redis 客户端
+		RedisClient: redisClient,
 
 		// 事务服务
 		TransactionService: transactionService,
@@ -216,11 +256,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		// 权限相关模型
 		UserPermissionModel: user_auth.NewUserPermissionModel(conn),
 
+		// 加入公司相关
+		JoinApplicationModel: user.NewJoinApplicationModel(conn),
+		InviteCodeService:    NewInviteCodeService(redisClient),
+
 		// MongoDB 相关
 		MongoURL:               mongoURL,
 		MongoDB:                c.Mongo.Database,
 		UploadFileModel:        uploadFileModel,
 		TaskProjectDetailModel: taskProjectDetailModel,
+		TaskCommentModel:       taskCommentModel,
+		AttachmentCommentModel: attachmentCommentModel,
 
 		// RabbitMQ 相关
 		MQClient:              mqClient,
@@ -230,8 +276,14 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		// 邮件模板和服务
 		EmailTemplateService: emailTemplateService,
 		EmailService:         emailService,
+
+		// 文件存储服务
+		FileStorageService: fileStorageService,
 	}
 	s.Scheduler = NewSchedulerService(s)
+
+	// 设置Redis客户端给JWT中间件（用于Token验证）
+	jwtMiddleware.SetRedisClient(redisClient)
 
 	// 启动消息队列消费者（在 ServiceContext 完全初始化后）
 	if mqClient != nil {

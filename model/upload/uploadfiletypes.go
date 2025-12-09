@@ -16,9 +16,11 @@ type Upload_file struct {
 	FileSize    int64         `bson:"fileSize" json:"fileSize"`
 	Module      string        `bson:"module" json:"module"`
 	Category    string        `bson:"category" json:"category"`
-	RelatedID   string        `bson:"relatedId" json:"relatedId"`
+	RelatedID   string        `bson:"relatedId" json:"relatedId"`   // 任务ID
+	TaskNodeID  string        `bson:"taskNodeId" json:"taskNodeId"` // 关联的任务节点ID
 	Description string        `bson:"description" json:"description"`
 	Tags        string        `bson:"tags" json:"tags"`
+	UploaderID  string        `bson:"uploaderId" json:"uploaderId"` // 上传者ID
 	UpdateAt    time.Time     `bson:"updateAt,omitempty" json:"updateAt,omitempty"`
 	CreateAt    time.Time     `bson:"createAt,omitempty" json:"createAt,omitempty"`
 }

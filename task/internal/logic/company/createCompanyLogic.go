@@ -6,6 +6,7 @@ package company
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	companyModel "task_Project/model/company"
@@ -73,8 +74,8 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 	}
 
 	// 生成公司ID
-	companyID := utils.Common.GenerateID()
-	employeeID := utils.Common.GenerateID()
+	companyID := utils.Common.GenId("cp")
+	employeeID := utils.Common.GenId("emp")
 
 	// 创建公司
 	companyInfo := &companyModel.Company{
@@ -93,9 +94,13 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 	}
 
 	// 使用事务创建公司、部门、职位、员工和权限
+	// 注意：模板初始化改为异步处理，不阻塞主事务，避免高并发时数据库压力过大
+	txCtx, cancel := context.WithTimeout(l.ctx, 30*time.Second)
+	defer cancel()
+
 	var founderDeptID, founderPosID, founderRoleID string
 
-	err = l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+	err = l.svcCtx.TransactionService.TransactCtx(txCtx, func(ctx context.Context, session sqlx.Session) error {
 		// 1. 插入公司
 		companyModelWithSession := l.svcCtx.TransactionHelper.GetCompanyModelWithSession(session)
 		if _, err := companyModelWithSession.Insert(ctx, companyInfo); err != nil {
@@ -176,11 +181,20 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 			return err
 		}
 
+		// 4.1. 更新职位的当前员工数（创始人已占用该职位）
+		positionModelWithSession := l.svcCtx.TransactionHelper.GetPositionModelWithSession(session)
+		if err := positionModelWithSession.UpdateCurrentEmployees(ctx, founderPosID, 1); err != nil {
+			logx.Errorf("更新职位当前员工数失败: %v", err)
+			return err
+		}
+
 		// 5. 创建超级管理员角色（拥有所有权限）
 		roleModelWithSession := l.svcCtx.TransactionHelper.GetRoleModelWithSession(session)
 		founderRoleID = utils.Common.GenId("role")
-		// 所有权限码（根据 authz.go 中定义的权限）
-		allPermissions := "[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]"
+		// 所有权限码（根据 permdefs.go 中定义的权限）
+		// 任务(1-5), 任务节点(10-13), 交接(20-23), 通知(30-32)
+		// 公司(40-43), 部门(45-48), 职位(50-53), 角色(60-65), 员工(70-74)
+		allPermissions := "[1,2,3,4,5,10,11,12,13,20,21,22,23,30,31,32,40,41,42,43,45,46,47,48,50,51,52,53,60,61,62,63,64,65,70,71,72,73,74]"
 		founderRole := &roleModel.Role{
 			Id:              founderRoleID,
 			CompanyId:       companyID,
@@ -204,9 +218,22 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 			Id:         positionRoleID,
 			PositionId: founderPosID,
 			RoleId:     founderRoleID,
+			GrantBy:    sql.NullString{String: userID, Valid: true},
+			GrantTime:  time.Now(),
+			ExpireTime: sql.NullTime{}, // 不过期
+			Status:     1,              // 正常状态
 			CreateTime: time.Now(),
 		}
 		if _, err := positionRoleModelWithSession.Insert(ctx, positionRole); err != nil {
+			return err
+		}
+
+		// 注意：权限验证直接通过职位->角色->权限查询，无需同步到user_permission表
+
+		// 7. 更新用户的加入公司状态（在同一事务中）
+		userModelWithSession := l.svcCtx.TransactionHelper.GetUserModelWithSession(session)
+		if err := userModelWithSession.UpdateHasJoinedCompany(ctx, userID, true); err != nil {
+			logx.Errorf("更新用户加入公司状态失败: %v", err)
 			return err
 		}
 
@@ -218,16 +245,49 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 		return utils.Response.InternalError("创建公司失败"), nil
 	}
 
-	// 复制系统默认部门与职位（其他部门）
-	if err := l.svcCtx.ApplyDefaultOrgStructure(l.ctx, companyID); err != nil {
-		logx.Errorf("初始化公司组织结构失败: %v", err)
-		// 不影响主流程，创始人部门和职位已经创建
+	// 如果用户选择了模板，异步初始化组织结构（不阻塞用户响应）
+	if req.UseTemplate {
+		go func() {
+			// 使用独立的 context，避免超时
+			templateCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+			defer cancel()
+
+			logx.Infof("[Async] 开始异步初始化公司组织结构: companyID=%s", companyID)
+			if err := l.svcCtx.ApplyDefaultOrgStructure(templateCtx, companyID); err != nil {
+				logx.Errorf("[Async] 异步初始化公司组织结构失败: companyID=%s, error=%v", companyID, err)
+				// 异步失败不影响主流程，可以后续手动触发或重试
+			} else {
+				logx.Infof("[Async] 异步初始化公司组织结构成功: companyID=%s", companyID)
+			}
+		}()
+		logx.Infof("已启动异步初始化组织结构任务: companyID=%s", companyID)
+	} else {
+		logx.Infof("用户选择不使用模板，公司 %s 仅创建基础结构", companyID)
 	}
 
-	// 更新用户的加入公司状态
-	if updateErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, userID, true); updateErr != nil {
-		logx.Errorf("更新用户加入公司状态失败: %v", updateErr)
-		// 不影响主流程，继续执行
+	// 生成新的JWT令牌（包含员工信息），用于更新前端token
+	// 这样用户就不需要重新登录了
+	newToken := ""
+	tokenErr := error(nil)
+	newToken, tokenErr = l.svcCtx.JWTMiddleware.GenerateTokenWithEmployee(
+		userID,
+		userInfo.Username,
+		userInfo.RealName.String,
+		"user",
+		employeeID,
+		companyID,
+	)
+	if tokenErr != nil {
+		logx.Errorf("生成新Token失败: %v", tokenErr)
+		newToken = "" // 如果生成失败，返回空字符串，前端需要重新登录
+	} else {
+		// 更新Redis中的Token
+		tokenKey := fmt.Sprintf("auth:token:%s", userID)
+		if err := l.svcCtx.RedisClient.Setex(tokenKey, newToken, 86400); err != nil {
+			logx.Errorf("更新Redis Token失败: %v", err)
+		} else {
+			logx.Infof("已更新Token: userId=%s, employeeId=%s, companyId=%s", userID, employeeID, companyID)
+		}
 	}
 
 	// 发送创建成功通知邮件
@@ -243,5 +303,7 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 		"roleId":       founderRoleID,
 		"name":         req.Name,
 		"bootstraped":  true,
+		"useTemplate":  req.UseTemplate,
+		"token":        newToken, // 返回新token，前端需要更新
 	}), nil
 }

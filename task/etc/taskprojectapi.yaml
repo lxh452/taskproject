@@ -8,15 +8,22 @@ System:
   # 这里建议填前端访问地址，后续你买域名后改成 https://your-domain.com 即可
   BaseURL: "http://localhost:5173"
 
+# 文件存储配置
+FileStorage:
+  # 本地存储根目录（后续接入COS时可以改为临时目录或直接上传到云存储）
+  StorageRoot: "./uploads"
+  # 文件访问URL前缀（本地开发时使用本地静态服务，生产环境替换为COS域名）
+  URLPrefix: "http://localhost:8888/static"
+
 # 数据库配置
 MySQL:
-  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local"
+  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s"
 
 # Redis配置
 Redis:
   Host: "localhost"
   Port: 6379
-  Password: ""
+  Password: "your_redis_password_123"  # 请修改为你的 Redis 实际密码
   DB: 0
 
 # JWT配置
@@ -59,11 +66,11 @@ RabbitMQ:
 
   #加入mongodb
 Mongo:
-  Host: 0.0.0.0
+  Host: localhost
   Port: 27017
   Database: task_project
-  Username: root
-  Password: "123456"
+  Username: admin
+  Password: "admin123"
   AuthSource: admin
   Collection: task_project
   Timeout: 10s

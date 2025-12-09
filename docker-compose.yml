@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   # MySQL 数据库
@@ -7,7 +7,7 @@ services:
     container_name: task_project_mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: task_project
       MYSQL_USER: task_user
       MYSQL_PASSWORD: task_password
@@ -24,7 +24,7 @@ services:
     networks:
       - task_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,11 +38,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass "your_redis_password_123"
     networks:
       - task_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "your_redis_password_123", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5

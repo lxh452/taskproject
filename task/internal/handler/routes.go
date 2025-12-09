@@ -81,6 +81,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/update",
 				Handler: company.UpdateCompanyHandler(serverCtx),
 			},
+			{
+				// 生成邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/generate",
+				Handler: company.GenerateInviteCodeHandler(serverCtx),
+			},
+			{
+				// 解析邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/parse",
+				Handler: company.ParseInviteCodeHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/v1/company"),
 	)
@@ -141,24 +153,42 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/get",
 				Handler: employee.GetEmployeeHandler(serverCtx),
 			},
-		{
-			// 员工离职
-			Method:  http.MethodPost,
-			Path:    "/leave",
-			Handler: employee.EmployeeLeaveHandler(serverCtx),
-		},
-		{
-			// 确认离职审批
-			Method:  http.MethodPost,
-			Path:    "/leave/approve",
-			Handler: employee.ConfirmLeaveApprovalHandler(serverCtx),
-		},
-		{
-			// 加入公司
-			Method:  http.MethodPost,
-			Path:    "/join",
-			Handler: employee.JoinCompanyHandler(serverCtx),
-		},
+			{
+				// 员工离职
+				Method:  http.MethodPost,
+				Path:    "/leave",
+				Handler: employee.EmployeeLeaveHandler(serverCtx),
+			},
+			{
+				// 确认离职审批
+				Method:  http.MethodPost,
+				Path:    "/leave/approve",
+				Handler: employee.ConfirmLeaveApprovalHandler(serverCtx),
+			},
+			{
+				// 加入公司（直接加入，无审批）
+				Method:  http.MethodPost,
+				Path:    "/join",
+				Handler: employee.JoinCompanyHandler(serverCtx),
+			},
+			{
+				// 申请加入公司（需要审批）
+				Method:  http.MethodPost,
+				Path:    "/join/apply",
+				Handler: employee.ApplyJoinCompanyHandler(serverCtx),
+			},
+			{
+				// 审批加入申请
+				Method:  http.MethodPost,
+				Path:    "/join/approve",
+				Handler: employee.ApproveJoinApplicationHandler(serverCtx),
+			},
+			{
+				// 获取待审批的加入申请列表
+				Method:  http.MethodPost,
+				Path:    "/join/pending",
+				Handler: employee.GetPendingJoinApplicationsHandler(serverCtx),
+			},
 			{
 				// 获取员工列表
 				Method:  http.MethodPost,
@@ -411,6 +441,30 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/update",
 				Handler: task.UpdateTaskHandler(serverCtx),
 			},
+			{
+				// 创建任务评论
+				Method:  http.MethodPost,
+				Path:    "/comment/create",
+				Handler: task.CreateTaskCommentHandler(serverCtx),
+			},
+			{
+				// 获取任务评论列表
+				Method:  http.MethodPost,
+				Path:    "/comment/list",
+				Handler: task.GetTaskCommentsHandler(serverCtx),
+			},
+			{
+				// 点赞/取消点赞评论
+				Method:  http.MethodPost,
+				Path:    "/comment/like",
+				Handler: task.LikeTaskCommentHandler(serverCtx),
+			},
+			{
+				// 删除任务评论
+				Method:  http.MethodPost,
+				Path:    "/comment/delete",
+				Handler: task.DeleteTaskCommentHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/v1/task"),
 	)
@@ -471,6 +525,60 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/file",
 				Handler: upload.UploadInfoHandler(serverCtx),
 			},
+			{
+				// 上传头像
+				Method:  http.MethodPost,
+				Path:    "/avatar",
+				Handler: upload.UploadAvatarHandler(serverCtx),
+			},
+			{
+				// 获取任务附件列表
+				Method:  http.MethodPost,
+				Path:    "/task/attachments",
+				Handler: upload.GetTaskAttachmentsHandler(serverCtx),
+			},
+			{
+				// 获取任务节点附件列表
+				Method:  http.MethodPost,
+				Path:    "/tasknode/attachments",
+				Handler: upload.GetTaskNodeAttachmentsHandler(serverCtx),
+			},
+			{
+				// 获取文件详情
+				Method:  http.MethodPost,
+				Path:    "/file/detail",
+				Handler: upload.GetFileDetailHandler(serverCtx),
+			},
+			{
+				// 删除附件
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: upload.DeleteAttachmentHandler(serverCtx),
+			},
+			{
+				// 创建附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/create",
+				Handler: upload.CreateAttachmentCommentHandler(serverCtx),
+			},
+			{
+				// 获取附件评论列表
+				Method:  http.MethodPost,
+				Path:    "/comment/list",
+				Handler: upload.GetAttachmentCommentsHandler(serverCtx),
+			},
+			{
+				// 标记附件评论已解决
+				Method:  http.MethodPost,
+				Path:    "/comment/resolve",
+				Handler: upload.ResolveAttachmentCommentHandler(serverCtx),
+			},
+			{
+				// 删除附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/delete",
+				Handler: upload.DeleteAttachmentCommentHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/v1/upload"),
 	)
@@ -519,19 +627,19 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/list",
 				Handler: checklist.GetChecklistListHandler(serverCtx),
 			},
-		{
-			// 批量完成/取消完成清单
-			Method:  http.MethodPost,
-			Path:    "/batch/complete",
-			Handler: checklist.BatchCompleteChecklistHandler(serverCtx),
+			{
+				// 批量完成/取消完成清单
+				Method:  http.MethodPost,
+				Path:    "/batch/complete",
+				Handler: checklist.BatchCompleteChecklistHandler(serverCtx),
+			},
+			{
+				// 获取我的清单列表
+				Method:  http.MethodPost,
+				Path:    "/my",
+				Handler: checklist.GetMyChecklistHandler(serverCtx),
+			},
 		},
-		{
-			// 获取我的清单列表
-			Method:  http.MethodPost,
-			Path:    "/my",
-			Handler: checklist.GetMyChecklistHandler(serverCtx),
-		},
-	},
-	rest.WithPrefix("/api/v1/checklist"),
-)
+		rest.WithPrefix("/api/v1/checklist"),
+	)
 }

@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"task_Project/model/user"
@@ -15,6 +16,12 @@ import (
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"golang.org/x/crypto/bcrypt"
+)
+
+// Token在Redis中的key前缀
+const (
+	TokenKeyPrefix = "auth:token:"
+	TokenExpire    = 86400 // 24小时过期
 )
 
 type LoginLogic struct {
@@ -90,12 +97,22 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 			companyID = employee.CompanyId
 		}
 	}
+	fmt.Println("员工id", employeeID)
 
 	// 登录成功，生成JWT令牌（包含员工信息）
 	token, err := l.svcCtx.JWTMiddleware.GenerateTokenWithEmployee(userInfo.Id, userInfo.Username, userInfo.RealName.String, "user", employeeID, companyID)
 	if err != nil {
 		logx.Errorf("生成JWT令牌失败: %v", err)
 		return utils.Response.InternalError("生成JWT令牌失败"), nil
+	}
+
+	// 将Token存储到Redis，用于后续验证
+	tokenKey := fmt.Sprintf("%s%s", TokenKeyPrefix, userInfo.Id)
+	if err := l.svcCtx.RedisClient.Setex(tokenKey, token, TokenExpire); err != nil {
+		logx.Errorf("存储Token到Redis失败: %v", err)
+		// 不影响登录流程，但记录错误
+	} else {
+		logx.Infof("Token已存储到Redis: userId=%s, key=%s", userInfo.Id, tokenKey)
 	}
 
 	// 更新最后登录信息

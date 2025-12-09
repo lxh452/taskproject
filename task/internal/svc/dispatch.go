@@ -129,6 +129,7 @@ func (d *DispatchService) CalculateEmployeeScore(ctx context.Context, employeeID
 	}, nil
 }
 
+// todo 可能后续是接入ai
 // SelectBestEmployee 选择最佳员工
 func (d *DispatchService) SelectBestEmployee(ctx context.Context, candidateIDs []string, taskNode *task.TaskNode) (*EmployeeScore, error) {
 	var scores []*EmployeeScore

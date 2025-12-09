@@ -65,7 +65,13 @@ func main() {
 				return
 			}
 			path := r.URL.Path
+			// 白名单：登录、注册、登出、静态文件
 			if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" {
+				next(w, r)
+				return
+			}
+			// 静态文件请求不需要JWT验证
+			if len(path) >= 8 && path[:8] == "/static/" {
 				next(w, r)
 				return
 			}
@@ -105,6 +111,51 @@ func main() {
 	defer ctx.Scheduler.Stop()
 
 	handler.RegisterHandlers(server, ctx)
+
+	// 添加静态文件服务（用于访问上传的文件）
+	// 静态文件路由：/static/* -> ./uploads/*
+	storageRoot := c.FileStorage.StorageRoot
+	if storageRoot == "" {
+		storageRoot = "./uploads"
+	}
+	server.AddRoute(rest.Route{
+		Method: http.MethodGet,
+		Path:   "/static/:path",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			// 使用文件服务器处理静态文件
+			http.StripPrefix("/static/", http.FileServer(http.Dir(storageRoot))).ServeHTTP(w, r)
+		},
+	})
+	// 支持多级路径
+	server.AddRoute(rest.Route{
+		Method: http.MethodGet,
+		Path:   "/static/:a/:b",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix("/static/", http.FileServer(http.Dir(storageRoot))).ServeHTTP(w, r)
+		},
+	})
+	server.AddRoute(rest.Route{
+		Method: http.MethodGet,
+		Path:   "/static/:a/:b/:c",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix("/static/", http.FileServer(http.Dir(storageRoot))).ServeHTTP(w, r)
+		},
+	})
+	server.AddRoute(rest.Route{
+		Method: http.MethodGet,
+		Path:   "/static/:a/:b/:c/:d",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix("/static/", http.FileServer(http.Dir(storageRoot))).ServeHTTP(w, r)
+		},
+	})
+	server.AddRoute(rest.Route{
+		Method: http.MethodGet,
+		Path:   "/static/:a/:b/:c/:d/:e",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix("/static/", http.FileServer(http.Dir(storageRoot))).ServeHTTP(w, r)
+		},
+	})
+	logx.Infof("静态文件服务已启动: /static/* -> %s", storageRoot)
 
 	// 为所有可能的 API 路径添加 OPTIONS 处理（作为后备方案）
 	// 注意：这应该不需要，但如果中间件没有拦截，这个可以工作

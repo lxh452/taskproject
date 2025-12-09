@@ -3,13 +3,20 @@ package middleware
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/rest"
+)
+
+// Token在Redis中的key前缀
+const (
+	TokenKeyPrefix = "auth:token:"
 )
 
 // JWTConfig JWT配置
@@ -34,7 +41,8 @@ type Claims struct {
 
 // JWTMiddleware JWT中间件
 type JWTMiddleware struct {
-	config JWTConfig
+	config      JWTConfig
+	redisClient *redis.Redis
 }
 
 // NewJWTMiddleware 创建JWT中间件
@@ -42,6 +50,36 @@ func NewJWTMiddleware(config JWTConfig) *JWTMiddleware {
 	return &JWTMiddleware{
 		config: config,
 	}
+}
+
+// SetRedisClient 设置Redis客户端（用于Token校验）
+func (j *JWTMiddleware) SetRedisClient(client *redis.Redis) {
+	j.redisClient = client
+}
+
+// ValidateTokenWithRedis 验证Token是否在Redis中有效
+func (j *JWTMiddleware) ValidateTokenWithRedis(tokenString string, userID string) error {
+	if j.redisClient == nil {
+		// 如果没有配置Redis，跳过Redis校验
+		return nil
+	}
+
+	tokenKey := fmt.Sprintf("%s%s", TokenKeyPrefix, userID)
+	storedToken, err := j.redisClient.Get(tokenKey)
+	if err != nil {
+		logx.Errorf("从Redis获取Token失败: %v", err)
+		return errors.New("token validation failed")
+	}
+
+	if storedToken == "" {
+		return errors.New("token not found in redis, user may have logged out")
+	}
+
+	if storedToken != tokenString {
+		return errors.New("token mismatch, may have logged in from another device")
+	}
+
+	return nil
 }
 
 // GenerateToken 生成JWT令牌
@@ -152,6 +190,13 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			logx.Errorf("JWT令牌验证失败: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// 验证Token是否在Redis中有效（确保登录一致性）
+		if err := j.ValidateTokenWithRedis(tokenString, claims.UserID); err != nil {
+			logx.Errorf("Redis Token验证失败: %v, userId=%s", err, claims.UserID)
+			http.Error(w, "Token invalid or expired, please login again", http.StatusUnauthorized)
 			return
 		}
 

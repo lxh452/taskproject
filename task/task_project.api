@@ -103,6 +103,7 @@ type (
 		Address           string `json:"address,optional"`
 		Phone             string `json:"phone,optional"`
 		Email             string `json:"email,optional"`
+		UseTemplate       bool   `json:"useTemplate,optional"` // 是否使用组织结构模板
 	}
 	// 更新公司请求
 	UpdateCompanyRequest {
@@ -337,6 +338,43 @@ type (
 		CompanyID    string `json:"companyId"`
 		DepartmentID string `json:"departmentId,optional"` // 可选，不填则加入默认部门
 		PositionID   string `json:"positionId,optional"`   // 可选，不填则使用默认职位
+	}
+	// 申请加入公司请求
+	ApplyJoinCompanyRequest {
+		InviteCode  string `json:"inviteCode"`
+		ApplyReason string `json:"applyReason,optional"`
+	}
+	// 审批加入申请请求
+	ApproveJoinApplicationRequest {
+		ApplicationID string `json:"applicationId"`
+		Approved      bool   `json:"approved"`
+		Note          string `json:"note,optional"`
+		DepartmentID  string `json:"departmentId,optional"`
+		PositionID    string `json:"positionId,optional"`
+	}
+	// 待审批加入申请列表请求
+	GetPendingJoinApplicationsRequest {
+		PageReq
+	}
+	// 加入申请信息
+	JoinApplicationInfo {
+		ID          string `json:"id"`
+		UserID      string `json:"userId"`
+		Username    string `json:"username,optional"`
+		RealName    string `json:"realName,optional"`
+		CompanyID   string `json:"companyId"`
+		CompanyName string `json:"companyName,optional"`
+		InviteCode  string `json:"inviteCode,optional"`
+		ApplyReason string `json:"applyReason,optional"`
+		Status      int    `json:"status"` // 0-待审批 1-已通过 2-已拒绝 3-已取消
+		ApproverID  string `json:"approverId,optional"`
+		ApproveNote string `json:"approveNote,optional"`
+		CreateTime  string `json:"createTime,optional"`
+	}
+	// 待审批加入申请列表响应
+	PendingJoinApplicationsResponse {
+		List  []JoinApplicationInfo `json:"list"`
+		Total int64                 `json:"total"`
 	}
 	// 获取员工信息请求
 	GetEmployeeRequest {
@@ -942,6 +980,18 @@ service taskprojectapi {
 	@doc "加入公司"
 	@handler JoinCompany
 	post /join (JoinCompanyRequest) returns (BaseResponse)
+
+	@doc "申请加入公司"
+	@handler ApplyJoinCompany
+	post /join/apply (ApplyJoinCompanyRequest) returns (BaseResponse)
+
+	@doc "审批加入公司申请"
+	@handler ApproveJoinApplication
+	post /join/approve (ApproveJoinApplicationRequest) returns (BaseResponse)
+
+	@doc "获取待审批加入申请列表"
+	@handler GetPendingJoinApplications
+	post /join/pending (GetPendingJoinApplicationsRequest) returns (BaseResponse)
 }
 
 @server (

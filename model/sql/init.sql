@@ -316,32 +316,7 @@ CREATE TABLE `notification` (
     CONSTRAINT `fk_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知表';
 
--- 11. 用户权限表
-CREATE TABLE `user_permission` (
-    `id` VARCHAR(32) NOT NULL COMMENT '权限id',
-    `user_id` VARCHAR(32) NOT NULL COMMENT '用户id',
-    `permission_code` VARCHAR(50) NOT NULL COMMENT '权限编码',
-    `permission_name` VARCHAR(100) NOT NULL COMMENT '权限名称',
-    `resource_type` TINYINT NOT NULL COMMENT '资源类型 0-菜单 1-按钮 2-接口 3-数据',
-    `resource_id` VARCHAR(32) COMMENT '资源id',
-    `grant_type` TINYINT NOT NULL DEFAULT 0 COMMENT '授权类型 0-直接授权 1-角色授权 2-部门授权',
-    `grant_by` VARCHAR(32) COMMENT '授权人id',
-    `expire_time` TIMESTAMP NULL COMMENT '过期时间',
-    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-正常',
-    `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    
-    PRIMARY KEY (`id`),
-    KEY `idx_permission_user` (`user_id`),
-    KEY `idx_permission_code` (`permission_code`),
-    KEY `idx_permission_type` (`resource_type`),
-    KEY `idx_permission_grant_type` (`grant_type`),
-    KEY `idx_permission_status` (`status`),
-    KEY `idx_create_time` (`create_time`),
-    
-    CONSTRAINT `fk_permission_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT `fk_permission_grant_by` FOREIGN KEY (`grant_by`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户权限表';
+
 
 -- 添加外键约束
 -- 公司表外键

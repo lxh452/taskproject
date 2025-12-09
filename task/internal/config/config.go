@@ -19,6 +19,14 @@ type Config struct {
 		BaseURL string `json:"baseURL"`
 	} `json:"system"`
 
+	// 文件存储配置
+	FileStorage struct {
+		// StorageRoot 本地存储根目录
+		StorageRoot string `json:"storageRoot"`
+		// URLPrefix 访问URL前缀
+		URLPrefix string `json:"urlPrefix"`
+	} `json:"fileStorage"`
+
 	// 数据库配置
 	MySQL struct {
 		DataSource string `json:"dataSource"`

@@ -68,6 +68,63 @@ type JoinCompanyRequest struct {
 	PositionID   string `json:"positionId,optional"`
 }
 
+// 生成邀请码请求
+type GenerateInviteCodeRequest struct {
+	ExpireDays int `json:"expireDays,optional"` // 过期天数，默认7天
+	MaxUses    int `json:"maxUses,optional"`    // 最大使用次数，0表示不限制
+}
+
+// 解析邀请码请求
+type ParseInviteCodeRequest struct {
+	InviteCode string `json:"inviteCode"`
+}
+
+// 解析邀请码响应数据
+type InviteCodeInfo struct {
+	CompanyID   string `json:"companyId"`
+	CompanyName string `json:"companyName"`
+	ExpireAt    string `json:"expireAt"`
+	MaxUses     int    `json:"maxUses"`
+	UsedCount   int    `json:"usedCount"`
+}
+
+// 申请加入公司请求
+type ApplyJoinCompanyRequest struct {
+	InviteCode  string `json:"inviteCode"`
+	ApplyReason string `json:"applyReason,optional"` // 申请理由
+}
+
+// 审批加入申请请求
+type ApproveJoinApplicationRequest struct {
+	ApplicationID string `json:"applicationId"`
+	Approved      bool   `json:"approved"`
+	Note          string `json:"note,optional"`         // 审批备注
+	DepartmentID  string `json:"departmentId,optional"` // 指定部门
+	PositionID    string `json:"positionId,optional"`   // 指定职位
+}
+
+// 获取待审批申请列表请求
+type GetPendingJoinApplicationsRequest struct {
+	PageReq
+}
+
+// 加入申请信息
+type JoinApplicationInfo struct {
+	ID          string `json:"id"`
+	UserID      string `json:"userId"`
+	Username    string `json:"username"`
+	RealName    string `json:"realName"`
+	CompanyID   string `json:"companyId"`
+	CompanyName string `json:"companyName"`
+	InviteCode  string `json:"inviteCode,optional"`
+	ApplyReason string `json:"applyReason,optional"`
+	Status      int    `json:"status"` // 0-待审批 1-已通过 2-已拒绝 3-已取消
+	ApproverID  string `json:"approverId,optional"`
+	ApproveTime string `json:"approveTime,optional"`
+	ApproveNote string `json:"approveNote,optional"`
+	CreateTime  string `json:"createTime"`
+}
+
 type CreateCompanyRequest struct {
 	Name              string `json:"name"`
 	CompanyAttributes int    `json:"companyAttributes"`
@@ -76,6 +133,7 @@ type CreateCompanyRequest struct {
 	Address           string `json:"address,optional"`
 	Phone             string `json:"phone,optional"`
 	Email             string `json:"email,optional"`
+	UseTemplate       bool   `json:"useTemplate,optional"` // 是否使用组织结构模板
 }
 
 type CreateDepartmentRequest struct {
@@ -643,6 +701,7 @@ type UploadInfoRequest struct {
 	FileType    string `form:"fileType,optional"`    // 文件类型：image/pdf/markdown/document/excel/word等（如果前端不传，后端可从文件扩展名推断）
 	Category    string `form:"category,optional"`    // 文件分类：avatar/document/attachment/cover/icon等
 	RelatedID   string `form:"relatedId,optional"`   // 关联的业务ID（如任务ID、用户ID、公司ID等）
+	TaskNodeID  string `form:"taskNodeId,optional"`  // 关联的任务节点ID（任务附件必填）
 	Description string `form:"description,optional"` // 文件描述或备注
 	Tags        string `form:"tags,optional"`        // 文件标签，多个标签用逗号分隔
 }
@@ -658,9 +717,9 @@ type UploadInfoResponse struct {
 
 // 任务清单相关类型
 type CreateChecklistRequest struct {
-	TaskNodeID string `json:"taskNodeId"`          // 任务节点ID
-	Content    string `json:"content"`             // 清单内容
-	SortOrder  int64  `json:"sortOrder,optional"`  // 排序顺序
+	TaskNodeID string `json:"taskNodeId"`         // 任务节点ID
+	Content    string `json:"content"`            // 清单内容
+	SortOrder  int64  `json:"sortOrder,optional"` // 排序顺序
 }
 
 type UpdateChecklistRequest struct {
@@ -727,4 +786,192 @@ type MyChecklistItem struct {
 	SortOrder    int64  `json:"sortOrder"`
 	CreateTime   string `json:"createTime"`
 	UpdateTime   string `json:"updateTime"`
+}
+
+// ============== 附件管理相关类型 ==============
+
+// 获取任务附件列表请求
+type GetTaskAttachmentsRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+// 获取任务节点附件列表请求
+type GetTaskNodeAttachmentsRequest struct {
+	TaskNodeID string `json:"taskNodeId"`
+}
+
+// 获取文件详情请求
+type GetFileDetailRequest struct {
+	FileID string `json:"fileId"`
+}
+
+// 删除附件请求
+type DeleteAttachmentRequest struct {
+	FileID string `json:"fileId"`
+}
+
+// 附件信息
+type AttachmentInfo struct {
+	FileID      string `json:"fileId"`
+	FileName    string `json:"fileName"`
+	FileURL     string `json:"fileUrl"`
+	FileType    string `json:"fileType"`
+	FileSize    int64  `json:"fileSize"`
+	Module      string `json:"module"`
+	Category    string `json:"category"`
+	RelatedID   string `json:"relatedId"`
+	TaskNodeID  string `json:"taskNodeId"` // 关联的任务节点ID
+	UploaderID  string `json:"uploaderId"` // 上传者ID
+	Description string `json:"description"`
+	Tags        string `json:"tags"`
+	CreateTime  string `json:"createTime"`
+	UpdateTime  string `json:"updateTime"`
+}
+
+// ============== 任务评论相关类型(MongoDB) ==============
+
+// 创建任务评论请求
+type CreateTaskCommentRequest struct {
+	TaskID        string   `json:"taskId"`                 // 任务ID
+	TaskNodeID    string   `json:"taskNodeId,optional"`    // 任务节点ID(可选)
+	Content       string   `json:"content"`                // 评论内容
+	ContentHTML   string   `json:"contentHtml,optional"`   // HTML格式内容
+	AtEmployeeIDs []string `json:"atEmployeeIds,optional"` // @的员工ID列表
+	ParentID      string   `json:"parentId,optional"`      // 父评论ID(回复时使用)
+	AttachmentIDs []string `json:"attachmentIds,optional"` // 附件ID列表
+}
+
+// 更新任务评论请求
+type UpdateTaskCommentRequest struct {
+	CommentID   string `json:"commentId"`            // 评论ID
+	Content     string `json:"content,optional"`     // 评论内容
+	ContentHTML string `json:"contentHtml,optional"` // HTML格式内容
+}
+
+// 删除任务评论请求
+type DeleteTaskCommentRequest struct {
+	CommentID string `json:"commentId"`
+}
+
+// 获取任务评论列表请求
+type GetTaskCommentsRequest struct {
+	PageReq
+	TaskID     string `json:"taskId,optional"`     // 任务ID
+	TaskNodeID string `json:"taskNodeId,optional"` // 任务节点ID
+}
+
+// 点赞/取消点赞评论请求
+type LikeCommentRequest struct {
+	CommentID string `json:"commentId"`
+	IsLike    bool   `json:"isLike"` // true为点赞，false为取消点赞
+}
+
+// 任务评论信息
+type TaskCommentInfo struct {
+	ID              string            `json:"id"`
+	CommentID       string            `json:"commentId"`
+	TaskID          string            `json:"taskId"`
+	TaskNodeID      string            `json:"taskNodeId"`
+	UserID          string            `json:"userId"`
+	EmployeeID      string            `json:"employeeId"`
+	EmployeeName    string            `json:"employeeName"`
+	Content         string            `json:"content"`
+	ContentHTML     string            `json:"contentHtml"`
+	AtEmployeeIDs   []string          `json:"atEmployeeIds"`
+	AtEmployeeNames []string          `json:"atEmployeeNames"`
+	ParentID        string            `json:"parentId"`
+	ReplyToUserID   string            `json:"replyToUserId"`
+	ReplyToName     string            `json:"replyToName"`
+	AttachmentIDs   []string          `json:"attachmentIds"`
+	AttachmentURLs  []string          `json:"attachmentUrls"`
+	LikeCount       int64             `json:"likeCount"`
+	IsLiked         bool              `json:"isLiked"`          // 当前用户是否已点赞
+	Replies         []TaskCommentInfo `json:"replies,optional"` // 回复列表
+	CreateTime      string            `json:"createTime"`
+	UpdateTime      string            `json:"updateTime"`
+}
+
+// ============== 附件评论标注相关类型(MongoDB) ==============
+
+// 创建附件评论请求
+type CreateAttachmentCommentRequest struct {
+	FileID         string             `json:"fileId"`                  // 附件文件ID
+	TaskID         string             `json:"taskId,optional"`         // 关联任务ID
+	TaskNodeID     string             `json:"taskNodeId,optional"`     // 关联任务节点ID
+	Content        string             `json:"content"`                 // 评论内容
+	AtEmployeeIDs  []string           `json:"atEmployeeIds,optional"`  // @的员工ID列表
+	AnnotationType string             `json:"annotationType,optional"` // 标注类型: point/rect/highlight/arrow
+	AnnotationData *AnnotationDataReq `json:"annotationData,optional"` // 标注数据
+	PageNumber     int                `json:"pageNumber,optional"`     // PDF页码
+	ParentID       string             `json:"parentId,optional"`       // 父评论ID
+}
+
+// 标注数据请求
+type AnnotationDataReq struct {
+	X      float64 `json:"x,optional"`
+	Y      float64 `json:"y,optional"`
+	Width  float64 `json:"width,optional"`
+	Height float64 `json:"height,optional"`
+	Color  string  `json:"color,optional"`
+	Text   string  `json:"text,optional"`
+	StartX float64 `json:"startX,optional"`
+	StartY float64 `json:"startY,optional"`
+	EndX   float64 `json:"endX,optional"`
+	EndY   float64 `json:"endY,optional"`
+}
+
+// 获取附件评论列表请求
+type GetAttachmentCommentsRequest struct {
+	PageReq
+	FileID string `json:"fileId"`
+}
+
+// 标记附件评论已解决请求
+type ResolveAttachmentCommentRequest struct {
+	CommentID string `json:"commentId"`
+}
+
+// 删除附件评论请求
+type DeleteAttachmentCommentRequest struct {
+	CommentID string `json:"commentId"`
+}
+
+// 附件评论信息
+type AttachmentCommentInfo struct {
+	ID              string                  `json:"id"`
+	CommentID       string                  `json:"commentId"`
+	FileID          string                  `json:"fileId"`
+	TaskID          string                  `json:"taskId"`
+	TaskNodeID      string                  `json:"taskNodeId"`
+	UserID          string                  `json:"userId"`
+	EmployeeID      string                  `json:"employeeId"`
+	EmployeeName    string                  `json:"employeeName"`
+	Content         string                  `json:"content"`
+	AtEmployeeIDs   []string                `json:"atEmployeeIds"`
+	AtEmployeeNames []string                `json:"atEmployeeNames"`
+	AnnotationType  string                  `json:"annotationType"`
+	AnnotationData  *AnnotationDataReq      `json:"annotationData"`
+	PageNumber      int                     `json:"pageNumber"`
+	ParentID        string                  `json:"parentId"`
+	ReplyToUserID   string                  `json:"replyToUserId"`
+	ReplyToName     string                  `json:"replyToName"`
+	IsResolved      bool                    `json:"isResolved"`
+	ResolvedBy      string                  `json:"resolvedBy"`
+	ResolvedAt      string                  `json:"resolvedAt"`
+	Replies         []AttachmentCommentInfo `json:"replies,optional"`
+	CreateTime      string                  `json:"createTime"`
+	UpdateTime      string                  `json:"updateTime"`
+}
+
+// ============== 头像上传相关类型 ==============
+
+// 上传头像请求(通过form-data传递)
+type UploadAvatarRequest struct {
+	UserID string `form:"userId,optional"` // 用户ID，为空则使用当前登录用户
+}
+
+// 上传头像响应
+type UploadAvatarResponse struct {
+	AvatarURL string `json:"avatarUrl"`
+	FileID    string `json:"fileId"`
 }

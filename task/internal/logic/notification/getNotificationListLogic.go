@@ -60,8 +60,12 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 	}
 
 	// 6. 构建过滤条件
+	// isRead 约定：
+	//   0 -> 未读
+	//   1 -> 已读
+	//  其他（例如 -1）-> 不按已读状态过滤（全部）
 	var isRead *int
-	if req.IsRead >= 0 {
+	if req.IsRead == 0 || req.IsRead == 1 {
 		isRead = &req.IsRead
 	}
 

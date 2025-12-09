@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"task_Project/task/internal/svc"
@@ -39,6 +40,15 @@ func (l *LogoutLogic) Logout() (resp *types.BaseResponse, err error) {
 
 	username, _ := utils.Common.GetCurrentUsername(l.ctx)
 	realName, _ := utils.Common.GetCurrentRealName(l.ctx)
+
+	// 从Redis删除Token，使Token失效
+	tokenKey := fmt.Sprintf("%s%s", TokenKeyPrefix, userID)
+	if _, err := l.svcCtx.RedisClient.Del(tokenKey); err != nil {
+		logx.Errorf("从Redis删除Token失败: %v", err)
+		// 不影响登出流程
+	} else {
+		logx.Infof("Token已从Redis删除: userId=%s, key=%s", userID, tokenKey)
+	}
 
 	// 记录登出日志
 	logx.Infof("用户登出: userID=%s, username=%s, realName=%s", userID, username, realName)

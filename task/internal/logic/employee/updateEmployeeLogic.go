@@ -38,27 +38,17 @@ func (l *UpdateEmployeeLogic) UpdateEmployee(req *types.UpdateEmployeeRequest) (
 	}
 
 	// 检查员工是否存在
-	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ID)
-	if err != nil {
+	if _, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ID); err != nil {
 		logx.Errorf("查询员工失败: %v", err)
 		return utils.Response.ErrorWithKey("employee_not_found"), nil
 	}
-
-	// 记录旧职位ID，用于判断是否需要同步权限
-	oldPositionID := ""
-	if employee.PositionId.Valid {
-		oldPositionID = employee.PositionId.String
-	}
-
 	// 构建更新数据
 	updateData := make(map[string]interface{})
 	if !utils.Validator.IsEmpty(req.DepartmentID) {
 		updateData["department_id"] = req.DepartmentID
 	}
-	positionChanged := false
 	if !utils.Validator.IsEmpty(req.PositionID) {
 		updateData["position_id"] = req.PositionID
-		positionChanged = (req.PositionID != oldPositionID)
 	}
 	if !utils.Validator.IsEmpty(req.EmployeeID) {
 		updateData["employee_id"] = req.EmployeeID
@@ -105,16 +95,5 @@ func (l *UpdateEmployeeLogic) UpdateEmployee(req *types.UpdateEmployeeRequest) (
 		logx.Errorf("更新员工信息失败: %v", err)
 		return utils.Response.InternalError("更新员工信息失败"), err
 	}
-
-	// 如果职位改变，同步员工权限
-	if positionChanged {
-		newPositionID := req.PositionID
-		permissionSyncService := svc.NewPermissionSyncService(l.svcCtx)
-		if err := permissionSyncService.SyncEmployeePermissions(l.ctx, employee.UserId, req.ID, newPositionID); err != nil {
-			logx.Errorf("同步员工权限失败: %v", err)
-			// 权限同步失败不影响员工更新，只记录日志
-		}
-	}
-
 	return utils.Response.Success("更新员工信息成功"), nil
 }

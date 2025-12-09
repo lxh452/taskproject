@@ -144,12 +144,7 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 			return err
 		}
 
-		// 同步员工权限（通过职位->角色->权限）
-		permissionSyncService := svc.NewPermissionSyncService(l.svcCtx)
-		if err := permissionSyncService.SyncEmployeePermissions(ctx, req.UserID, employeeID, req.PositionID); err != nil {
-			logx.Errorf("同步员工权限失败: %v", err)
-			// 权限同步失败不影响员工创建，只记录日志
-		}
+		// 注意：权限验证直接通过职位->角色->权限查询，无需同步到user_permission表
 
 		return nil
 	})
