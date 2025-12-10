@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"task_Project/model/task"
+	"task_Project/model/user"
 	"task_Project/task/internal/logic/notification"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -73,6 +74,11 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	if !flag {
 		return utils.Response.NotFoundError("非法用户"), nil
 	}
+	// 检查权限：不能以下犯上（但允许给自己安排任务）
+	if err := l.checkAssignmentPermission(emp, req.ExecutorIDs); err != nil {
+		return utils.Response.BusinessError(err.Error()), nil
+	}
+
 	executorIds := strings.Join(req.ExecutorIDs, ",")
 
 	// 解析时间字段
@@ -195,4 +201,104 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	}
 
 	return utils.Response.Success(node), nil
+}
+
+// checkAssignmentPermission 检查任务分配权限
+// 规则：
+// 1. 创始人可以给所有人分配任务
+// 2. 不能以下犯上（下级不能给上级安排任务）
+// 3. 允许给自己安排任务
+func (l *CreateTaskNodeLogic) checkAssignmentPermission(assigner *user.Employee, executorIDs []string) error {
+	// 检查是否是创始人
+	isFounder := l.isFounder(assigner)
+	if isFounder {
+		// 创始人可以给所有人分配任务，无需检查
+		return nil
+	}
+
+	// 获取分配者的职位级别和部门优先级
+	assignerLevel := 0
+	assignerDeptPriority := 0
+	if assigner.PositionId.Valid {
+		pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, assigner.PositionId.String)
+		if err == nil && pos != nil {
+			assignerLevel = int(pos.PositionLevel)
+		}
+	}
+	if assigner.DepartmentId.Valid {
+		dept, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, assigner.DepartmentId.String)
+		if err == nil && dept != nil {
+			assignerDeptPriority = int(dept.DepartmentPriority)
+		}
+	}
+
+	// 检查每个执行人
+	for _, executorID := range executorIDs {
+		executorID = strings.TrimSpace(executorID)
+		if executorID == "" {
+			continue
+		}
+
+		// 允许给自己安排任务
+		if executorID == assigner.Id {
+			continue
+		}
+
+		// 获取执行人信息
+		executor, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, executorID)
+		if err != nil {
+			return fmt.Errorf("执行人 %s 不存在", executorID)
+		}
+
+		// 检查执行人是否是创始人（不能给创始人安排任务，除非分配者也是创始人）
+		if l.isFounder(executor) {
+			return fmt.Errorf("不能给公司创始人安排任务")
+		}
+
+		// 获取执行人的职位级别和部门优先级
+		executorLevel := 0
+		executorDeptPriority := 0
+		if executor.PositionId.Valid {
+			pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, executor.PositionId.String)
+			if err == nil && pos != nil {
+				executorLevel = int(pos.PositionLevel)
+			}
+		}
+		if executor.DepartmentId.Valid {
+			dept, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, executor.DepartmentId.String)
+			if err == nil && dept != nil {
+				executorDeptPriority = int(dept.DepartmentPriority)
+			}
+		}
+
+		// 检查是否以下犯上
+		// 如果执行人的职位级别更高，或者部门优先级更高，则不能分配
+		if executorLevel > assignerLevel {
+			return fmt.Errorf("不能给职位级别更高的员工安排任务")
+		}
+		if executorLevel == assignerLevel && executorDeptPriority > assignerDeptPriority {
+			return fmt.Errorf("不能给部门优先级更高的员工安排任务")
+		}
+	}
+
+	return nil
+}
+
+// isFounder 检查员工是否是创始人
+func (l *CreateTaskNodeLogic) isFounder(employee *user.Employee) bool {
+	// 检查职位代码是否为 FOUNDER
+	if employee.PositionId.Valid {
+		pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, employee.PositionId.String)
+		if err == nil && pos != nil && pos.PositionCode.Valid {
+			if pos.PositionCode.String == "FOUNDER" {
+				return true
+			}
+		}
+	}
+	// 检查是否是公司Owner
+	company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, employee.CompanyId)
+	if err == nil && company != nil && company.Owner == employee.UserId {
+		return true
+	}
+	return false
 }

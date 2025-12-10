@@ -45,5 +45,65 @@ func (l *GetSelfEmployeeLogic) GetSelfEmployee() (resp *types.BaseResponse, err 
 	converter := utils.NewConverter()
 	employeeInfo := converter.ToEmployeeInfo(employee)
 
-	return utils.Response.SuccessWithKey("employee", employeeInfo), nil
+	// 获取职位信息（职位级别、职位代码）
+	positionLevel := 0
+	positionCode := ""
+	isManagement := 0
+	if employee.PositionId.Valid && employee.PositionId.String != "" {
+		pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, employee.PositionId.String)
+		if err == nil && pos != nil {
+			positionLevel = int(pos.PositionLevel)
+			if pos.PositionCode.Valid {
+				positionCode = pos.PositionCode.String
+			}
+			isManagement = int(pos.IsManagement)
+		}
+	}
+
+	// 获取部门信息（部门优先级）
+	departmentPriority := 0
+	if employee.DepartmentId.Valid && employee.DepartmentId.String != "" {
+		dept, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
+		if err == nil && dept != nil {
+			departmentPriority = int(dept.DepartmentPriority)
+		}
+	}
+
+	// 检查是否是创始人（通过职位代码或公司Owner）
+	isFounder := false
+	if positionCode == "FOUNDER" {
+		isFounder = true
+	} else if employee.CompanyId != "" {
+		company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, employee.CompanyId)
+		if err == nil && company != nil && company.Owner == employee.UserId {
+			isFounder = true
+		}
+	}
+
+	// 构建包含额外信息的员工信息
+	empMap := map[string]interface{}{
+		"id":                employeeInfo.ID,
+		"userId":            employeeInfo.UserID,
+		"companyId":         employeeInfo.CompanyID,
+		"departmentId":      employeeInfo.DepartmentID,
+		"positionId":         employeeInfo.PositionID,
+		"employeeId":         employeeInfo.EmployeeID,
+		"realName":           employeeInfo.RealName,
+		"workEmail":          employeeInfo.WorkEmail,
+		"workPhone":          employeeInfo.WorkPhone,
+		"skills":             employeeInfo.Skills,
+		"roleTags":           employeeInfo.RoleTags,
+		"hireDate":           employeeInfo.HireDate,
+		"leaveDate":          employeeInfo.LeaveDate,
+		"status":             employeeInfo.Status,
+		"createTime":         employeeInfo.CreateTime,
+		"updateTime":          employeeInfo.UpdateTime,
+		"positionLevel":      positionLevel,      // 职位级别
+		"positionCode":       positionCode,       // 职位代码
+		"isManagement":       isManagement,       // 是否管理岗
+		"departmentPriority": departmentPriority, // 部门优先级
+		"isFounder":          isFounder,          // 是否是创始人
+	}
+
+	return utils.Response.SuccessWithKey("employee", empMap), nil
 }

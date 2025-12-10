@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"task_Project/model/task"
+	"task_Project/model/user"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -131,12 +132,18 @@ func (l *AutoDispatchLogic) hasDispatchPermission(userID string, taskInfo *task.
 		return true
 	}
 
-	// 部门经理可派发
+	// 获取员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userID)
 	if err != nil {
 		return false
 	}
 
+	// 检查是否是创始人（创始人可以给所有人派发任务，不受部门限制）
+	if l.isFounder(employee) {
+		return true
+	}
+
+	// 部门经理可派发（仅限本部门）
 	if taskInfo.DepartmentIds.Valid && taskInfo.DepartmentIds.String != "" && employee.DepartmentId.Valid {
 		deptID := taskInfo.DepartmentIds.String
 		// 仅当员工属于该部门再校验
@@ -146,6 +153,25 @@ func (l *AutoDispatchLogic) hasDispatchPermission(userID string, taskInfo *task.
 				return true
 			}
 		}
+	}
+	return false
+}
+
+// isFounder 检查员工是否是创始人
+func (l *AutoDispatchLogic) isFounder(employee *user.Employee) bool {
+	// 检查职位代码是否为 FOUNDER
+	if employee.PositionId.Valid {
+		pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, employee.PositionId.String)
+		if err == nil && pos != nil && pos.PositionCode.Valid {
+			if pos.PositionCode.String == "FOUNDER" {
+				return true
+			}
+		}
+	}
+	// 检查是否是公司Owner
+	company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, employee.CompanyId)
+	if err == nil && company != nil && company.Owner == employee.UserId {
+		return true
 	}
 	return false
 }

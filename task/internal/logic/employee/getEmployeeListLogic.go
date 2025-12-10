@@ -100,25 +100,65 @@ func (l *GetEmployeeListLogic) GetEmployeeList(req *types.EmployeeListRequest) (
 		// 查询员工参与的所有任务节点数量（去重，包括作为执行人和负责人的任务节点）
 		taskCount, _ := l.svcCtx.TaskNodeModel.GetTaskNodeCountByEmployee(l.ctx, employeeID)
 
+		// 获取职位信息（职位级别、职位代码）
+		positionLevel := 0
+		positionCode := ""
+		isManagement := 0
+		if empInfo.PositionID != "" {
+			pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, empInfo.PositionID)
+			if err == nil && pos != nil {
+				positionLevel = int(pos.PositionLevel)
+				if pos.PositionCode.Valid {
+					positionCode = pos.PositionCode.String
+				}
+				isManagement = int(pos.IsManagement)
+			}
+		}
+
+		// 获取部门信息（部门优先级）
+		departmentPriority := 0
+		if empInfo.DepartmentID != "" {
+			dept, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, empInfo.DepartmentID)
+			if err == nil && dept != nil {
+				departmentPriority = int(dept.DepartmentPriority)
+			}
+		}
+
+		// 检查是否是创始人（通过职位代码或公司Owner）
+		isFounder := false
+		if positionCode == "FOUNDER" {
+			isFounder = true
+		} else if empInfo.CompanyID != "" {
+			company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, empInfo.CompanyID)
+			if err == nil && company != nil && company.Owner == empInfo.UserID {
+				isFounder = true
+			}
+		}
+
 		// 构建包含任务数量的员工信息
 		empMap := map[string]interface{}{
-			"id":           empInfo.ID,
-			"userId":       empInfo.UserID,
-			"companyId":    empInfo.CompanyID,
-			"departmentId": empInfo.DepartmentID,
-			"positionId":   empInfo.PositionID,
-			"employeeId":   empInfo.EmployeeID,
-			"realName":     empInfo.RealName,
-			"workEmail":    empInfo.WorkEmail,
-			"workPhone":    empInfo.WorkPhone,
-			"skills":       empInfo.Skills,
-			"roleTags":     empInfo.RoleTags,
-			"hireDate":     empInfo.HireDate,
-			"leaveDate":    empInfo.LeaveDate,
-			"status":       empInfo.Status,
-			"createTime":   empInfo.CreateTime,
-			"updateTime":   empInfo.UpdateTime,
-			"taskCount":    taskCount,
+			"id":                empInfo.ID,
+			"userId":            empInfo.UserID,
+			"companyId":         empInfo.CompanyID,
+			"departmentId":      empInfo.DepartmentID,
+			"positionId":        empInfo.PositionID,
+			"employeeId":        empInfo.EmployeeID,
+			"realName":          empInfo.RealName,
+			"workEmail":         empInfo.WorkEmail,
+			"workPhone":         empInfo.WorkPhone,
+			"skills":            empInfo.Skills,
+			"roleTags":          empInfo.RoleTags,
+			"hireDate":          empInfo.HireDate,
+			"leaveDate":         empInfo.LeaveDate,
+			"status":            empInfo.Status,
+			"createTime":        empInfo.CreateTime,
+			"updateTime":        empInfo.UpdateTime,
+			"taskCount":         taskCount,
+			"positionLevel":     positionLevel,     // 职位级别
+			"positionCode":      positionCode,      // 职位代码
+			"isManagement":      isManagement,      // 是否管理岗
+			"departmentPriority": departmentPriority, // 部门优先级
+			"isFounder":         isFounder,         // 是否是创始人
 		}
 		employeeList = append(employeeList, empMap)
 	}

@@ -160,13 +160,18 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 		if userInfo.RealName.Valid && userInfo.RealName.String != "" {
 			realName = userInfo.RealName.String
 		}
+		// 生成唯一的员工编号（避免写死导致冲突）
+		empCode := fmt.Sprintf("FOUNDER-%s", employeeID[len(employeeID)-6:])
+		if len(employeeID) < 6 {
+			empCode = fmt.Sprintf("FOUNDER-%s", employeeID)
+		}
 		founderEmp := &user.Employee{
 			Id:           employeeID,
 			UserId:       userID,
 			CompanyId:    companyID,
 			DepartmentId: utils.Common.ToSqlNullString(founderDeptID),
 			PositionId:   utils.Common.ToSqlNullString(founderPosID),
-			EmployeeId:   "FOUNDER-001",
+			EmployeeId:   empCode,
 			RealName:     realName,
 			Email:        userInfo.Email,
 			Phone:        userInfo.Phone,

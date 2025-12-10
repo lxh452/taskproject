@@ -57,6 +57,11 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 		return utils.Response.BusinessError("员工已离职"), nil
 	}
 
+	// 5. 检查是否是创始人，禁止给创始人递交离职
+	if l.isFounder(employee) {
+		return utils.Response.BusinessError("不能给公司创始人递交离职申请"), nil
+	}
+
 	// 5. 解析离职时间
 	var leaveDate time.Time
 	if req.LeaveDate != "" {
@@ -214,4 +219,23 @@ func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employe
 		"leaveDate":    leaveDate.Format("2006-01-02"),
 		"status":       "pending_approval",
 	}), nil
+}
+
+// isFounder 检查员工是否是创始人
+func (l *EmployeeLeaveLogic) isFounder(employee *user.Employee) bool {
+	// 检查职位代码是否为 FOUNDER
+	if employee.PositionId.Valid {
+		pos, err := l.svcCtx.PositionModel.FindOne(l.ctx, employee.PositionId.String)
+		if err == nil && pos != nil && pos.PositionCode.Valid {
+			if pos.PositionCode.String == "FOUNDER" {
+				return true
+			}
+		}
+	}
+	// 检查是否是公司Owner
+	company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, employee.CompanyId)
+	if err == nil && company != nil && company.Owner == employee.UserId {
+		return true
+	}
+	return false
 }
