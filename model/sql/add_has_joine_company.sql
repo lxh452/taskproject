@@ -12,7 +12,5 @@ WHERE EXISTS (
     SELECT 1 FROM employee e WHERE e.user_id = u.id AND e.delete_time IS NULL
 );
 
--- 验证更新结果
-SELECT id, username, has_joined_company FROM `user` WHERE delete_time IS NULL;
-
+-- 注意：验证查询已移除，迁移脚本中不应包含 SELECT 语句
 

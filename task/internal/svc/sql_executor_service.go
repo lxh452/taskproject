@@ -42,7 +42,7 @@ func (s *SQLExecutorService) AutoMigrate(ctx context.Context) error {
 		"task_checklist.sql",
 		"handover_approval.sql",
 		"join_application.sql",
-		"add_has_joined_company.sql",
+		"add_has_joine_company.sql", // 注意：实际文件名是 add_has_joine_company.sql（少了一个d）
 	}
 
 	successCount := 0
@@ -160,16 +160,19 @@ func (s *SQLExecutorService) executeScriptFile(ctx context.Context, filePath, fi
 	return failCount == 0, nil
 }
 
-// parseSQLStatements 解析SQL语句（按分号分割，处理注释）
+// parseSQLStatements 解析SQL语句（按分号分割，处理注释和动态SQL）
 func (s *SQLExecutorService) parseSQLStatements(content string) []string {
 	var statements []string
 	var currentStmt strings.Builder
 	inMultiLineComment := false
+	inPrepareBlock := false // 是否在 PREPARE 块中
+	prepareDepth := 0       // PREPARE 语句的嵌套深度
 
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmedLine := strings.TrimSpace(line)
+		upperLine := strings.ToUpper(trimmedLine)
 
 		// 处理多行注释
 		if inMultiLineComment {
@@ -181,7 +184,13 @@ func (s *SQLExecutorService) parseSQLStatements(content string) []string {
 				if trimmedLine == "" {
 					continue
 				}
+				upperLine = strings.ToUpper(trimmedLine)
 			} else {
+				// 如果在 PREPARE 块中，需要保留注释内容
+				if inPrepareBlock {
+					currentStmt.WriteString(line)
+					currentStmt.WriteString("\n")
+				}
 				continue
 			}
 		}
@@ -193,24 +202,89 @@ func (s *SQLExecutorService) parseSQLStatements(content string) []string {
 				continue
 			}
 			inMultiLineComment = true
+			// 如果在 PREPARE 块中，需要保留注释
+			if inPrepareBlock {
+				currentStmt.WriteString(line)
+				currentStmt.WriteString("\n")
+			}
 			continue
 		}
 
-		// 跳过空行和单行注释
-		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "--") || strings.HasPrefix(trimmedLine, "#") {
-			continue
+		// 跳过空行和单行注释（除非在 PREPARE 块中）
+		if !inPrepareBlock {
+			if trimmedLine == "" || strings.HasPrefix(trimmedLine, "--") || strings.HasPrefix(trimmedLine, "#") {
+				continue
+			}
+		}
+
+		// 检测动态 SQL 块：从 SET @ 开始，到 DEALLOCATE PREPARE 结束
+		// 如果遇到 SET @，可能是动态 SQL 的开始，需要等待 PREPARE 确认
+		// 如果已经遇到 PREPARE，则确认是动态 SQL 块
+		if strings.HasPrefix(upperLine, "SET @") {
+			// 可能是动态 SQL 的开始，但需要等待 PREPARE 确认
+			// 暂时不设置 inPrepareBlock，继续累积语句
+		}
+
+		// 检测 PREPARE 语句（确认是动态 SQL 块）
+		// 如果当前语句包含 SET @，则从 SET @ 开始的所有内容都是动态 SQL 块的一部分
+		if strings.HasPrefix(upperLine, "PREPARE ") {
+			// 检查 currentStmt 中是否有 SET @，如果有，则确认是动态 SQL 块
+			currentContent := strings.ToUpper(currentStmt.String())
+			if strings.Contains(currentContent, "SET @") {
+				inPrepareBlock = true
+				prepareDepth = 1
+			}
 		}
 
 		currentStmt.WriteString(line)
 		currentStmt.WriteString("\n")
 
+		// 检测 DEALLOCATE PREPARE 语句（结束动态 SQL 块）
+		if strings.HasPrefix(upperLine, "DEALLOCATE PREPARE ") {
+			// 标记块即将结束，等待分号
+			if inPrepareBlock {
+				prepareDepth = 0
+			}
+		}
+
 		// 检查语句是否结束（以分号结尾）
 		if strings.HasSuffix(trimmedLine, ";") {
-			stmt := strings.TrimSpace(currentStmt.String())
-			if stmt != "" && stmt != ";" {
-				statements = append(statements, stmt)
+			// 如果在动态 SQL 块中，且已经遇到 DEALLOCATE PREPARE，则结束块
+			if inPrepareBlock && prepareDepth == 0 {
+				stmt := strings.TrimSpace(currentStmt.String())
+				if stmt != "" && stmt != ";" {
+					statements = append(statements, stmt)
+				}
+				currentStmt.Reset()
+				inPrepareBlock = false
+				prepareDepth = 0
+			} else if !inPrepareBlock {
+				// 检查当前语句是否包含 SET @ 但还没有 PREPARE
+				// 如果是，可能是独立的 SET @ 语句，应该提交
+				currentContent := strings.ToUpper(strings.TrimSpace(currentStmt.String()))
+				if strings.HasPrefix(currentContent, "SET @") && !strings.Contains(currentContent, "PREPARE ") {
+					// 独立的 SET @ 语句，可以提交
+					stmt := strings.TrimSpace(currentStmt.String())
+					if stmt != "" && stmt != ";" {
+						statements = append(statements, stmt)
+					}
+					currentStmt.Reset()
+				} else {
+					// 普通语句，直接提交
+					stmt := strings.TrimSpace(currentStmt.String())
+					if stmt != "" && stmt != ";" {
+						// 跳过 SELECT 语句（迁移脚本中不应该有查询语句）
+						upperStmt := strings.ToUpper(strings.TrimSpace(stmt))
+						if !strings.HasPrefix(upperStmt, "SELECT ") {
+							statements = append(statements, stmt)
+						} else {
+							logx.Infof("[SQL迁移] 跳过 SELECT 语句: %s", truncateSQL(stmt, 50))
+						}
+					}
+					currentStmt.Reset()
+				}
 			}
-			currentStmt.Reset()
+			// 如果在动态 SQL 块中但还没遇到 DEALLOCATE，继续累积
 		}
 	}
 
@@ -218,7 +292,12 @@ func (s *SQLExecutorService) parseSQLStatements(content string) []string {
 	if currentStmt.Len() > 0 {
 		stmt := strings.TrimSpace(currentStmt.String())
 		if stmt != "" && stmt != ";" {
-			statements = append(statements, stmt)
+			upperStmt := strings.ToUpper(strings.TrimSpace(stmt))
+			if !strings.HasPrefix(upperStmt, "SELECT ") {
+				statements = append(statements, stmt)
+			} else {
+				logx.Infof("[SQL迁移] 跳过 SELECT 语句: %s", truncateSQL(stmt, 50))
+			}
 		}
 	}
 
