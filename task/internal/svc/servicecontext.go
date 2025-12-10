@@ -285,7 +285,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		FileStorageService: fileStorageService,
 
 		// SQL执行服务
-		SQLExecutorService: NewSQLExecutorService(conn, "./model/sql"),
+		SQLExecutorService: NewSQLExecutorService(conn, "./../model/sql"),
 	}
 
 	// 启动时自动执行数据库迁移
