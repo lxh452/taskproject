@@ -10,7 +10,6 @@ import (
 	"task_Project/task/internal/utils"
 
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type GetTaskListLogic struct {
@@ -35,27 +34,14 @@ func (l *GetTaskListLogic) GetTaskList(req *types.TaskListRequest) (resp *types.
 		return utils.Response.ValidationError(errs[0]), nil
 	}
 
-	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
-
-	//获取当前员工id
-	emp, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 
 	// 3. 根据用户角色获取任务列表
 	var tasks []*task.Task
 	var total int64
-
-	// 获取用户信息以确定角色
-	_, err = l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
-	if err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("用户未绑定员工信息"), nil
-		}
-		return nil, err
-	}
 
 	// 根据查询条件获取任务
 	if req.CompanyID != "" {
@@ -72,7 +58,7 @@ func (l *GetTaskListLogic) GetTaskList(req *types.TaskListRequest) (resp *types.
 		}
 	} else {
 		// 查询用户参与的任务：创建者/负责人/节点执行人（支持多员工字段）
-		tasks, total, err = l.svcCtx.TaskModel.FindByInvolved(l.ctx, emp.Id, page, pageSize)
+		tasks, total, err = l.svcCtx.TaskModel.FindByInvolved(l.ctx, employeeId, page, pageSize)
 		if err != nil {
 			return nil, err
 		}

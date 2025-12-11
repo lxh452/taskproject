@@ -49,17 +49,17 @@ var SuccessMessages = map[string]string{
 // 业务错误消息枚举
 var BusinessErrorMessages = map[string]string{
 	// 用户相关错误
-	"user_not_found":         "用户不存在",
-	"user_already_exists":    "用户已存在",
+	"user_not_found":          "用户不存在",
+	"user_already_exists":     "用户已存在",
 	"user_already_in_company": "用户已加入其他公司，无法创建新公司",
-	"username_exists":        "用户名已存在",
-	"email_exists":           "邮箱已被注册",
-	"phone_exists":           "手机号已被注册",
-	"password_weak":          "密码强度不够",
-	"user_disabled":          "用户已被禁用",
-	"user_locked":            "用户已被锁定",
-	"login_failed":           "用户名或密码错误",
-	"login_failed_too_many":  "密码错误次数过多，账户已被锁定",
+	"username_exists":         "用户名已存在",
+	"email_exists":            "邮箱已被注册",
+	"phone_exists":            "手机号已被注册",
+	"password_weak":           "密码强度不够",
+	"user_disabled":           "用户已被禁用",
+	"user_locked":             "用户已被锁定",
+	"login_failed":            "用户名或密码错误",
+	"login_failed_too_many":   "密码错误次数过多，账户已被锁定",
 
 	// 公司相关错误
 	"company_not_found":     "公司不存在",
@@ -98,6 +98,7 @@ var BusinessErrorMessages = map[string]string{
 	"task_not_found":      "任务不存在",
 	"task_node_not_found": "任务节点不存在",
 	"taskProgress":        "无权限更新此任务节点的进度",
+	"no_root_update":      "无权限更新此任务节点的前置节点",
 }
 
 // ResponseHelper 响应工具类

@@ -5,6 +5,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,20 +33,9 @@ func NewUpdateTaskDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *UpdateTaskDetailLogic) UpdateTaskDetail(req *types.UpdateTaskDetailRequest) (resp *types.BaseResponse, err error) {
-	// 先查看该员工是否合法
-	userID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
-	}
-	//遍历查看员工信息是否存在，如果不存在则返回错误
-	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, userID)
-	if err != nil {
-		logx.WithContext(l.ctx).Errorf("员工信息不存在: %v", err)
-		return utils.Response.BusinessError("员工信息不存在"), nil
-	}
-	if employee == nil {
-		logx.WithContext(l.ctx).Errorf("员工信息不存在: %v", err)
-		return utils.Response.BusinessError("员工信息不存在,请重新登录"), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
 	//遍历查看任务信息是否存在，如果不存在则返回错误
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskId)

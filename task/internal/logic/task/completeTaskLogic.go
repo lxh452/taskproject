@@ -35,10 +35,9 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 		return utils.Response.BusinessError("任务ID不能为空"), nil
 	}
 
-	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
 
 	// 3. 获取任务信息
@@ -51,7 +50,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 	}
 
 	// 4. 验证用户权限（只有任务创建者可以标记任务完成）
-	if taskInfo.TaskCreator != currentUserID {
+	if taskInfo.TaskCreator != employeeId {
 		return utils.Response.BusinessError("无权限完成此任务"), nil
 	}
 
@@ -96,7 +95,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 		TaskId:     req.TaskID,
 		LogType:    3, // 完成类型
 		LogContent: fmt.Sprintf("任务 %s 已完成", taskInfo.TaskTitle),
-		EmployeeId: currentUserID,
+		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)

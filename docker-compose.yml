@@ -35,10 +35,10 @@ services:
     container_name: task_project_redis
     restart: always
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass "your_redis_password_123"
+    command: redis-server --appendonly yes --requirepass "your_redis_password_123" --bind 0.0.0.0
     networks:
       - task_network
     healthcheck:

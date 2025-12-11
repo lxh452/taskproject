@@ -36,11 +36,10 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 
 	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
-
 	// 3. 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
@@ -51,7 +50,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 
 	// 4. 验证用户是否有权限更新任务
-	if taskInfo.TaskCreator != currentUserID {
+	if taskInfo.TaskCreator != employeeId {
 		return utils.Response.BusinessError("无权限更新此任务"), nil
 	}
 
@@ -114,7 +113,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		TaskId:     req.TaskID,
 		LogType:    2, // 更新类型
 		LogContent: fmt.Sprintf("任务信息已更新：%s", req.UpdateNote),
-		EmployeeId: currentUserID,
+		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)

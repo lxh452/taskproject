@@ -45,13 +45,13 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 	}
 
 	// 2. 获取当前用户ID并查找员工信息
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	currentEmpID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
 
 	// 获取当前员工信息
-	currentEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
+	currentEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentEmpID)
 	if err != nil {
 		l.Logger.Errorf("获取当前员工信息失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil

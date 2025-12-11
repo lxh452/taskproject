@@ -5,9 +5,9 @@ package task
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
-	"task_Project/task/internal/logic/notification"
 	"time"
 
 	"task_Project/model/task"
@@ -57,10 +57,15 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		l.Logger.Errorf("输出错误", err.Error())
 		return utils.Response.BusinessError("公司不存在"), nil
 	}
+	// 1. 从上下文获取当前员工ID
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
+	}
 
 	// 4. 验证用户（如果有负责人和节点负责人）
 	// 这里需要根据实际需求来确定是否需要验证
-	// 假设：公司管理员可以创建任务，不需要在负责人列表中
+	// todo 假设：公司管理员可以创建任务，不需要在负责人列表中
 
 	// 5. 创建任务ID
 	taskID := utils.Common.GenerateIDWithPrefix("task")
@@ -88,8 +93,8 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		TaskDetail:             req.TaskDetail,
 		TaskPriority:           int64(req.TaskPriority),
 		TaskType:               int64(req.TaskType), // 1: 单部门, 2: 跨部门
-		TaskStatus:             1,                   // 待开始
-		TaskCreator:            "",                  // 可以通过middleware获取当前用户
+		TaskStatus:             0,                   // 待开始
+		TaskCreator:            employeeId,
 		TaskStartTime:          time.Now(),
 		TaskDeadline:           deadline,
 		ResponsibleEmployeeIds: utils.Common.ToSqlNullString(responsibleEmployeeIds),
@@ -121,27 +126,6 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		notificationEvent.Priority = req.TaskType
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
 			l.Logger.Errorf("发布任务创建通知事件失败: %v", err)
-		}
-	}
-
-	// 兼容旧代码：如果还需要通过 notificationLogic 创建，保留这部分
-	notificationLogic := notification.NewCreateNotificationLogic(l.ctx, l.svcCtx)
-	var note types.CreateNotificationRequest
-	for _, v := range req.NodeEmployeeIDs {
-		note = types.CreateNotificationRequest{
-			EmployeeID:  v,
-			Title:       req.TaskTitle,
-			Content:     content,
-			Type:        1,
-			Priority:    req.TaskType,
-			RelatedID:   taskID,
-			RelatedType: "task",
-		}
-		_, err = notificationLogic.CreateNotification(&note)
-
-		if err != nil {
-			l.Logger.Errorf("通知节点负责人失败：%v", err)
-			return nil, err
 		}
 	}
 
@@ -187,7 +171,7 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		TaskId:     taskID,
 		LogType:    1, // 创建类型
 		LogContent: "创建任务: " + req.TaskTitle,
-		EmployeeId: "", // 可以通过middleware获取当前用户ID
+		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)

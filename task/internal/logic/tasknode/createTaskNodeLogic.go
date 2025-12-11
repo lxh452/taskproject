@@ -39,11 +39,10 @@ func NewCreateTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Cr
 
 func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (resp *types.BaseResponse, err error) {
 	resp = new(types.BaseResponse)
-	fmt.Println("用户", req)
 	// 先查看自己是否通过校验
 	// 获取当前用户Id
-	userID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	emp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userID)
+	empID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, empID)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		l.Logger.Errorf("找不到该员工，reason：%v", err)
 		return nil, err
@@ -65,7 +64,7 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	nodeIDs := strings.Split(currentTask.NodeEmployeeIds.String, ",")
 	var flag bool
 	for _, v := range nodeIDs {
-		if emp.Id == v {
+		if empID == v {
 			flag = true
 		}
 	}
@@ -123,7 +122,7 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 		NodeStatus:     0,
 		NodeFinishTime: sql.NullTime{Valid: false}, // 节点完成时间，创建时为空
 		ExecutorId:     executorIds,
-		LeaderId:       emp.Id, // 使用员工ID，不是用户ID
+		LeaderId:       empID,
 		Progress:       0,
 		NodePriority:   req.NodePriority,
 		DeleteTime:     sql.NullTime{Valid: false}, // 删除时间，创建时为空

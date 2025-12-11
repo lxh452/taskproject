@@ -46,7 +46,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 	}
 
 	// 2. 获取当前用户ID并查找员工信息
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	currentUserID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}

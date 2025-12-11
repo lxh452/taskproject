@@ -6,8 +6,6 @@ package tasknode
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -33,18 +31,15 @@ func NewUpdatePrerequisiteNodesLogic(ctx context.Context, svcCtx *svc.ServiceCon
 // 专门用于更新前置节点的方法
 func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.UpdatePrerequisiteNodesRequest) (resp *types.BaseResponse, err error) {
 	resp = new(types.BaseResponse)
-	fmt.Println(req.PrerequisiteNodes)
 	// 1. 参数验证
 	if req.NodeID == "" {
 		return utils.Response.BusinessError("任务节点ID不能为空"), nil
 	}
 
-	// 2. 获取当前用户ID（用于权限验证）
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
-
 	// 3. 获取任务节点信息
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.NodeID)
 	if err != nil {
@@ -53,20 +48,30 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 		}
 		return nil, err
 	}
-	currentEmp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, currentUserID)
+	currentEmp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, employeeId)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		l.Logger.Errorf("更新前置节点失败: %v", err)
 		return utils.Response.InternalError("更新前置节点失败"), nil
 	}
 	// 4. 验证用户权限（只有负责人可以更新前置节点）
 	if taskNode.LeaderId != currentEmp.Id {
-		return utils.Response.BusinessError("无权限更新此任务节点的前置节点"), nil
+		return utils.Response.BusinessError("no_root_update"), nil
 	}
 
+	node, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, req.NodeID)
+	if err != nil {
+		return utils.Response.InternalError("更新前置节点失败"), nil
+	}
 	// 5. 更新前置节点
 	if err := l.svcCtx.TaskNodeModel.UpdateExNodeIds(l.ctx, req.NodeID, req.PrerequisiteNodes); err != nil {
 		l.Logger.Errorf("更新前置节点失败: %v", err)
 		return utils.Response.InternalError("更新前置节点失败"), nil
+	}
+	// 如果创建好了流程证明该流程已经完善了，因此需要修正任务
+	err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, node.TaskId, 1)
+	if err != nil {
+		l.Logger.Errorf("更新任务状态失败: %v", err)
+		return utils.Response.InternalError("更新任务失败"), err
 	}
 
 	return utils.Response.Success(map[string]interface{}{

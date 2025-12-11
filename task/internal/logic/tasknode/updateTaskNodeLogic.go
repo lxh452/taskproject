@@ -36,7 +36,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 
 	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	currentEmpID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
@@ -51,7 +51,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 
 	// 4. 验证用户权限
-	if taskNode.LeaderId != currentUserID && taskNode.ExecutorId != currentUserID {
+	if taskNode.LeaderId != currentEmpID && taskNode.ExecutorId != currentEmpID {
 		return utils.Response.BusinessError("无权限更新此任务节点"), nil
 	}
 
@@ -65,14 +65,14 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		updateFields = append(updateFields, "节点名称")
 	}
 
-	// 更新节点详情（只有负责人可以修改）
-	if req.NodeDetail != "" && taskNode.LeaderId == currentUserID {
+	// 更新节点详情  只有负责人可以修改或者任务负责人
+	if req.NodeDetail != "" && taskNode.LeaderId == currentEmpID {
 		updateData["node_detail"] = req.NodeDetail
 		updateFields = append(updateFields, "节点详情")
 	}
 
-	// 更新执行人（只有负责人可以修改）
-	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentUserID {
+	// 更新执行人 只有负责人可以修改或者任务负责人
+	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
 		// 取第一个执行人
 		newExecutorID := req.ExecutorID[0]
 		// 验证新执行人是否存在
@@ -132,10 +132,10 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	if req.NodeName != "" {
 		updatedTaskNode.NodeName = req.NodeName
 	}
-	if req.NodeDetail != "" && taskNode.LeaderId == currentUserID {
+	if req.NodeDetail != "" && taskNode.LeaderId == currentEmpID {
 		updatedTaskNode.NodeDetail = utils.Common.ToSqlNullString(req.NodeDetail)
 	}
-	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentUserID {
+	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
 		updatedTaskNode.ExecutorId = req.ExecutorID[0]
 	}
 	if len(req.NodeStatus) > 0 {
@@ -172,7 +172,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		TaskId:     taskNode.TaskId,
 		LogType:    2, // 更新类型
 		LogContent: logContent,
-		EmployeeId: currentUserID,
+		EmployeeId: currentEmpID,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)

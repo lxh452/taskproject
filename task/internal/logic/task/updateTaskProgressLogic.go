@@ -45,14 +45,12 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	}
 
 	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	// 1. 从上下文获取当前员工ID
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
-	emp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, currentUserID)
-	if err != nil && err != sqlx.ErrNotFound {
-		return utils.Response.BusinessError(err.Error()), nil
-	}
+
 	// 3. 获取任务节点信息
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.TaskNodeID)
 	if err != nil {
@@ -66,13 +64,13 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	leaderIds := strings.Split(taskNode.LeaderId, ",")
 	i := make(chan bool, 1)
 	for _, leaderId := range leaderIds {
-		if leaderId == emp.Id {
+		if leaderId == employeeId {
 			i <- true
 		}
 	}
 	go func() {
 		for _, exectorId := range exectorIds {
-			if exectorId == emp.Id {
+			if exectorId == employeeId {
 				i <- true
 				return
 			}
@@ -119,7 +117,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 		LogId:      utils.NewCommon().GenerateIDWithPrefix("task_log"),
 		TaskId:     taskNode.TaskId,
 		TaskNodeId: utils.Common.ToSqlNullString(req.TaskNodeID),
-		EmployeeId: currentUserID,
+		EmployeeId: employeeId,
 		LogType:    1, // 更新类型
 		LogContent: logContent,
 		Progress:   sql.NullInt64{Int64: int64(req.Progress), Valid: true},

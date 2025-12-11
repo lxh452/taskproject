@@ -268,12 +268,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: notification.CreateNotificationHandler(serverCtx),
 			},
 			{
-				// 获取通知信息
-				Method:  http.MethodPost,
-				Path:    "/get",
-				Handler: notification.GetNotificationHandler(serverCtx),
-			},
-			{
 				// 获取通知列表
 				Method:  http.MethodPost,
 				Path:    "/list",

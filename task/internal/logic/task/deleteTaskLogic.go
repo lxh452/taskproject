@@ -35,10 +35,9 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 		return utils.Response.BusinessError("任务ID不能为空"), nil
 	}
 
-	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
-		return utils.Response.UnauthorizedError(), nil
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
 	}
 
 	// 3. 获取任务信息
@@ -51,7 +50,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	}
 
 	// 4. 验证用户权限（只有任务创建者可以删除）
-	if taskInfo.TaskCreator != currentUserID {
+	if taskInfo.TaskCreator != employeeId {
 		return utils.Response.BusinessError("无权限删除此任务"), nil
 	}
 
@@ -94,7 +93,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 		TaskId:     req.TaskID,
 		LogType:    4, // 删除类型
 		LogContent: fmt.Sprintf("任务 %s 已被删除", taskInfo.TaskTitle),
-		EmployeeId: currentUserID,
+		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
@@ -141,7 +140,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 
 	// 获取操作者信息
 	operatorName := "系统"
-	operator, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, currentUserID)
+	operator, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, employeeId)
 	if err == nil {
 		operatorName = operator.RealName
 	}
