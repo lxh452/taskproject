@@ -44,14 +44,14 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return utils.Response.BusinessError("任务节点不存在"), nil
 		}
-		l.Logger.Errorf("获取任务节点详情失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务节点详情失败: %v", err)
 		return nil, err
 	}
 
 	// 4. 验证用户权限（只有负责人、执行人或任务创建者可以查看）
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
 	if err != nil {
-		l.Logger.Errorf("获取任务信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 		return nil, err
 	}
 

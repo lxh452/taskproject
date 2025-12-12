@@ -47,14 +47,14 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 	// 2. 解析截止时间
 	deadline, err := time.Parse("2006-01-02", req.TaskDeadline)
 	if err != nil {
-		l.Logger.Errorf("输出错误", err.Error())
+		l.Logger.WithContext(l.ctx).Errorf("输出错误", err.Error())
 		return utils.Response.BusinessError("任务截止时间格式错误"), nil
 	}
 
 	// 3. 验证公司是否存在
 	_, err = l.svcCtx.CompanyModel.FindOne(l.ctx, req.CompanyID)
 	if err != nil {
-		l.Logger.Errorf("输出错误", err.Error())
+		l.Logger.WithContext(l.ctx).Errorf("输出错误", err.Error())
 		return utils.Response.BusinessError("公司不存在"), nil
 	}
 	// 1. 从上下文获取当前员工ID
@@ -106,7 +106,7 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 
 	_, err = l.svcCtx.TaskModel.Insert(l.ctx, newTask)
 	if err != nil {
-		l.Logger.Errorf("创建任务失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务失败: %v", err)
 		return nil, err
 	}
 
@@ -125,25 +125,25 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		notificationEvent.Content = content
 		notificationEvent.Priority = req.TaskType
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布任务创建通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务创建通知事件失败: %v", err)
 		}
 	}
 
 	// 发送邮件给节点负责人（通过消息队列）
 	if l.svcCtx.EmailMQService != nil && len(req.NodeEmployeeIDs) > 0 {
-		l.Logger.Infof("[CreateTask] EmailMQService is available, preparing to send emails to node employees")
+		l.Logger.WithContext(l.ctx).Infof("[CreateTask] EmailMQService is available, preparing to send emails to node employees")
 		emails := []string{}
 		for _, employeeID := range req.NodeEmployeeIDs {
 			emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, employeeID)
 			if err == nil && emp.Email.Valid && emp.Email.String != "" {
 				emails = append(emails, emp.Email.String)
-				l.Logger.Infof("[CreateTask] Found employee email: employeeId=%s, email=%s", employeeID, emp.Email.String)
+				l.Logger.WithContext(l.ctx).Infof("[CreateTask] Found employee email: employeeId=%s, email=%s", employeeID, emp.Email.String)
 			} else {
-				l.Logger.Infof("[CreateTask] Employee email not found or invalid: employeeId=%s, error=%v", employeeID, err)
+				l.Logger.WithContext(l.ctx).Infof("[CreateTask] Employee email not found or invalid: employeeId=%s, error=%v", employeeID, err)
 			}
 		}
 		if len(emails) > 0 {
-			l.Logger.Infof("[CreateTask] Sending email to %d recipients: %v", len(emails), emails)
+			l.Logger.WithContext(l.ctx).Infof("[CreateTask] Sending email to %d recipients: %v", len(emails), emails)
 			emailEvent := &svc.EmailEvent{
 				EventType: svc.TaskCreated,
 				To:        emails,
@@ -153,16 +153,16 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 				TaskID:    taskID,
 			}
 			if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-				l.Logger.Errorf("[CreateTask] Failed to publish email event: error=%v, taskId=%s, emails=%v",
+				l.Logger.WithContext(l.ctx).Errorf("[CreateTask] Failed to publish email event: error=%v, taskId=%s, emails=%v",
 					err, taskID, emails)
 			} else {
-				l.Logger.Infof("[CreateTask] Email event published successfully: taskId=%s, emails=%v", taskID, emails)
+				l.Logger.WithContext(l.ctx).Infof("[CreateTask] Email event published successfully: taskId=%s, emails=%v", taskID, emails)
 			}
 		} else {
-			l.Logger.Infof("[CreateTask] No valid email addresses found for node employees: nodeEmployeeIDs=%v", req.NodeEmployeeIDs)
+			l.Logger.WithContext(l.ctx).Infof("[CreateTask] No valid email addresses found for node employees: nodeEmployeeIDs=%v", req.NodeEmployeeIDs)
 		}
 	} else {
-		l.Logger.Infof("[CreateTask] EmailMQService is not available or no node employees, email notification will be skipped")
+		l.Logger.WithContext(l.ctx).Infof("[CreateTask] EmailMQService is not available or no node employees, email notification will be skipped")
 	}
 
 	// 7. 创建任务日志
@@ -176,7 +176,7 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 8. 如果是跨部门任务（TaskType=2），需要通知相关部门负责人
@@ -184,7 +184,6 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		// 这里可以发送通知给相关部门负责人
 		// 通知逻辑已经在notification.go中实现
 	}
-
 	return utils.Response.Success(map[string]interface{}{
 		"taskId":  taskID,
 		"message": "任务创建成功",

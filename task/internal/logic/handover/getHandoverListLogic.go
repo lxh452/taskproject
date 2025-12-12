@@ -41,19 +41,19 @@ func (l *GetHandoverListLogic) GetHandoverList(req *types.HandoverListRequest) (
 	// 3. 获取员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("查询员工失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
 
 	// 4. 查询与当前员工相关的所有交接（作为发起人、接收人或审批人）
 	// 使用员工主键ID（employee.Id）而不是工号（employee.EmployeeId）
-	l.Logger.Infof("查询交接列表: employeeId=%s, page=%d, pageSize=%d", employee.Id, page, pageSize)
+	l.Logger.WithContext(l.ctx).Infof("查询交接列表: employeeId=%s, page=%d, pageSize=%d", employee.Id, page, pageSize)
 	handovers, total, err := l.svcCtx.TaskHandoverModel.FindByEmployeeInvolved(l.ctx, employee.Id, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询交接列表失败: employeeId=%s, error=%v", employee.Id, err)
+		l.Logger.WithContext(l.ctx).Errorf("查询交接列表失败: employeeId=%s, error=%v", employee.Id, err)
 		return utils.Response.ValidationError("查询交接列表失败: " + err.Error()), nil
 	}
-	l.Logger.Infof("查询到 %d 条交接记录, 总数: %d", len(handovers), total)
+	l.Logger.WithContext(l.ctx).Infof("查询到 %d 条交接记录, 总数: %d", len(handovers), total)
 
 	// 5. 状态过滤（如果指定了状态）
 	var filteredHandovers = handovers

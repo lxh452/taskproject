@@ -44,7 +44,7 @@ func (l *BatchCompleteChecklistLogic) BatchCompleteChecklist(req *types.BatchCom
 	for _, checklistId := range req.ChecklistIDs {
 		checklist, err := l.svcCtx.TaskChecklistModel.FindOne(l.ctx, checklistId)
 		if err != nil {
-			l.Logger.Errorf("查询清单失败: checklistId=%s, error=%v", checklistId, err)
+			l.Logger.WithContext(l.ctx).Errorf("查询清单失败: checklistId=%s, error=%v", checklistId, err)
 			continue
 		}
 		if checklist.DeleteTime.Valid {
@@ -53,7 +53,7 @@ func (l *BatchCompleteChecklistLogic) BatchCompleteChecklist(req *types.BatchCom
 
 		// 验证权限：只有创建者可以修改清单完成状态
 		if checklist.CreatorId != employeeId {
-			l.Logger.Infof("用户无权修改清单: userId=%s, checklistId=%s, creatorId=%s",
+			l.Logger.WithContext(l.ctx).Infof("用户无权修改清单: userId=%s, checklistId=%s, creatorId=%s",
 				employeeId, checklistId, checklist.CreatorId)
 			continue
 		}
@@ -69,7 +69,7 @@ func (l *BatchCompleteChecklistLogic) BatchCompleteChecklist(req *types.BatchCom
 	// 4. 批量更新清单状态
 	err = l.svcCtx.TaskChecklistModel.BatchUpdateCompleteStatus(l.ctx, validChecklistIds, req.IsCompleted)
 	if err != nil {
-		l.Logger.Errorf("批量更新清单状态失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("批量更新清单状态失败: %v", err)
 		return nil, errors.New("批量更新清单状态失败")
 	}
 
@@ -77,12 +77,12 @@ func (l *BatchCompleteChecklistLogic) BatchCompleteChecklist(req *types.BatchCom
 	for nodeId := range nodeIds {
 		err = l.updateNodeChecklistCount(nodeId)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点清单统计失败: nodeId=%s, error=%v", nodeId, err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点清单统计失败: nodeId=%s, error=%v", nodeId, err)
 		}
 
 		err = l.updateNodeProgress(nodeId)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点进度失败: nodeId=%s, error=%v", nodeId, err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: nodeId=%s, error=%v", nodeId, err)
 		}
 	}
 
@@ -163,13 +163,13 @@ func (l *BatchCompleteChecklistLogic) updateTaskProgress(taskNodeId string) erro
 	// 更新任务进度
 	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
 	if err != nil {
-		l.Logger.Errorf("更新任务进度失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
 	}
 
 	// 更新任务节点统计
 	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点统计失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
 	}
 
 	return nil

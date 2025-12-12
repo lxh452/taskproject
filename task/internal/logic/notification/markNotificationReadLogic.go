@@ -44,7 +44,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	// 3. 获取员工ID
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("查询员工失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
 		return utils.Response.BusinessError("用户未绑定员工信息"), nil
 	}
 
@@ -54,7 +54,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return utils.Response.BusinessError("通知不存在"), nil
 		}
-		l.Logger.Errorf("查询通知失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询通知失败: %v", err)
 		return nil, err
 	}
 	fmt.Println("notification:", notification, employee.Id)
@@ -74,7 +74,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	// 7. 更新通知为已读状态
 	err = l.svcCtx.NotificationModel.UpdateReadStatus(l.ctx, req.NotificationID, 1)
 	if err != nil {
-		l.Logger.Errorf("更新通知已读状态失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新通知已读状态失败: %v", err)
 		return nil, err
 	}
 

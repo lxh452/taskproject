@@ -72,7 +72,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 	// 6. 获取当前用户信息
 	currentEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("获取当前用户信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取当前用户信息失败: %v", err)
 	}
 	approverName := ""
 	if currentEmployee != nil {
@@ -82,7 +82,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 	// 7. 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
 	if err != nil {
-		l.Logger.Errorf("获取任务信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 	}
 	taskTitle := ""
 	if taskInfo != nil {
@@ -114,7 +114,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 	}
 	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
 	if err != nil {
-		l.Logger.Errorf("插入审批记录失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
 	}
 
 	// 10. 创建任务日志
@@ -128,7 +128,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 11. 发送通知给发起人（接收人已拒绝）
@@ -143,7 +143,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 		notificationEvent.Content = fmt.Sprintf("接收人拒绝接收任务「%s」的交接，原因：%s", taskTitle, comment)
 		notificationEvent.Priority = 2
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
 		}
 	}
 
@@ -155,7 +155,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 			RelatedID:   req.HandoverID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布邮件事件失败: %v", err)
 		}
 	}
 

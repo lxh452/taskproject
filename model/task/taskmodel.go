@@ -209,35 +209,35 @@ func (m *customTaskModel) SearchTasks(ctx context.Context, keyword string, page,
 
 // UpdateStatus 更新任务状态
 func (m *customTaskModel) UpdateStatus(ctx context.Context, id string, status int) error {
-	query := `UPDATE task SET status = ?, update_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET task_status = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }
 
 // UpdateProgress 更新任务进度
 func (m *customTaskModel) UpdateProgress(ctx context.Context, id string, progress int) error {
-	query := `UPDATE task SET progress = ?, update_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET task_progress = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, progress, id)
 	return err
 }
 
 // UpdateActualHours 更新实际工时
 func (m *customTaskModel) UpdateActualHours(ctx context.Context, id string, actualHours int) error {
-	query := `UPDATE task SET actual_hours = ?, update_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET actual_hours = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, actualHours, id)
 	return err
 }
 
 // UpdateBasicInfo 更新任务基本信息
 func (m *customTaskModel) UpdateBasicInfo(ctx context.Context, id, title, description string) error {
-	query := `UPDATE task SET task_title = ?, task_description = ?, update_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET task_title = ?, task_description = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, title, description, id)
 	return err
 }
 
 // UpdateDeadline 更新任务截止时间
 func (m *customTaskModel) UpdateDeadline(ctx context.Context, id string, deadline string) error {
-	query := `UPDATE task SET deadline = ?, update_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET deadline = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, deadline, id)
 	return err
 }

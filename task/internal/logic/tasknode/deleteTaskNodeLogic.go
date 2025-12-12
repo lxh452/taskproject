@@ -63,7 +63,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	// 6. 检查是否有其他节点依赖此节点（暂时注释掉，因为方法不存在）
 	// dependentNodes, err := l.svcCtx.TaskNodeModel.FindDependentNodes(l.ctx, req.TaskNodeID)
 	// if err != nil {
-	// 	l.Logger.Errorf("查询依赖节点失败: %v", err)
+	// 	l.Logger.WithContext(l.ctx).Errorf("查询依赖节点失败: %v", err)
 	// 	return nil, err
 	// }
 
@@ -74,7 +74,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	// 7. 软删除任务节点
 	err = l.svcCtx.TaskNodeModel.SoftDelete(l.ctx, req.TaskNodeID)
 	if err != nil {
-		l.Logger.Errorf("删除任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("删除任务节点失败: %v", err)
 		return nil, err
 	}
 
@@ -89,7 +89,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 9. 通知相关人员（通过消息队列）
@@ -145,7 +145,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 		notificationEvent.Content = fmt.Sprintf("任务节点 %s（任务：%s）已被 %s 删除", taskNode.NodeName, taskTitle, operatorName)
 		notificationEvent.Priority = 2
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布任务节点删除通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务节点删除通知事件失败: %v", err)
 		}
 	}
 
@@ -165,7 +165,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 			if err == nil {
 				body = renderedBody
 			} else {
-				l.Logger.Errorf("渲染任务节点删除邮件模板失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("渲染任务节点删除邮件模板失败: %v", err)
 			}
 		}
 
@@ -179,7 +179,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 			NodeID:    req.TaskNodeID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布任务节点删除邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务节点删除邮件事件失败: %v", err)
 		}
 	}
 

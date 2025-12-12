@@ -51,8 +51,26 @@ func (v *validator) IsValidPassword(password string) bool {
 	if v.IsEmpty(password) {
 		return false
 	}
-	// 密码长度至少6位
-	return len(password) >= 6
+	// 密码长度至少8位，最多32位
+	if len(password) < 8 || len(password) > 32 {
+		return false
+	}
+	// 必须包含数字
+	hasDigit, _ := regexp.MatchString(`\d`, password)
+	if !hasDigit {
+		return false
+	}
+	// 必须包含字母
+	hasLetter, _ := regexp.MatchString(`[a-zA-Z]`, password)
+	if !hasLetter {
+		return false
+	}
+	// 必须包含特殊字符
+	hasSpecial, _ := regexp.MatchString(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]`, password)
+	if !hasSpecial {
+		return false
+	}
+	return true
 }
 
 // IsValidUsername 验证用户名格式
@@ -113,8 +131,23 @@ func (v *validator) ValidatePassword(password string) string {
 	if v.IsEmpty(password) {
 		return "密码不能为空"
 	}
-	if !v.IsValidPassword(password) {
-		return "密码长度不能少于6位"
+	if len(password) < 8 {
+		return "密码长度不能少于8位"
+	}
+	if len(password) > 32 {
+		return "密码长度不能超过32位"
+	}
+	hasDigit, _ := regexp.MatchString(`\d`, password)
+	if !hasDigit {
+		return "密码必须包含数字"
+	}
+	hasLetter, _ := regexp.MatchString(`[a-zA-Z]`, password)
+	if !hasLetter {
+		return "密码必须包含字母"
+	}
+	hasSpecial, _ := regexp.MatchString(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]`, password)
+	if !hasSpecial {
+		return "密码必须包含特殊字符(!@#$%^&*等)"
 	}
 	return ""
 }

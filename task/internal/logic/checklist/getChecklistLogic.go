@@ -29,7 +29,7 @@ func (l *GetChecklistLogic) GetChecklist(req *types.GetChecklistRequest) (resp *
 	// 1. 查询清单
 	checklist, err := l.svcCtx.TaskChecklistModel.FindOne(l.ctx, req.ChecklistID)
 	if err != nil {
-		l.Logger.Errorf("查询清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询清单失败: %v", err)
 		return nil, errors.New("清单不存在")
 	}
 	if checklist.DeleteTime.Valid {

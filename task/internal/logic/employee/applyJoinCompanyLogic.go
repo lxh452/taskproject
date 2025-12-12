@@ -14,7 +14,7 @@ import (
 )
 
 type ApplyJoinCompanyLogic struct {
-	logx.Logger
+	logger logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
@@ -22,7 +22,7 @@ type ApplyJoinCompanyLogic struct {
 // 申请加入公司
 func NewApplyJoinCompanyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApplyJoinCompanyLogic {
 	return &ApplyJoinCompanyLogic{
-		Logger: logx.WithContext(ctx),
+		logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
@@ -55,14 +55,14 @@ func (l *ApplyJoinCompanyLogic) ApplyJoinCompany(req *types.ApplyJoinCompanyRequ
 	// 解析邀请码
 	inviteData, err := l.svcCtx.InviteCodeService.ParseInviteCode(l.ctx, req.InviteCode)
 	if err != nil {
-		logx.Errorf("解析邀请码失败: code=%s, err=%v", req.InviteCode, err)
+		l.logger.WithContext(l.ctx).Errorf("解析邀请码失败: code=%s, err=%v", req.InviteCode, err)
 		return utils.Response.BusinessError(err.Error()), nil
 	}
 
 	// 验证公司是否存在
 	company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, inviteData.CompanyID)
 	if err != nil {
-		logx.Errorf("查询公司失败: companyId=%s, err=%v", inviteData.CompanyID, err)
+		l.logger.WithContext(l.ctx).Errorf("查询公司失败: companyId=%s, err=%v", inviteData.CompanyID, err)
 		return utils.Response.BusinessError("邀请码对应的公司不存在"), nil
 	}
 
@@ -86,20 +86,20 @@ func (l *ApplyJoinCompanyLogic) ApplyJoinCompany(req *types.ApplyJoinCompanyRequ
 
 	_, err = l.svcCtx.JoinApplicationModel.Insert(l.ctx, application)
 	if err != nil {
-		logx.Errorf("创建加入申请失败: %v", err)
+		l.logger.WithContext(l.ctx).Errorf("创建加入申请失败: %v", err)
 		return utils.Response.InternalError("提交申请失败"), nil
 	}
 
 	// 使用邀请码（增加使用计数）
 	if err := l.svcCtx.InviteCodeService.UseInviteCode(l.ctx, req.InviteCode); err != nil {
-		logx.Errorf("更新邀请码使用次数失败: %v", err)
+		l.logger.WithContext(l.ctx).Errorf("更新邀请码使用次数失败: %v", err)
 		// 不影响主流程
 	}
 
 	// 发送通知给审批人（创始人或人事部门）
 	go l.notifyApprovers(inviteData.CompanyID, company.Name, userID, applicationID)
 
-	logx.Infof("用户 %s 申请加入公司 %s, 申请ID: %s", userID, company.Name, applicationID)
+	l.logger.WithContext(l.ctx).Infof("用户 %s 申请加入公司 %s, 申请ID: %s", userID, company.Name, applicationID)
 
 	return utils.Response.Success(map[string]interface{}{
 		"applicationId": applicationID,
@@ -162,9 +162,9 @@ func (l *ApplyJoinCompanyLogic) notifyApprovers(companyID, companyName, applican
 			RelatedType: "join_application",
 		}
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
-			logx.Errorf("发送加入申请通知失败: %v", err)
+			l.logger.WithContext(l.ctx).Errorf("发送加入申请通知失败: %v", err)
 		} else {
-			logx.Infof("已发送加入申请通知: applicationId=%s, approvers=%v", applicationID, approverEmployeeIDs)
+			l.logger.WithContext(l.ctx).Infof("已发送加入申请通知: applicationId=%s, approvers=%v", applicationID, approverEmployeeIDs)
 		}
 	}
 }

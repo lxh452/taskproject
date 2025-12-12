@@ -478,11 +478,12 @@ type PositionRolesRequest struct {
 }
 
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email,optional"`
-	Phone    string `json:"phone,optional"`
-	RealName string `json:"realName"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	Email            string `json:"email"`
+	Phone            string `json:"phone,optional"`
+	RealName         string `json:"realName"`
+	VerificationCode string `json:"verificationCode,optional"` // 邮箱验证码
 }
 
 type RevokeRoleRequest struct {
@@ -974,4 +975,28 @@ type UploadAvatarRequest struct {
 type UploadAvatarResponse struct {
 	AvatarURL string `json:"avatarUrl"`
 	FileID    string `json:"fileId"`
+}
+
+// ============== 验证码相关类型 ==============
+
+// 发送验证码请求
+type SendVerificationCodeRequest struct {
+	Email string `json:"email"` // 邮箱地址
+	Type  string `json:"type"`  // 验证码类型：register（注册）、reset_password（重置密码）
+}
+
+// 重置密码请求
+type ResetPasswordRequest struct {
+	Email            string `json:"email"`            // 邮箱地址
+	VerificationCode string `json:"verificationCode"` // 验证码
+	NewPassword      string `json:"newPassword"`      // 新密码
+}
+
+// 注册请求（带验证码）
+type RegisterWithCodeRequest struct {
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	Email            string `json:"email"`
+	RealName         string `json:"realName"`
+	VerificationCode string `json:"verificationCode"` // 邮箱验证码
 }

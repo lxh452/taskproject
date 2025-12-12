@@ -49,9 +49,13 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		return nil, err
 	}
 
-	// 4. 验证用户是否有权限更新任务
-	if taskInfo.TaskCreator != employeeId {
-		return utils.Response.BusinessError("无权限更新此任务"), nil
+	// 4. 验证用户是否有权限更新任务（任务创建者或任务负责人都可以）
+	leaderId := ""
+	if taskInfo.LeaderId.Valid {
+		leaderId = taskInfo.LeaderId.String
+	}
+	if taskInfo.TaskCreator != employeeId && leaderId != employeeId {
+		return utils.Response.BusinessError("无权限更新此任务，只有任务创建者或负责人可以修改"), nil
 	}
 
 	// 5. 验证任务状态
@@ -72,8 +76,9 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		updateData["task_status"] = req.Status
 	}
 	if req.Deadline != "" {
-		deadline, err := time.Parse("2006-01-02", req.Deadline)
-		if err != nil {
+		// 支持多种日期格式
+		deadline, parseErr := parseDeadline(req.Deadline)
+		if parseErr != nil {
 			return utils.Response.BusinessError("任务截止时间格式错误"), nil
 		}
 		updateData["task_deadline"] = deadline
@@ -93,8 +98,8 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		updatedTask.TaskStatus = int64(req.Status)
 	}
 	if req.Deadline != "" {
-		deadline, err := time.Parse("2006-01-02", req.Deadline)
-		if err != nil {
+		deadline, parseErr := parseDeadline(req.Deadline)
+		if parseErr != nil {
 			return utils.Response.BusinessError("任务截止时间格式错误"), nil
 		}
 		updatedTask.TaskDeadline = deadline
@@ -103,7 +108,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
 	if err != nil {
-		l.Logger.Errorf("更新任务失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务失败: %v", err)
 		return nil, err
 	}
 
@@ -118,11 +123,31 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	return utils.Response.Success(map[string]interface{}{
 		"taskId":  req.TaskID,
 		"message": "任务更新成功",
 	}), nil
+}
+
+// parseDeadline 解析多种格式的截止时间
+func parseDeadline(dateStr string) (time.Time, error) {
+	// 尝试多种日期格式
+	formats := []string{
+		time.RFC3339,           // 2006-01-02T15:04:05Z07:00
+		"2006-01-02T15:04:05Z", // ISO 8601
+		"2006-01-02T15:04:05",  // ISO 8601 without timezone
+		"2006-01-02 15:04:05",  // 常见格式
+		"2006-01-02",           // 纯日期
+	}
+
+	for _, format := range formats {
+		if t, err := time.Parse(format, dateStr); err == nil {
+			return t, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("无法解析日期格式: %s", dateStr)
 }

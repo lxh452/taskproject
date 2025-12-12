@@ -62,7 +62,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 	// 6. 检查所有任务节点是否都已完成
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("查询任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询任务节点失败: %v", err)
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
 	if err != nil {
-		l.Logger.Errorf("更新任务状态失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
 		return nil, err
 	}
 
@@ -100,7 +100,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 9. 通知相关人员（通过消息队列，消费者会查询并发送）
@@ -134,7 +134,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 		notificationEvent.Content = fmt.Sprintf("任务 %s 已完成", taskInfo.TaskTitle)
 		notificationEvent.Priority = 2
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布任务完成通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务完成通知事件失败: %v", err)
 		}
 	}
 
@@ -145,7 +145,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 			TaskID:    req.TaskID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布任务完成邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务完成邮件事件失败: %v", err)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"task_Project/model/task"
 	"time"
 
 	"task_Project/task/internal/svc"
@@ -37,7 +38,7 @@ func (l *UpdateChecklistLogic) UpdateChecklist(req *types.UpdateChecklistRequest
 	// 2. 查询清单
 	checklist, err := l.svcCtx.TaskChecklistModel.FindOne(l.ctx, req.ChecklistID)
 	if err != nil {
-		l.Logger.Errorf("查询清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询清单失败: %v", err)
 		return nil, errors.New("清单不存在")
 	}
 	if checklist.DeleteTime.Valid {
@@ -72,7 +73,7 @@ func (l *UpdateChecklistLogic) UpdateChecklist(req *types.UpdateChecklistRequest
 	// 5. 保存更新
 	err = l.svcCtx.TaskChecklistModel.Update(l.ctx, checklist)
 	if err != nil {
-		l.Logger.Errorf("更新清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新清单失败: %v", err)
 		return nil, errors.New("更新清单失败")
 	}
 
@@ -80,22 +81,41 @@ func (l *UpdateChecklistLogic) UpdateChecklist(req *types.UpdateChecklistRequest
 	if oldCompletedStatus != checklist.IsCompleted {
 		err = l.updateNodeChecklistCount(checklist.TaskNodeId)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点清单统计失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点清单统计失败: %v", err)
 			// 不影响主流程，只记录日志
 		}
 
 		// 同时更新任务节点的进度
 		err = l.updateNodeProgress(checklist.TaskNodeId)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点进度失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: %v", err)
 		}
 	}
 
 	// 7. 查询更新后的清单
 	updatedChecklist, err := l.svcCtx.TaskChecklistModel.FindOne(l.ctx, req.ChecklistID)
 	if err != nil {
-		l.Logger.Errorf("查询更新后的清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询更新后的清单失败: %v", err)
 		return nil, errors.New("清单更新成功但查询失败")
+	}
+	one, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, updatedChecklist.TaskNodeId)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("查询任务失败: %v", err)
+		return nil, errors.New("任务不存在")
+	}
+	// 创建任务日志
+	// 7. 创建任务日志
+	taskLog := &task.TaskLog{
+		LogId:      utils.NewCommon().GenerateIDWithPrefix("task_log"),
+		TaskId:     one.TaskId,
+		LogType:    2, // 创建类型
+		LogContent: "更新任务" + req.Content,
+		EmployeeId: employeeId,
+		CreateTime: time.Now(),
+	}
+	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 8. 转换为响应
@@ -144,6 +164,9 @@ func (l *UpdateChecklistLogic) updateNodeProgress(taskNodeId string) error {
 	if err != nil {
 		return err
 	}
+	if progress == 100 {
+		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, taskNodeId, 2)
+	}
 
 	// 更新任务整体进度
 	return l.updateTaskProgress(taskNodeId)
@@ -171,7 +194,7 @@ func (l *UpdateChecklistLogic) updateTaskProgress(taskNodeId string) error {
 	var totalProgress int64
 	var completedCount int64
 	for _, node := range nodes {
-		totalProgress += int64(node.Progress)
+		totalProgress += node.Progress
 		if node.Progress >= 100 {
 			completedCount++
 		}
@@ -181,13 +204,21 @@ func (l *UpdateChecklistLogic) updateTaskProgress(taskNodeId string) error {
 	// 更新任务进度
 	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
 	if err != nil {
-		l.Logger.Errorf("更新任务进度失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
+	}
+
+	// 当所有节点都完成时（平均进度达到100%），更新任务状态为已完成
+	if avgProgress == 100 {
+		err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+		}
 	}
 
 	// 更新任务节点统计
 	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点统计失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
 	}
 
 	return nil

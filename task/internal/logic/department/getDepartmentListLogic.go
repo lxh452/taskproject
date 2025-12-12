@@ -40,7 +40,7 @@ func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequ
 		return utils.Response.UnauthorizedError(), nil
 	}
 	if req.CompanyID == "" {
-		l.Logger.Errorf("公司id不能为空")
+		l.Logger.WithContext(l.ctx).Errorf("公司id不能为空")
 		return utils.Response.NotFoundError("公司id不能为空"), nil
 	}
 	// 查询部门列表

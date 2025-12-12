@@ -48,13 +48,19 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 		}
 		return nil, err
 	}
-	currentEmp, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, employeeId)
-	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		l.Logger.Errorf("更新前置节点失败: %v", err)
-		return utils.Response.InternalError("更新前置节点失败"), nil
+
+	// 4. 验证用户权限（节点负责人或任务负责人都可以更新前置节点）
+	// 获取任务信息，检查是否是任务负责人
+	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
+		return utils.Response.InternalError("获取任务信息失败"), nil
 	}
-	// 4. 验证用户权限（只有负责人可以更新前置节点）
-	if taskNode.LeaderId != currentEmp.Id {
+
+	isNodeLeader := taskNode.LeaderId == employeeId
+	isTaskLeader := taskInfo.TaskCreator == employeeId
+
+	if !isNodeLeader && !isTaskLeader {
 		return utils.Response.BusinessError("no_root_update"), nil
 	}
 
@@ -64,13 +70,13 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 	}
 	// 5. 更新前置节点
 	if err := l.svcCtx.TaskNodeModel.UpdateExNodeIds(l.ctx, req.NodeID, req.PrerequisiteNodes); err != nil {
-		l.Logger.Errorf("更新前置节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新前置节点失败: %v", err)
 		return utils.Response.InternalError("更新前置节点失败"), nil
 	}
 	// 如果创建好了流程证明该流程已经完善了，因此需要修正任务
 	err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, node.TaskId, 1)
 	if err != nil {
-		l.Logger.Errorf("更新任务状态失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
 		return utils.Response.InternalError("更新任务失败"), err
 	}
 

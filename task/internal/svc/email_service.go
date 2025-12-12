@@ -203,6 +203,11 @@ func (s *EmailService) SendTaskUpdatedEmail(ctx context.Context, employeeEmail, 
 	return s.sendEmail(ctx, []string{employeeEmail}, "任务更新通知", body)
 }
 
+// SendCustomEmail 发送自定义邮件（用于验证码等场景）
+func (s *EmailService) SendCustomEmail(ctx context.Context, email, subject, body string) error {
+	return s.sendEmail(ctx, []string{email}, subject, body)
+}
+
 // sendEmail 统一发送邮件方法（通过消息队列）
 func (s *EmailService) sendEmail(ctx context.Context, to []string, subject, body string) error {
 	logx.WithContext(ctx).Infof("[EmailService] sendEmail called: to=%v, subject=%s, bodyLength=%d",

@@ -41,7 +41,7 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 	// 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("获取任务信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 		return utils.Response.BusinessError("任务不存在"), nil
 	}
 
@@ -53,7 +53,7 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 	// 获取任务的所有节点
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("获取任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务节点失败: %v", err)
 		return utils.Response.BusinessError("获取任务节点失败"), nil
 	}
 
@@ -75,7 +75,7 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 		// 执行自动派发
 		err := dispatchService.AutoDispatchTask(l.ctx, taskNode.TaskNodeId)
 		if err != nil {
-			l.Logger.Errorf("自动派发任务节点 %s 失败: %v", taskNode.TaskNodeId, err)
+			l.Logger.WithContext(l.ctx).Errorf("自动派发任务节点 %s 失败: %v", taskNode.TaskNodeId, err)
 			dispatchResults = append(dispatchResults, DispatchResult{
 				TaskNodeID: taskNode.TaskNodeId,
 				NodeName:   taskNode.NodeName,

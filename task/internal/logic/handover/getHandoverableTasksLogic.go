@@ -47,7 +47,7 @@ func (l *GetHandoverableTasksLogic) GetHandoverableTasks(req *types.PageReq) (re
 	// 2. 获取员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("获取员工信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取员工信息失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
 	employeeID := employee.Id

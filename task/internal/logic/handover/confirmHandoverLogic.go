@@ -53,7 +53,7 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 	// 获取当前员工信息
 	currentEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentEmpID)
 	if err != nil {
-		l.Logger.Errorf("获取当前员工信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取当前员工信息失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
 	currentEmployeeID := currentEmployee.Id
@@ -81,7 +81,7 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 	// 6. 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
 	if err != nil {
-		l.Logger.Errorf("获取任务信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 	}
 	taskTitle := ""
 	if taskInfo != nil {
@@ -109,7 +109,7 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 	}
 	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
 	if err != nil {
-		l.Logger.Errorf("插入审批记录失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
 	}
 
 	// 9. 创建任务日志
@@ -123,11 +123,11 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 10. 发送通知给发起人（接收人已同意）
-	l.Logger.Infof("准备发送通知, NotificationMQService=%v", l.svcCtx.NotificationMQService != nil)
+	l.Logger.WithContext(l.ctx).Infof("准备发送通知, NotificationMQService=%v", l.svcCtx.NotificationMQService != nil)
 	if l.svcCtx.NotificationMQService != nil {
 		notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
 			svc.HandoverNotification,
@@ -138,14 +138,14 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 		notificationEvent.Title = "交接接收确认"
 		notificationEvent.Content = fmt.Sprintf("接收人已同意接收任务「%s」的交接，等待上级审批", taskTitle)
 		notificationEvent.Priority = 2
-		l.Logger.Infof("发布通知事件: toEmployees=%v, title=%s", []string{handover.FromEmployeeId}, notificationEvent.Title)
+		l.Logger.WithContext(l.ctx).Infof("发布通知事件: toEmployees=%v, title=%s", []string{handover.FromEmployeeId}, notificationEvent.Title)
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
 		} else {
-			l.Logger.Infof("通知事件发布成功")
+			l.Logger.WithContext(l.ctx).Infof("通知事件发布成功")
 		}
 	} else {
-		l.Logger.Errorf("NotificationMQService 为空，无法发送通知")
+		l.Logger.WithContext(l.ctx).Errorf("NotificationMQService 为空，无法发送通知")
 	}
 
 	// 11. 发送通知给审批人（如果有）
@@ -161,7 +161,7 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 			notificationEvent.Content = fmt.Sprintf("有一个任务「%s」的交接申请需要您审批", taskTitle)
 			notificationEvent.Priority = 2
 			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-				l.Logger.Errorf("发布通知事件失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
 			}
 		}
 
@@ -173,7 +173,7 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 				RelatedID:   req.HandoverID,
 			}
 			if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-				l.Logger.Errorf("发布邮件事件失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("发布邮件事件失败: %v", err)
 			}
 		}
 	}

@@ -42,7 +42,7 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 	// 3. 获取员工ID
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("查询员工失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
 		return utils.Response.BusinessError("用户未绑定员工信息"), nil
 	}
 
@@ -79,7 +79,7 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 	// 7. 查询通知列表
 	notifications, total, err := l.svcCtx.NotificationModel.FindByEmployee(l.ctx, employeeID, isRead, category, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询通知列表失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询通知列表失败: %v", err)
 		return nil, err
 	}
 

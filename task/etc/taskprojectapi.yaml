@@ -23,7 +23,7 @@ MySQL:
 Redis:
   Host: "localhost"
   Port: 6379
-  Password: "your_redis_password_123"  # 请修改为你的 Redis 实际密码
+  Password: "your_redis_password_123"
   DB: 0
 
 # JWT配置
@@ -35,11 +35,6 @@ JWT:
   Audience: "task-project-client"
 
 # 邮件配置
-# 注意：QQ 邮箱推荐使用 587 端口（STARTTLS），比 465 端口更稳定
-# 如果 587 端口仍有问题，请检查：
-# 1. QQ 邮箱是否已开启 SMTP 服务
-# 2. 授权码是否正确（不是邮箱密码）
-# 3. 网络连接和防火墙设置
 Email:
   Host: "smtp.qq.com"
   Port: 587  # 改为 587 端口（STARTTLS），比 465 更稳定

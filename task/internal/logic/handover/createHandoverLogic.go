@@ -39,7 +39,7 @@ func NewCreateHandoverLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Cr
 
 func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (resp *types.BaseResponse, err error) {
 	// 打印请求参数用于调试
-	l.Logger.Infof("创建交接请求参数: TaskID=%s, FromEmployeeID=%s, ToEmployeeID=%s", req.TaskID, req.FromEmployeeID, req.ToEmployeeID)
+	l.Logger.WithContext(l.ctx).Infof("创建交接请求参数: TaskID=%s, FromEmployeeID=%s, ToEmployeeID=%s", req.TaskID, req.FromEmployeeID, req.ToEmployeeID)
 
 	// 1. 参数验证
 	if req.TaskID == "" {
@@ -108,22 +108,22 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 		}
 	}
 
-	l.Logger.Infof("权限检查: isCreator=%v, isResponsible=%v, isExecutor=%v, TaskCreator=%s", isCreator, isResponsible, isExecutor, taskInfo.TaskCreator)
+	l.Logger.WithContext(l.ctx).Infof("权限检查: isCreator=%v, isResponsible=%v, isExecutor=%v, TaskCreator=%s", isCreator, isResponsible, isExecutor, taskInfo.TaskCreator)
 	if !isCreator && !isResponsible && !isExecutor {
 		return utils.Response.ValidationError("只有任务的创建者、负责人或执行人才能发起交接"), nil
 	}
 
 	// 5. 验证接收人是否存在且在职
-	l.Logger.Infof("查找接收人: ToEmployeeID=%s", req.ToEmployeeID)
+	l.Logger.WithContext(l.ctx).Infof("查找接收人: ToEmployeeID=%s", req.ToEmployeeID)
 	toEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.ToEmployeeID)
 	if err != nil {
-		l.Logger.Errorf("查找接收人失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查找接收人失败: %v", err)
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return utils.Response.ValidationError("接收人不存在"), nil
 		}
 		return nil, err
 	}
-	l.Logger.Infof("找到接收人: ID=%s, Name=%s, Status=%d", toEmployee.Id, toEmployee.RealName, toEmployee.Status)
+	l.Logger.WithContext(l.ctx).Infof("找到接收人: ID=%s, Name=%s, Status=%d", toEmployee.Id, toEmployee.RealName, toEmployee.Status)
 	if toEmployee.Status != 1 {
 		return utils.Response.ValidationError("接收人不在职，无法接收任务"), nil
 	}
@@ -174,7 +174,7 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 
 	_, err = l.svcCtx.TaskHandoverModel.Insert(l.ctx, newHandover)
 	if err != nil {
-		l.Logger.Errorf("创建交接记录失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建交接记录失败: %v", err)
 		return nil, err
 	}
 
@@ -189,7 +189,7 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 10. 发送通知给接收人（通过消息队列）
@@ -204,7 +204,7 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 		notificationEvent.Content = fmt.Sprintf("您收到了一个任务交接请求：%s，原因：%s，请确认是否接收", taskInfo.TaskTitle, req.HandoverReason)
 		notificationEvent.Priority = 2
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布交接通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布交接通知事件失败: %v", err)
 		}
 	}
 
@@ -216,7 +216,7 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 			RelatedID:   handoverID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布交接邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布交接邮件事件失败: %v", err)
 		}
 	}
 

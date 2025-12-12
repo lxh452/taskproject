@@ -45,14 +45,14 @@ func (l *GetMyChecklistLogic) GetMyChecklist(req *types.GetMyChecklistRequest) (
 	// 3. 查询我的清单
 	checklists, total, err := l.svcCtx.TaskChecklistModel.FindByCreatorIdWithPage(l.ctx, employeeId, req.IsCompleted, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询我的清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询我的清单失败: %v", err)
 		return nil, errors.New("查询清单失败")
 	}
 
 	// 4. 查询未完成数量（用于显示badge）
 	uncompletedCount, err := l.svcCtx.TaskChecklistModel.CountUncompletedByCreatorId(l.ctx, employeeId)
 	if err != nil {
-		l.Logger.Errorf("统计未完成清单数量失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("统计未完成清单数量失败: %v", err)
 		uncompletedCount = 0
 	}
 
@@ -97,4 +97,3 @@ func (l *GetMyChecklistLogic) GetMyChecklist(req *types.GetMyChecklistRequest) (
 		"uncompletedCount": uncompletedCount,
 	}, nil
 }
-

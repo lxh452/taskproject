@@ -161,7 +161,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 
 	err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedTaskNode)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点失败: %v", err)
 		return nil, err
 	}
 
@@ -177,7 +177,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 8. 如果更新了执行人，发送通知和邮件（通过消息队列，消费者会查询并发送）
@@ -189,7 +189,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 				NodeID:    req.NodeID,
 			}
 			if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-				l.Logger.Errorf("发布邮件事件失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("发布邮件事件失败: %v", err)
 			}
 		}
 
@@ -205,7 +205,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 				RelatedType: "task",
 			}
 			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, event); err != nil {
-				l.Logger.Errorf("发布通知事件失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
 			}
 		}
 	}

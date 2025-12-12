@@ -62,7 +62,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	// 6. 检查是否有进行中的任务节点
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("查询任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询任务节点失败: %v", err)
 		return nil, err
 	}
 
@@ -75,7 +75,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	// 7. 软删除任务
 	err = l.svcCtx.TaskModel.SoftDelete(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("删除任务失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("删除任务失败: %v", err)
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	for _, node := range taskNodes {
 		err = l.svcCtx.TaskNodeModel.SoftDelete(l.ctx, node.TaskNodeId)
 		if err != nil {
-			l.Logger.Errorf("删除任务节点失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("删除任务节点失败: %v", err)
 		}
 	}
 
@@ -98,7 +98,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 	}
 
 	// 10. 通知相关人员（通过消息队列）
@@ -157,7 +157,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 		notificationEvent.Content = fmt.Sprintf("任务 %s 已被 %s 删除", taskInfo.TaskTitle, operatorName)
 		notificationEvent.Priority = 2
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布任务删除通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务删除通知事件失败: %v", err)
 		}
 	}
 
@@ -177,7 +177,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 			if err == nil {
 				body = renderedBody
 			} else {
-				l.Logger.Errorf("渲染任务删除邮件模板失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("渲染任务删除邮件模板失败: %v", err)
 			}
 		}
 
@@ -190,7 +190,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 			TaskID:    req.TaskID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布任务删除邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布任务删除邮件事件失败: %v", err)
 		}
 	}
 

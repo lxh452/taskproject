@@ -45,14 +45,14 @@ func (l *GetTaskLogic) GetTask(req *types.GetTaskRequest) (resp *types.BaseRespo
 	// 3. 获取任务节点
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("获取任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务节点失败: %v", err)
 		taskNodes = []*taskmodel.TaskNode{} // 设置为空数组，不影响主流程
 	}
 
 	// 4. 获取任务日志
 	taskLogs, err := l.svcCtx.TaskLogModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("获取任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务日志失败: %v", err)
 		taskLogs = []*taskmodel.TaskLog{} // 设置为空数组，不影响主流程
 	}
 

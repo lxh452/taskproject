@@ -17,6 +17,7 @@ CREATE TABLE `user` (
     `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `delete_time` TIMESTAMP NULL COMMENT '删除时间',
+    `has_joined_company`  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已加入公司 0-否 1-是',
     
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_username` (`username`),

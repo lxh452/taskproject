@@ -54,7 +54,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 	// 获取当前员工信息
 	currentEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("获取当前员工信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取当前员工信息失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
 	currentEmployeeID := currentEmployee.Id
@@ -122,7 +122,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		}
 		// 更新交接人
 		handover.ToEmployeeId = req.ToEmployeeID
-		l.Logger.Infof("审批时指定交接人: %s -> %s", handover.FromEmployeeId, req.ToEmployeeID)
+		l.Logger.WithContext(l.ctx).Infof("审批时指定交接人: %s -> %s", handover.FromEmployeeId, req.ToEmployeeID)
 	}
 
 	// 7. 更新交接状态
@@ -180,14 +180,14 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 	}
 	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
 	if err != nil {
-		l.Logger.Errorf("插入审批记录失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
 	}
 
 	// 9. 如果通过，更新任务和任务节点的相关人员
 	if newStatus == 2 {
 		if handover.TaskId != "" {
 			// 普通任务交接：更新指定任务的相关人员
-			l.Logger.Infof("开始更新任务相关人员: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
+			l.Logger.WithContext(l.ctx).Infof("开始更新任务相关人员: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
 
 			// 9.1 更新任务的负责人
 			taskInfo, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
@@ -198,7 +198,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 				if taskInfo.TaskCreator == handover.FromEmployeeId {
 					taskInfo.TaskCreator = handover.ToEmployeeId
 					needUpdateTask = true
-					l.Logger.Infof("更新任务创建者: %s -> %s", handover.FromEmployeeId, handover.ToEmployeeId)
+					l.Logger.WithContext(l.ctx).Infof("更新任务创建者: %s -> %s", handover.FromEmployeeId, handover.ToEmployeeId)
 				}
 
 				// 检查并更新任务负责人列表
@@ -208,7 +208,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					if oldIds != newIds {
 						taskInfo.ResponsibleEmployeeIds = sql.NullString{String: newIds, Valid: true}
 						needUpdateTask = true
-						l.Logger.Infof("更新任务负责人: %s -> %s", oldIds, newIds)
+						l.Logger.WithContext(l.ctx).Infof("更新任务负责人: %s -> %s", oldIds, newIds)
 					}
 				}
 
@@ -219,16 +219,16 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					if oldIds != newIds {
 						taskInfo.NodeEmployeeIds = sql.NullString{String: newIds, Valid: true}
 						needUpdateTask = true
-						l.Logger.Infof("更新任务节点员工: %s -> %s", oldIds, newIds)
+						l.Logger.WithContext(l.ctx).Infof("更新任务节点员工: %s -> %s", oldIds, newIds)
 					}
 				}
 
 				if needUpdateTask {
 					taskInfo.UpdateTime = time.Now()
 					if updateErr := l.svcCtx.TaskModel.Update(l.ctx, taskInfo); updateErr != nil {
-						l.Logger.Errorf("更新任务信息失败: %v", updateErr)
+						l.Logger.WithContext(l.ctx).Errorf("更新任务信息失败: %v", updateErr)
 					} else {
-						l.Logger.Infof("任务信息更新成功")
+						l.Logger.WithContext(l.ctx).Infof("任务信息更新成功")
 					}
 				}
 			}
@@ -236,7 +236,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 			// 9.2 更新任务节点的执行人和负责人
 			nodes, nodeErr := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, handover.TaskId)
 			if nodeErr != nil {
-				l.Logger.Errorf("获取任务节点失败: %v", nodeErr)
+				l.Logger.WithContext(l.ctx).Errorf("获取任务节点失败: %v", nodeErr)
 			} else {
 				for _, node := range nodes {
 					needUpdateNode := false
@@ -245,29 +245,29 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					if node.ExecutorId == handover.FromEmployeeId {
 						node.ExecutorId = handover.ToEmployeeId
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
 					// 更新负责人
 					if node.LeaderId == handover.FromEmployeeId {
 						node.LeaderId = handover.ToEmployeeId
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
 					if needUpdateNode {
 						node.UpdateTime = time.Now()
 						if updateErr := l.svcCtx.TaskNodeModel.Update(l.ctx, node); updateErr != nil {
-							l.Logger.Errorf("更新任务节点失败: %v", updateErr)
+							l.Logger.WithContext(l.ctx).Errorf("更新任务节点失败: %v", updateErr)
 						}
 					}
 				}
 			}
 
-			l.Logger.Infof("任务相关人员更新完成")
+			l.Logger.WithContext(l.ctx).Infof("任务相关人员更新完成")
 		} else {
 			// 离职申请：处理离职员工的所有任务节点交接
-			l.Logger.Infof("开始处理离职员工任务交接: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
+			l.Logger.WithContext(l.ctx).Infof("开始处理离职员工任务交接: 从 %s 转移到 %s", handover.FromEmployeeId, handover.ToEmployeeId)
 
 			// 9.3 查找离职员工负责的所有任务节点（作为执行人和负责人）
 			executorNodes, _, executorErr := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, handover.FromEmployeeId, 1, 1000)
@@ -305,12 +305,12 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 						newExecutorIds = append(newExecutorIds, handover.ToEmployeeId)
 						node.ExecutorId = strings.Join(newExecutorIds, ",")
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, handover.ToEmployeeId)
 					} else if node.ExecutorId == handover.FromEmployeeId {
 						// 单执行人情况
 						node.ExecutorId = handover.ToEmployeeId
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
 					// 更新负责人（支持多负责人）
@@ -327,26 +327,26 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 						newLeaderIds = append(newLeaderIds, handover.ToEmployeeId)
 						node.LeaderId = strings.Join(newLeaderIds, ",")
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, handover.ToEmployeeId)
 					} else if node.LeaderId == handover.FromEmployeeId {
 						// 单负责人情况
 						node.LeaderId = handover.ToEmployeeId
 						needUpdateNode = true
-						l.Logger.Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
 					if needUpdateNode {
 						node.UpdateTime = time.Now()
 						if updateErr := l.svcCtx.TaskNodeModel.Update(l.ctx, node); updateErr != nil {
-							l.Logger.Errorf("更新任务节点失败: %v", updateErr)
+							l.Logger.WithContext(l.ctx).Errorf("更新任务节点失败: %v", updateErr)
 						} else {
 							updatedCount++
 						}
 					}
 				}
-				l.Logger.Infof("离职员工任务节点交接完成，共更新 %d 个节点", updatedCount)
+				l.Logger.WithContext(l.ctx).Infof("离职员工任务节点交接完成，共更新 %d 个节点", updatedCount)
 			} else {
-				l.Logger.Infof("离职员工没有需要交接的任务节点")
+				l.Logger.WithContext(l.ctx).Infof("离职员工没有需要交接的任务节点")
 			}
 
 			// 9.4 更新员工状态为离职
@@ -356,9 +356,9 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 			}
 			err = l.svcCtx.EmployeeModel.SelectiveUpdate(l.ctx, handover.FromEmployeeId, updateData)
 			if err != nil {
-				l.Logger.Errorf("更新员工离职状态失败: %v", err)
+				l.Logger.WithContext(l.ctx).Errorf("更新员工离职状态失败: %v", err)
 			} else {
-				l.Logger.Infof("员工 %s 状态已更新为离职", handover.FromEmployeeId)
+				l.Logger.WithContext(l.ctx).Infof("员工 %s 状态已更新为离职", handover.FromEmployeeId)
 			}
 		}
 	}
@@ -376,13 +376,13 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		}
 		_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 		if err != nil {
-			l.Logger.Errorf("创建任务日志失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 		}
 	}
 
 	// 10. 发送通知给发起人和接收人
 	notifyEmployees := []string{handover.FromEmployeeId, handover.ToEmployeeId}
-	l.Logger.Infof("准备发送审批结果通知, NotificationMQService=%v, notifyEmployees=%v", l.svcCtx.NotificationMQService != nil, notifyEmployees)
+	l.Logger.WithContext(l.ctx).Infof("准备发送审批结果通知, NotificationMQService=%v, notifyEmployees=%v", l.svcCtx.NotificationMQService != nil, notifyEmployees)
 	if l.svcCtx.NotificationMQService != nil {
 		notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
 			svc.HandoverNotification,
@@ -397,14 +397,14 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 			notificationEvent.Content = fmt.Sprintf("您的交接申请被上级拒绝，原因：%s", req.Comment)
 		}
 		notificationEvent.Priority = 2
-		l.Logger.Infof("发布审批结果通知: title=%s, content=%s", notificationEvent.Title, notificationEvent.Content)
+		l.Logger.WithContext(l.ctx).Infof("发布审批结果通知: title=%s, content=%s", notificationEvent.Title, notificationEvent.Content)
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-			l.Logger.Errorf("发布通知事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
 		} else {
-			l.Logger.Infof("审批结果通知发布成功")
+			l.Logger.WithContext(l.ctx).Infof("审批结果通知发布成功")
 		}
 	} else {
-		l.Logger.Errorf("NotificationMQService 为空，无法发送审批结果通知")
+		l.Logger.WithContext(l.ctx).Errorf("NotificationMQService 为空，无法发送审批结果通知")
 	}
 
 	// 发布邮件事件
@@ -415,7 +415,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 			RelatedID:   req.HandoverID,
 		}
 		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.Errorf("发布邮件事件失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("发布邮件事件失败: %v", err)
 		}
 	}
 

@@ -64,12 +64,12 @@ func (l *GetCompanyListLogic) GetCompanyList(req *types.CompanyListRequest) (res
 	// 这里可以根据用户角色来决定是否只显示自己的公司
 	emInfo, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userID)
 	if err != nil {
-		l.Logger.Errorf("查找该用户公司信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查找该用户公司信息失败: %v", err)
 		return nil, err
 	}
 	companyInfo, err := l.svcCtx.CompanyModel.FindOne(l.ctx, emInfo.CompanyId)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		l.Logger.Errorf("查找公司错误: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查找公司错误: %v", err)
 		return nil, err
 	}
 

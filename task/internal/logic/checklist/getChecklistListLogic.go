@@ -29,7 +29,7 @@ func (l *GetChecklistListLogic) GetChecklistList(req *types.GetChecklistListRequ
 	// 1. 验证任务节点是否存在
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, req.TaskNodeID)
 	if err != nil {
-		l.Logger.Errorf("查询任务节点失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询任务节点失败: %v", err)
 		return nil, errors.New("任务节点不存在")
 	}
 	if taskNode.DeleteTime.Valid {
@@ -43,14 +43,14 @@ func (l *GetChecklistListLogic) GetChecklistList(req *types.GetChecklistListRequ
 	// 3. 查询清单列表
 	checklists, total, err := l.svcCtx.TaskChecklistModel.FindByTaskNodeIdWithPage(l.ctx, req.TaskNodeID, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询清单列表失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询清单列表失败: %v", err)
 		return nil, errors.New("查询清单列表失败")
 	}
 
 	// 4. 获取清单统计信息
 	totalCount, completedCount, err := l.svcCtx.TaskChecklistModel.CountByTaskNodeId(l.ctx, req.TaskNodeID)
 	if err != nil {
-		l.Logger.Errorf("查询清单统计失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询清单统计失败: %v", err)
 	}
 
 	// 计算进度

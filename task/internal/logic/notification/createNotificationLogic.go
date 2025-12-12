@@ -69,12 +69,12 @@ func (l *CreateNotificationLogic) CreateNotificationInternal(req *types.CreateNo
 	// 2. 验证员工是否存在，并获取员工主键ID
 	emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.EmployeeID)
 	if err != nil {
-		l.Logger.Errorf("查询员工失败: %v %v", err, req.EmployeeID)
+		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v %v", err, req.EmployeeID)
 		return utils.Response.BusinessError("员工不存在"), nil
 	}
 	// 使用员工主键 Id（通知表使用员工主键存储）
 	actualEmployeeID := emp.Id
-	l.Logger.Infof("创建通知给员工: %s (ID: %s)", emp.RealName, actualEmployeeID)
+	l.Logger.WithContext(l.ctx).Infof("创建通知给员工: %s (ID: %s)", emp.RealName, actualEmployeeID)
 
 	// 3. 生成通知ID
 	notificationID := utils.Common.GenId("notification")
@@ -96,7 +96,7 @@ func (l *CreateNotificationLogic) CreateNotificationInternal(req *types.CreateNo
 
 	_, err = l.svcCtx.NotificationModel.Insert(l.ctx, notification)
 	if err != nil {
-		l.Logger.Errorf("创建通知失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建通知失败: %v", err)
 		return nil, err
 	}
 

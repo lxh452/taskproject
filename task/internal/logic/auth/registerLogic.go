@@ -39,6 +39,7 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		"用户名":  req.Username,
 		"密码":   req.Password,
 		"真实姓名": req.RealName,
+		"邮箱":   req.Email,
 	}
 
 	if errors := utils.Validator.ValidateRequired(requiredFields); len(errors) > 0 {
@@ -55,6 +56,20 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		if emailErr := utils.Validator.ValidateEmail(req.Email); emailErr != "" {
 			return utils.Response.ValidationError(emailErr), nil
 		}
+	}
+
+	// 验证邮箱验证码（如果提供了）
+	if req.VerificationCode != "" {
+		codeKey := "email_code:register:" + req.Email
+		storedCode, err := l.svcCtx.RedisClient.Get(codeKey)
+		if err != nil || storedCode == "" {
+			return utils.Response.BusinessError("验证码已过期，请重新获取"), nil
+		}
+		if storedCode != req.VerificationCode {
+			return utils.Response.BusinessError("验证码错误"), nil
+		}
+		// 验证成功后删除验证码
+		l.svcCtx.RedisClient.Del(codeKey)
 	}
 
 	// 验证手机号格式

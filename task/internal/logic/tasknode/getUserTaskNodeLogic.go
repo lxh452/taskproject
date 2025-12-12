@@ -59,7 +59,7 @@ func (l *GetUserTaskNodeLogic) GetUserTaskNode(req *types.PageReq) (resp *types.
 	// 将用户ID映射为员工ID（任务节点里存的是员工ID）
 	emp, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil {
-		l.Logger.Errorf("根据用户ID获取员工信息失败 userID=%s, err=%v", userID, err)
+		l.Logger.WithContext(l.ctx).Errorf("根据用户ID获取员工信息失败 userID=%s, err=%v", userID, err)
 		// 返回空列表而不是报错，避免前端异常
 		data := Data{ExecutorTask: []TaskNodeWithTitle{}, ExecutorTaskCount: 0, LeaderTask: []TaskNodeWithTitle{}, LeaderTaskCount: 0}
 		return utils.Response.Success(data), nil
@@ -68,12 +68,12 @@ func (l *GetUserTaskNodeLogic) GetUserTaskNode(req *types.PageReq) (resp *types.
 
 	leaderTask, leaderTaskCount, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, employeeID, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询用户的任务列表 err:%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询用户的任务列表 err:%v", err)
 		return nil, err
 	}
 	executorTask, executorTaskCount, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, page, pageSize)
 	if err != nil {
-		l.Logger.Errorf("查询用户的任务列表（执行者） err:%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询用户的任务列表（执行者） err:%v", err)
 		return nil, err
 	}
 

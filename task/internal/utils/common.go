@@ -319,3 +319,13 @@ func (c *common) GenId(name string) string {
 	}
 	return fmt.Sprintf("%v_%X", name, bytes)
 }
+
+// IsValidEmail 验证邮箱格式
+func (c *common) IsValidEmail(email string) bool {
+	return Validator.IsValidEmail(email)
+}
+
+// IsValidPassword 验证密码强度
+func (c *common) IsValidPassword(password string) bool {
+	return Validator.IsValidPassword(password)
+}

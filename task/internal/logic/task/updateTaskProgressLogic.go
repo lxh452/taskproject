@@ -83,7 +83,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	// 5. 更新任务节点进度
 	err = l.svcCtx.TaskNodeModel.UpdateProgress(l.ctx, req.TaskNodeID, req.Progress)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点进度失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: %v", err)
 		return utils.Response.InternalError("更新进度失败"), nil
 	}
 
@@ -91,7 +91,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	if req.ActualHours > 0 {
 		err = l.svcCtx.TaskNodeModel.UpdateActualHours(l.ctx, req.TaskNodeID, req.ActualHours)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点实际工时失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点实际工时失败: %v", err)
 			// 不影响主流程，继续执行
 		}
 	}
@@ -100,7 +100,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	if req.Progress >= 100 && taskNode.NodeStatus != 2 {
 		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, req.TaskNodeID, 2) // 2-已完成
 		if err != nil {
-			l.Logger.Errorf("更新任务节点状态失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
 		}
 	}
 
@@ -125,7 +125,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
 	if err != nil {
-		l.Logger.Errorf("创建任务日志失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
 		// 不影响主流程，继续执行
 	}
 
@@ -161,7 +161,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 				notificationEvent.Content = fmt.Sprintf("任务节点 %s 已完成（任务：%s）", taskNode.NodeName, taskInfo.TaskTitle)
 				notificationEvent.Priority = 2
 				if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-					l.Logger.Errorf("发布任务节点完成通知事件失败: %v", err)
+					l.Logger.WithContext(l.ctx).Errorf("发布任务节点完成通知事件失败: %v", err)
 				}
 			}
 
@@ -173,7 +173,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 					NodeID:    req.TaskNodeID,
 				}
 				if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-					l.Logger.Errorf("发布任务节点完成邮件事件失败: %v", err)
+					l.Logger.WithContext(l.ctx).Errorf("发布任务节点完成邮件事件失败: %v", err)
 				}
 			}
 
@@ -183,7 +183,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 				if l.svcCtx.EmailService != nil {
 					completeTime := time.Now().Format("2006-01-02 15:04:05")
 					if err := l.svcCtx.EmailService.SendTaskCompletedEmail(l.ctx, leader.Email.String, taskInfo.TaskTitle, taskNode.NodeName, completeTime); err != nil {
-						l.Logger.Errorf("发送任务完成邮件失败: %v", err)
+						l.Logger.WithContext(l.ctx).Errorf("发送任务完成邮件失败: %v", err)
 					}
 				}
 			}

@@ -54,12 +54,15 @@ var BusinessErrorMessages = map[string]string{
 	"user_already_in_company": "用户已加入其他公司，无法创建新公司",
 	"username_exists":         "用户名已存在",
 	"email_exists":            "邮箱已被注册",
+	"email_not_found":         "该邮箱未注册",
 	"phone_exists":            "手机号已被注册",
 	"password_weak":           "密码强度不够",
 	"user_disabled":           "用户已被禁用",
 	"user_locked":             "用户已被锁定",
 	"login_failed":            "用户名或密码错误",
+	"code_error":              "验证码已过期，请重新获取",
 	"login_failed_too_many":   "密码错误次数过多，账户已被锁定",
+	"send_to_fast":            "发送频率过快，请稍后再试",
 
 	// 公司相关错误
 	"company_not_found":     "公司不存在",
@@ -97,6 +100,7 @@ var BusinessErrorMessages = map[string]string{
 	// 任务相关错误
 	"task_not_found":      "任务不存在",
 	"task_node_not_found": "任务节点不存在",
+	"task_log_error":      "任务日志创建失败",
 	"taskProgress":        "无权限更新此任务节点的进度",
 	"no_root_update":      "无权限更新此任务节点的前置节点",
 }

@@ -55,6 +55,10 @@ type (
 		CreateTime             time.Time      `db:"create_time"`              // 创建时间
 		UpdateTime             time.Time      `db:"update_time"`              // 更新时间
 		DeleteTime             sql.NullTime   `db:"delete_time"`              // 删除时间
+		LeaderId               sql.NullString `db:"leader_id"`                // 负责人
+		CompletedNodes         sql.NullString `db:"completed_nodes"`          // 完成任务节点
+		TotalNodes             sql.NullString `db:"total_nodes"`              // 总任务节点
+		TaskProgress           sql.NullString `db:"task_progress"`            // 任务进度
 	}
 )
 

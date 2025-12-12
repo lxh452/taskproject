@@ -5,6 +5,11 @@ CREATE TABLE `task` (
     `task_title` VARCHAR(200) NOT NULL COMMENT '任务标题',
     `task_detail` TEXT NOT NULL COMMENT '任务详情',
     `task_status` TINYINT NOT NULL DEFAULT 0 COMMENT '任务状态：0-未开始，1-进行中，2-已完成，3-逾期完成',
+    `task_progress` INT NOT NULL DEFAULT 0 COMMENT '任务整体进度 0-100',
+    `total_nodes` INT NOT NULL DEFAULT 0 COMMENT '任务节点总数',
+    `completed_nodes` INT NOT NULL DEFAULT 0 COMMENT '已完成节点数',
+    `estimated_hours` DECIMAL(10,2) DEFAULT 0 COMMENT '预计工时（小时）',
+    `actual_hours` DECIMAL(10,2) DEFAULT 0 COMMENT '实际工时（小时）',
     `task_priority` TINYINT NOT NULL DEFAULT 0 COMMENT '任务优先级：0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急',
     `task_type` TINYINT NOT NULL DEFAULT 0 COMMENT '任务类型：0-单部门任务，1-跨部门任务',
     `responsible_employee_ids` TEXT COMMENT '负责人员工ID列表',
@@ -13,6 +18,7 @@ CREATE TABLE `task` (
     `task_start_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '任务开始时间',
     `task_deadline` TIMESTAMP NOT NULL COMMENT '任务截止时间',
     `task_creator` VARCHAR(32) NOT NULL COMMENT '任务创建者员工ID',
+    `leader_id` VARCHAR(32) COMMENT '任务负责人员工ID',
     `task_assigner` VARCHAR(32) COMMENT '任务分配者员工ID',
     `attachment_url` VARCHAR(500) COMMENT '附件URL',
     `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -22,11 +28,13 @@ CREATE TABLE `task` (
     PRIMARY KEY (`task_id`),
     KEY `idx_task_company` (`company_id`),
     KEY `idx_task_status` (`task_status`),
+    KEY `idx_task_progress` (`task_progress`),
     KEY `idx_task_priority` (`task_priority`),
     KEY `idx_task_type` (`task_type`),
     KEY `idx_task_start_time` (`task_start_time`),
     KEY `idx_task_deadline` (`task_deadline`),
     KEY `idx_task_creator` (`task_creator`),
+    KEY `idx_leader_id` (`leader_id`),
     KEY `idx_task_assigner` (`task_assigner`),
     KEY `idx_create_time` (`create_time`),
     KEY `idx_delete_time` (`delete_time`)
@@ -119,3 +127,4 @@ CREATE TABLE `task_handover` (
     
     -- 外键约束在init.sql中统一添加
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务交接表';
+

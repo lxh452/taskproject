@@ -35,7 +35,7 @@ func (l *DeleteChecklistLogic) DeleteChecklist(req *types.DeleteChecklistRequest
 	// 2. 查询清单
 	checklist, err := l.svcCtx.TaskChecklistModel.FindOne(l.ctx, req.ChecklistID)
 	if err != nil {
-		l.Logger.Errorf("查询清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询清单失败: %v", err)
 		return nil, errors.New("清单不存在")
 	}
 	if checklist.DeleteTime.Valid {
@@ -52,21 +52,21 @@ func (l *DeleteChecklistLogic) DeleteChecklist(req *types.DeleteChecklistRequest
 	// 4. 软删除清单
 	err = l.svcCtx.TaskChecklistModel.SoftDelete(l.ctx, req.ChecklistID)
 	if err != nil {
-		l.Logger.Errorf("删除清单失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("删除清单失败: %v", err)
 		return nil, errors.New("删除清单失败")
 	}
 
 	// 5. 更新任务节点的清单统计
 	err = l.updateNodeChecklistCount(taskNodeId)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点清单统计失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点清单统计失败: %v", err)
 		// 不影响主流程，只记录日志
 	}
 
 	// 6. 更新任务节点进度
 	err = l.updateNodeProgress(taskNodeId)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点进度失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: %v", err)
 	}
 
 	return map[string]interface{}{
@@ -138,13 +138,13 @@ func (l *DeleteChecklistLogic) updateTaskProgress(taskNodeId string) error {
 	// 更新任务进度
 	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
 	if err != nil {
-		l.Logger.Errorf("更新任务进度失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
 	}
 
 	// 更新任务节点统计
 	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
 	if err != nil {
-		l.Logger.Errorf("更新任务节点统计失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
 	}
 
 	return nil

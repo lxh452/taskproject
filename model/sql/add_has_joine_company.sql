@@ -14,3 +14,10 @@ WHERE EXISTS (
 
 -- 注意：验证查询已移除，迁移脚本中不应包含 SELECT 语句
 
+-- 添加任务相关字段（分开执行，失败的会被跳过，成功的会继续）
+ALTER TABLE `task` ADD COLUMN `task_progress` INT NOT NULL DEFAULT 0 COMMENT '任务整体进度 0-100';
+ALTER TABLE `task` ADD COLUMN `total_nodes` INT NOT NULL DEFAULT 0 COMMENT '任务节点总数';
+ALTER TABLE `task` ADD COLUMN `completed_nodes` INT NOT NULL DEFAULT 0 COMMENT '已完成节点数';
+ALTER TABLE `task` ADD COLUMN `estimated_hours` DECIMAL(10,2) DEFAULT 0 COMMENT '预计工时（小时）';
+ALTER TABLE `task` ADD COLUMN `actual_hours` DECIMAL(10,2) DEFAULT 0 COMMENT '实际工时（小时）';
+ALTER TABLE `task` ADD COLUMN `leader_id` VARCHAR(32) COMMENT '任务负责人员工ID';

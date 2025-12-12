@@ -44,7 +44,7 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	empID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, empID)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		l.Logger.Errorf("找不到该员工，reason：%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("找不到该员工，reason：%v", err)
 		return nil, err
 	}
 	if !ok {
@@ -53,7 +53,7 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	// 首先查看总任务是否存在 并且查看是否为空
 	currentTask, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		l.Logger.Errorf("找不到该总任务，reason：%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("找不到该总任务，reason：%v", err)
 		return nil, err
 	}
 	if currentTask == nil {
@@ -131,35 +131,31 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 	}
 	_, err = l.svcCtx.TaskNodeModel.InsertTask(l.ctx, node)
 	if err != nil {
-		l.Logger.Errorf("创建任务节点失败：%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("创建任务节点失败：%v", err)
 		return nil, err
 	}
 
 	// 更新任务的总节点数
 	totalNodeCount, err := l.svcCtx.TaskNodeModel.GetTaskNodeCountByTask(l.ctx, req.TaskID)
 	if err != nil {
-		l.Logger.Errorf("获取任务节点总数失败：%v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取任务节点总数失败：%v", err)
 	} else {
 		completedNodeCount, err := l.svcCtx.TaskNodeModel.GetCompletedNodeCountByTask(l.ctx, req.TaskID)
 		if err != nil {
-			l.Logger.Errorf("获取已完成节点数失败：%v", err)
+			l.Logger.WithContext(l.ctx).Errorf("获取已完成节点数失败：%v", err)
 			completedNodeCount = 0
 		}
 		err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, req.TaskID, totalNodeCount, completedNodeCount)
 		if err != nil {
-			l.Logger.Errorf("更新任务节点统计失败：%v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败：%v", err)
 		}
 	}
-
-	// 发送通知给执行人（异步处理，不阻塞主进程）
-	l.Logger.Infof("========== 通知发送检查 ==========")
-	l.Logger.Infof("req.ExecutorIDs = %v, 长度 = %d", req.ExecutorIDs, len(req.ExecutorIDs))
 
 	if len(req.ExecutorIDs) > 0 {
 		content := fmt.Sprintf("您被分配为任务节点 %s 的执行人，请登录系统查看详情并及时处理", req.NodeName)
 		title := fmt.Sprintf("任务节点分配 - %s", req.NodeName)
 
-		l.Logger.Infof("准备为执行人创建通知: executorIDs=%v, nodeID=%s", req.ExecutorIDs, nodeID)
+		l.Logger.WithContext(l.ctx).Infof("准备为执行人创建通知: executorIDs=%v, nodeID=%s", req.ExecutorIDs, nodeID)
 
 		// 直接批量创建通知（最可靠的方式）
 		notificationLogic := notification.NewCreateNotificationLogic(context.Background(), l.svcCtx)
@@ -196,9 +192,22 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 			}()
 		}
 	} else {
-		l.Logger.Info("没有执行人，跳过通知发送")
+		l.Logger.WithContext(l.ctx).Info("没有执行人，跳过通知发送")
 	}
-
+	// 创建任务日志
+	taskLog := &task.TaskLog{
+		LogId:      utils.NewCommon().GenId("task_log"),
+		TaskId:     req.TaskID,
+		LogType:    2, //更新内容
+		EmployeeId: empID,
+		TaskNodeId: utils.Common.ToSqlNullString(nodeID),
+		CreateTime: time.Now(),
+	}
+	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("创建任务失败")
+		return utils.Response.BusinessError("task_log_error"), nil
+	}
 	return utils.Response.Success(node), nil
 }
 

@@ -42,7 +42,7 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 	// 3. 获取当前员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
-		l.Logger.Errorf("查询员工失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
 	currentEmployeeID := employee.Id
@@ -53,7 +53,7 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return utils.Response.ValidationError("交接记录不存在"), nil
 		}
-		l.Logger.Errorf("获取交接信息失败: %v", err)
+		l.Logger.WithContext(l.ctx).Errorf("获取交接信息失败: %v", err)
 		return nil, err
 	}
 
@@ -63,7 +63,7 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 	if handover.TaskId != "" {
 		task, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
 		if err != nil {
-			l.Logger.Errorf("获取任务信息失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 			return utils.Response.ValidationError("任务不存在"), nil
 		}
 		taskInfo = task
@@ -138,22 +138,22 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 	// 9. 转换为响应格式
 	converter := utils.NewConverter()
 	handoverDetail := map[string]interface{}{
-		"handoverId":            handover.HandoverId,
-		"taskId":                handover.TaskId,
-		"taskTitle":             taskTitle,
-		"fromEmployeeId":        handover.FromEmployeeId,
-		"fromEmployeeName":      fromEmployeeName,
+		"handoverId":             handover.HandoverId,
+		"taskId":                 handover.TaskId,
+		"taskTitle":              taskTitle,
+		"fromEmployeeId":         handover.FromEmployeeId,
+		"fromEmployeeName":       fromEmployeeName,
 		"fromEmployeePositionId": fromEmployeePositionId,
-		"toEmployeeId":          handover.ToEmployeeId,
-		"toEmployeeName":        toEmployeeName,
-		"approverId":            approverId,
-		"approverName":          approverName,
-		"handoverType":          handover.HandoverType,
-		"handoverStatus":        handover.HandoverStatus,
-		"handoverReason":        handoverReason,
-		"handoverNote":          handoverNote,
-		"createTime":            handover.CreateTime.Format("2006-01-02 15:04:05"),
-		"updateTime":            handover.UpdateTime.Format("2006-01-02 15:04:05"),
+		"toEmployeeId":           handover.ToEmployeeId,
+		"toEmployeeName":         toEmployeeName,
+		"approverId":             approverId,
+		"approverName":           approverName,
+		"handoverType":           handover.HandoverType,
+		"handoverStatus":         handover.HandoverStatus,
+		"handoverReason":         handoverReason,
+		"handoverNote":           handoverNote,
+		"createTime":             handover.CreateTime.Format("2006-01-02 15:04:05"),
+		"updateTime":             handover.UpdateTime.Format("2006-01-02 15:04:05"),
 	}
 
 	// 如果有任务信息，添加到响应中
