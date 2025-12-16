@@ -49,12 +49,13 @@ type ServiceContext struct {
 	PositionRoleModel role.PositionRoleModel
 
 	// 任务相关模型
-	TaskModel             task.TaskModel
-	TaskNodeModel         task.TaskNodeModel
-	TaskLogModel          task.TaskLogModel
-	TaskHandoverModel     task.TaskHandoverModel
-	HandoverApprovalModel task.HandoverApprovalModel
-	TaskChecklistModel    task.TaskChecklistModel
+	TaskModel                       task.TaskModel
+	TaskNodeModel                   task.TaskNodeModel
+	TaskLogModel                    task.TaskLogModel
+	TaskHandoverModel               task.TaskHandoverModel
+	HandoverApprovalModel           task.HandoverApprovalModel
+	TaskChecklistModel              task.TaskChecklistModel
+	TaskNodeCompletionApprovalModel task.TaskNodeCompletionApprovalModel
 
 	// 通知相关模型
 	NotificationModel user_auth.NotificationModel
@@ -171,6 +172,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	taskHandoverModel := task.NewTaskHandoverModel(conn)
 	handoverApprovalModel := task.NewHandoverApprovalModel(conn)
 	taskChecklistModel := task.NewTaskChecklistModel(conn)
+	taskNodeCompletionApprovalModel := task.NewTaskNodeCompletionApprovalModel(conn)
 
 	// 初始化 RabbitMQ
 	var mqClient *MQClient
@@ -247,12 +249,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		PositionRoleModel: positionRoleModel,
 
 		// 任务相关模型
-		TaskModel:             taskModel,
-		TaskNodeModel:         taskNodeModel,
-		TaskLogModel:          taskLogModel,
-		TaskHandoverModel:     taskHandoverModel,
-		HandoverApprovalModel: handoverApprovalModel,
-		TaskChecklistModel:    taskChecklistModel,
+		TaskModel:                       taskModel,
+		TaskNodeModel:                   taskNodeModel,
+		TaskLogModel:                    taskLogModel,
+		TaskHandoverModel:               taskHandoverModel,
+		HandoverApprovalModel:           handoverApprovalModel,
+		TaskChecklistModel:              taskChecklistModel,
+		TaskNodeCompletionApprovalModel: taskNodeCompletionApprovalModel,
 
 		// 通知相关模型
 		NotificationModel: user_auth.NewNotificationModel(conn),

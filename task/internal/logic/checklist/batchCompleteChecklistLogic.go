@@ -149,12 +149,12 @@ func (l *BatchCompleteChecklistLogic) updateTaskProgress(taskNodeId string) erro
 		return nil
 	}
 
-	// 计算平均进度和完成节点数
+	// 计算平均进度和完成节点数（只统计状态为已完成（状态2）的节点）
 	var totalProgress int64
 	var completedCount int64
 	for _, node := range nodes {
 		totalProgress += int64(node.Progress)
-		if node.Progress >= 100 {
+		if node.NodeStatus == 2 { // 状态为已完成
 			completedCount++
 		}
 	}

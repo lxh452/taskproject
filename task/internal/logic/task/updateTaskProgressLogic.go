@@ -96,13 +96,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 		}
 	}
 
-	// 7. 如果进度达到100%，自动更新节点状态为已完成
-	if req.Progress >= 100 && taskNode.NodeStatus != 2 {
-		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, req.TaskNodeID, 2) // 2-已完成
-		if err != nil {
-			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
-		}
-	}
+	// 7. 注意：进度100%时不自动改为已完成，需要员工手动提交审批，审批通过后才改为已完成
 
 	// 8. 创建任务日志
 	logContent := fmt.Sprintf("更新任务节点进度: %d%%", req.Progress)
@@ -190,9 +184,68 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 		}
 	}
 
+	// 10. 更新任务整体进度（根据所有节点进度计算平均值）
+	err = l.updateTaskProgress(req.TaskNodeID)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务整体进度失败: %v", err)
+		// 不影响主流程，继续执行
+	}
+
 	return utils.Response.Success(map[string]interface{}{
 		"taskNodeId": req.TaskNodeID,
 		"progress":   req.Progress,
 		"message":    "进度更新成功",
 	}), nil
+}
+
+// updateTaskProgress 根据所有任务节点进度更新任务整体进度（与 updateChecklistLogic 中的实现保持一致）
+func (l *UpdateTaskProgressLogic) updateTaskProgress(taskNodeId string) error {
+	// 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
+	if err != nil {
+		return err
+	}
+
+	// 获取该任务的所有节点
+	nodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, taskNode.TaskId)
+	if err != nil {
+		return err
+	}
+
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	// 计算平均进度和完成节点数（只统计状态为已完成（状态2）的节点）
+	var totalProgress int64
+	var completedCount int64
+	for _, node := range nodes {
+		totalProgress += node.Progress
+		if node.NodeStatus == 2 { // 状态为已完成
+			completedCount++
+		}
+	}
+	avgProgress := int(totalProgress / int64(len(nodes)))
+
+	// 更新任务进度
+	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
+	}
+
+	// 当所有节点都完成时（平均进度达到100%），更新任务状态为已完成
+	if avgProgress == 100 {
+		err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+		}
+	}
+
+	// 更新任务节点统计
+	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
+	}
+
+	return nil
 }

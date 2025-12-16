@@ -87,14 +87,14 @@ func (m *defaultTaskNodeModel) FindOne(ctx context.Context, taskNodeId string) (
 }
 
 func (m *defaultTaskNodeModel) Insert(ctx context.Context, data *TaskNode) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, taskNodeRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.TaskNodeId, data.TaskId, data.DepartmentId, data.NodeName, data.NodeDetail, data.NodeDeadline, data.NodeStartTime, data.EstimatedDays, data.ActualDays, data.NodeStatus, data.NodeFinishTime, data.ExecutorId, data.LeaderId, data.Progress, data.NodePriority, data.DeleteTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, taskNodeRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.TaskNodeId, data.TaskId, data.DepartmentId, data.NodeName, data.NodeDetail, data.ExNodeIds, data.NodeDeadline, data.NodeStartTime, data.EstimatedDays, data.ActualDays, data.NodeStatus, data.NodeFinishTime, data.ExecutorId, data.LeaderId, data.Progress, data.NodePriority, data.DeleteTime)
 	return ret, err
 }
 
 func (m *defaultTaskNodeModel) Update(ctx context.Context, data *TaskNode) error {
 	query := fmt.Sprintf("update %s set %s where `task_node_id` = ?", m.table, taskNodeRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.TaskId, data.DepartmentId, data.NodeName, data.NodeDetail, data.NodeDeadline, data.NodeStartTime, data.EstimatedDays, data.ActualDays, data.NodeStatus, data.NodeFinishTime, data.ExecutorId, data.LeaderId, data.Progress, data.NodePriority, data.DeleteTime, data.TaskNodeId)
+	_, err := m.conn.ExecCtx(ctx, query, data.TaskId, data.DepartmentId, data.NodeName, data.NodeDetail, data.ExNodeIds, data.NodeDeadline, data.NodeStartTime, data.EstimatedDays, data.ActualDays, data.NodeStatus, data.NodeFinishTime, data.ExecutorId, data.LeaderId, data.Progress, data.NodePriority, data.DeleteTime, data.TaskNodeId)
 	return err
 }
 

@@ -51,7 +51,12 @@ func (l *CreateChecklistLogic) CreateChecklist(req *types.CreateChecklistRequest
 		return nil, errors.New("任务节点已被删除")
 	}
 
-	// 3. 验证权限：只有任务节点的执行人才能创建清单
+	// 3. 检查任务节点状态：只有进行中（状态1）的节点才能创建清单
+	if taskNode.NodeStatus != 1 {
+		return nil, errors.New("任务节点未启动，无法创建清单。任务节点需要在流程设计器中流转后才会变为进行中状态")
+	}
+
+	// 4. 验证权限：只有任务节点的执行人才能创建清单
 	if !l.isExecutor(taskNode.ExecutorId, employeeId) {
 		return nil, errors.New("只有该任务节点的执行人才能创建清单")
 	}

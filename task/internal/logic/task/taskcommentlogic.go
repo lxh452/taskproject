@@ -202,7 +202,7 @@ func (l *TaskCommentLogic) LikeComment(req *types.LikeCommentRequest) (resp *typ
 		return utils.Response.UnauthorizedError(), nil
 	}
 
-	if req.IsLike {
+	if req.IsLike == 1 {
 		err = l.svcCtx.TaskCommentModel.AddLike(l.ctx, req.CommentID, userID)
 	} else {
 		err = l.svcCtx.TaskCommentModel.RemoveLike(l.ctx, req.CommentID, userID)
@@ -269,10 +269,9 @@ func (l *TaskCommentLogic) convertToCommentInfo(c *task.Task_comment, currentUse
 		ReplyToName:     c.ReplyToName,
 		AttachmentIDs:   c.AttachmentIDs,
 		AttachmentURLs:  c.AttachmentURLs,
-		LikeCount:       c.LikeCount,
+		LikeCount:       int64(c.LikeCount),
 		IsLiked:         isLiked,
 		CreateTime:      c.CreateAt.Format(time.RFC3339),
 		UpdateTime:      c.UpdateAt.Format(time.RFC3339),
 	}
 }
-

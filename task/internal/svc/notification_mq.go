@@ -17,17 +17,18 @@ import (
 // 枚举需要通知的事务
 const (
 	// 任务相关
-	TaskCreated             = "task.created"
-	TaskUpdated             = "task.updated"
-	TaskDeleted             = "task.deleted"
-	TaskCompleted           = "task.completed"
-	TaskNodeExecutorChanged = "task.node.executor.changed"
-	TaskNodeCreated         = "task.node.created"
-	TaskNodeDeleted         = "task.node.deleted"
-	TaskNodeCompleted       = "task.node.completed"
-	TaskDeadlineReminder    = "task.deadline.reminder"
-	TaskSlowProgress        = "task.slow.progress"
-	TaskNodeExecutorLeft    = "task.node.executor.left"
+	TaskCreated                = "task.created"
+	TaskUpdated                = "task.updated"
+	TaskDeleted                = "task.deleted"
+	TaskCompleted              = "task.completed"
+	TaskNodeExecutorChanged    = "task.node.executor.changed"
+	TaskNodeCreated            = "task.node.created"
+	TaskNodeDeleted            = "task.node.deleted"
+	TaskNodeCompleted          = "task.node.completed"
+	TaskNodeCompletionApproval = "task.node.completion.approval"
+	TaskDeadlineReminder       = "task.deadline.reminder"
+	TaskSlowProgress           = "task.slow.progress"
+	TaskNodeExecutorLeft       = "task.node.executor.left"
 
 	// 员工相关
 	EmployeeCreated = "employee.created"
@@ -532,6 +533,8 @@ func (s *NotificationMQService) NewNotificationEvent(eventType string, employeeI
 		title = "任务节点创建通知"
 	case TaskNodeCompleted:
 		title = "任务节点完成通知"
+	case TaskNodeCompletionApproval:
+		title = "任务节点完成审批"
 	case TaskDeadlineReminder:
 		title = "任务截止时间提醒"
 	case TaskSlowProgress:

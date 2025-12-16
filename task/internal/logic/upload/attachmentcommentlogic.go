@@ -104,7 +104,7 @@ func (l *AttachmentCommentLogic) CreateComment(req *types.CreateAttachmentCommen
 
 	// 转换标注数据
 	var annotationData *uploadModel.AnnotationData
-	if req.AnnotationData != nil {
+	if req.AnnotationData.Type != "" || req.AnnotationData.X != 0 || req.AnnotationData.Y != 0 {
 		annotationData = &uploadModel.AnnotationData{
 			X:      req.AnnotationData.X,
 			Y:      req.AnnotationData.Y,
@@ -271,9 +271,9 @@ func (l *AttachmentCommentLogic) DeleteComment(req *types.DeleteAttachmentCommen
 
 // convertToCommentInfo 转换评论信息
 func (l *AttachmentCommentLogic) convertToCommentInfo(c *uploadModel.Attachment_comment) types.AttachmentCommentInfo {
-	var annotationData *types.AnnotationDataReq
+	var annotationDataReq types.AnnotationDataReq
 	if c.AnnotationData != nil {
-		annotationData = &types.AnnotationDataReq{
+		annotationDataReq = types.AnnotationDataReq{
 			X:      c.AnnotationData.X,
 			Y:      c.AnnotationData.Y,
 			Width:  c.AnnotationData.Width,
@@ -305,7 +305,7 @@ func (l *AttachmentCommentLogic) convertToCommentInfo(c *uploadModel.Attachment_
 		AtEmployeeIDs:   c.AtEmployeeIDs,
 		AtEmployeeNames: c.AtEmployeeNames,
 		AnnotationType:  c.AnnotationType,
-		AnnotationData:  annotationData,
+		AnnotationData:  annotationDataReq,
 		PageNumber:      c.PageNumber,
 		ParentID:        c.ParentID,
 		ReplyToUserID:   c.ReplyToUserID,

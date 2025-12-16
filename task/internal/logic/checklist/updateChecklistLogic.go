@@ -164,9 +164,7 @@ func (l *UpdateChecklistLogic) updateNodeProgress(taskNodeId string) error {
 	if err != nil {
 		return err
 	}
-	if progress == 100 {
-		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, taskNodeId, 2)
-	}
+	// 注意：进度100%时不自动改为已完成，需要员工手动提交审批，审批通过后才改为已完成
 
 	// 更新任务整体进度
 	return l.updateTaskProgress(taskNodeId)
@@ -190,12 +188,12 @@ func (l *UpdateChecklistLogic) updateTaskProgress(taskNodeId string) error {
 		return nil
 	}
 
-	// 计算平均进度和完成节点数
+	// 计算平均进度和完成节点数（只统计状态为已完成（状态2）的节点）
 	var totalProgress int64
 	var completedCount int64
 	for _, node := range nodes {
 		totalProgress += node.Progress
-		if node.Progress >= 100 {
+		if node.NodeStatus == 2 { // 状态为已完成
 			completedCount++
 		}
 	}

@@ -29,18 +29,31 @@ type (
 	}
 	// 用户注册请求
 	RegisterRequest {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Email    string `json:"email,optional"`
-		Phone    string `json:"phone,optional"`
-		RealName string `json:"realName"`
+		Username         string `json:"username"`
+		Password         string `json:"password"`
+		Email            string `json:"email,optional"`
+		Phone            string `json:"phone,optional"`
+		RealName         string `json:"realName"`
+		VerificationCode string `json:"verificationCode,optional"`
 	}
 	// 登录响应
 	LoginResponse {
-		Token    string `json:"token"`
-		UserID   string `json:"userId"`
-		Username string `json:"username"`
-		RealName string `json:"realName"`
+		Token            string `json:"token"`
+		UserID           string `json:"userId"`
+		Username         string `json:"username"`
+		RealName         string `json:"realName"`
+		HasJoinedCompany bool   `json:"hasJoinedCompany,optional"`
+	}
+	// 发送验证码请求
+	SendVerificationCodeRequest {
+		Email string `json:"email"`
+		Type  string `json:"type"` // register/reset
+	}
+	// 重置密码请求
+	ResetPasswordRequest {
+		Email            string `json:"email"`
+		VerificationCode string `json:"verificationCode"`
+		NewPassword      string `json:"newPassword"`
 	}
 )
 
@@ -70,6 +83,55 @@ type (
 		FileID           []string `json:"fileId,optional"` // 返回响应的文件id
 		AtEmployeeId     []string `json:"atEmployeeId,optional"` // @的员工userid，用于消息通知
 	}
+	// 创建任务评论请求
+	CreateTaskCommentRequest {
+		TaskID        string   `json:"taskId"`
+		TaskNodeID    string   `json:"taskNodeId,optional"`
+		Content       string   `json:"content"`
+		ContentHTML   string   `json:"contentHtml,optional"`
+		ParentID      string   `json:"parentId,optional"`
+		AttachmentIDs []string `json:"attachmentIds,optional"`
+		AtEmployeeIDs []string `json:"atEmployeeIds,optional"`
+	}
+	// 获取任务评论列表请求
+	GetTaskCommentsRequest {
+		TaskID     string `json:"taskId"`
+		TaskNodeID string `json:"taskNodeId,optional"`
+		PageReq
+	}
+	// 任务评论信息
+	TaskCommentInfo {
+		ID              string            `json:"id"`
+		CommentID       string            `json:"commentId"`
+		TaskID          string            `json:"taskId"`
+		TaskNodeID      string            `json:"taskNodeId,optional"`
+		UserID          string            `json:"userId"`
+		EmployeeID      string            `json:"employeeId"`
+		EmployeeName    string            `json:"employeeName"`
+		Content         string            `json:"content"`
+		ContentHTML     string            `json:"contentHtml,optional"`
+		AtEmployeeIDs   []string          `json:"atEmployeeIds,optional"`
+		AtEmployeeNames []string          `json:"atEmployeeNames,optional"`
+		ParentID        string            `json:"parentId,optional"`
+		ReplyToUserID   string            `json:"replyToUserId,optional"`
+		ReplyToName     string            `json:"replyToName,optional"`
+		AttachmentIDs   []string          `json:"attachmentIds,optional"`
+		AttachmentURLs  []string          `json:"attachmentUrls,optional"`
+		LikeCount       int64             `json:"likeCount"`
+		IsLiked         bool              `json:"isLiked"` // 当前用户是否已点赞
+		Replies         []TaskCommentInfo `json:"replies,optional"` // 回复列表
+		CreateTime      string            `json:"createTime"`
+		UpdateTime      string            `json:"updateTime"`
+	}
+	// 点赞评论请求
+	LikeCommentRequest {
+		CommentID string `json:"commentId"`
+		IsLike    int    `json:"isLike"` // 1-点赞，0-取消点赞
+	}
+	// 删除任务评论请求
+	DeleteTaskCommentRequest {
+		CommentID string `json:"commentId"`
+	}
 	// 文件上传请求（统一上传接口，支持图片、PDF、Markdown等文件，需要做一个文件类型的区分查看这个文件或者图片是属于什么模块的，方便后续查询）
 	// 注意：此接口使用 multipart/form-data 格式，文件通过 form 表单上传
 	// 文件字段需要在 handler 中通过 http.Request.FormFile("file") 获取，不能通过结构体自动绑定
@@ -78,6 +140,7 @@ type (
 		FileType    string `form:"fileType,optional"` // 文件类型：image/pdf/markdown/document/excel/word等（如果前端不传，后端可从文件扩展名推断）
 		Category    string `form:"category,optional"` // 文件分类：avatar/document/attachment/cover/icon等
 		RelatedID   string `form:"relatedId,optional"` // 关联的业务ID（如任务ID、用户ID、公司ID等）
+		TaskNodeID  string `form:"taskNodeId,optional"` // 任务节点ID
 		Description string `form:"description,optional"` // 文件描述或备注
 		Tags        string `form:"tags,optional"` // 文件标签，多个标签用逗号分隔
 	}
@@ -89,6 +152,122 @@ type (
 		FileName  string `json:"fileName"` // 存储后的文件名
 		FileSize  int64  `json:"fileSize"` // 文件大小
 		FileType  string `json:"fileType"` // 文件类型
+	}
+	// 上传头像请求
+	UploadAvatarRequest {
+		UserID string `form:"userId,optional"`
+	}
+	// 上传头像响应
+	UploadAvatarResponse {
+		FileID    string `json:"fileId"`
+		FileURL   string `json:"fileUrl"`
+		AvatarURL string `json:"avatarUrl"`
+		FileName  string `json:"fileName"`
+	}
+	// 获取任务附件列表请求
+	GetTaskAttachmentsRequest {
+		TaskID string `json:"taskId"`
+		PageReq
+	}
+	// 获取任务节点附件列表请求
+	GetTaskNodeAttachmentsRequest {
+		TaskNodeID string `json:"taskNodeId"`
+		PageReq
+	}
+	// 获取文件详情请求
+	GetFileDetailRequest {
+		FileID string `json:"fileId"`
+	}
+	// 删除附件请求
+	DeleteAttachmentRequest {
+		FileID string `json:"fileId"`
+	}
+	// 创建附件评论请求
+	CreateAttachmentCommentRequest {
+		FileID         string            `json:"fileId"`
+		Content        string            `json:"content"`
+		ParentID       string            `json:"parentId,optional"`
+		TaskID         string            `json:"taskId,optional"`
+		TaskNodeID     string            `json:"taskNodeId,optional"`
+		AnnotationData AnnotationDataReq `json:"annotationData,optional"` // 标注数据
+		AnnotationType string            `json:"annotationType,optional"` // 标注类型
+		PageNumber     int               `json:"pageNumber,optional"` // 页码
+		AtEmployeeIDs  []string          `json:"atEmployeeIds,optional"` // @的员工ID
+	}
+	// 获取附件评论列表请求
+	GetAttachmentCommentsRequest {
+		FileID string `json:"fileId"`
+		PageReq
+	}
+	// 解决附件评论请求
+	ResolveAttachmentCommentRequest {
+		CommentID string `json:"commentId"`
+		Resolved  int    `json:"resolved"` // 1-已解决，0-未解决
+	}
+	// 删除附件评论请求
+	DeleteAttachmentCommentRequest {
+		CommentID string `json:"commentId"`
+	}
+	// 附件评论信息
+	AttachmentCommentInfo {
+		CommentID       string                  `json:"commentId"`
+		ID              string                  `json:"id"`
+		FileID          string                  `json:"fileId"`
+		TaskID          string                  `json:"taskId,optional"`
+		TaskNodeID      string                  `json:"taskNodeId,optional"`
+		UserID          string                  `json:"userId"`
+		EmployeeID      string                  `json:"employeeId"`
+		EmployeeName    string                  `json:"employeeName"`
+		Content         string                  `json:"content"`
+		CreatorID       string                  `json:"creatorId"`
+		CreatorName     string                  `json:"creatorName"`
+		Resolved        int                     `json:"resolved"`
+		IsResolved      bool                    `json:"isResolved,optional"`
+		ResolvedBy      string                  `json:"resolvedBy,optional"`
+		ResolvedAt      string                  `json:"resolvedAt,optional"`
+		ParentID        string                  `json:"parentId,optional"`
+		ReplyToUserID   string                  `json:"replyToUserId,optional"`
+		ReplyToName     string                  `json:"replyToName,optional"`
+		AnnotationData  AnnotationDataReq       `json:"annotationData,optional"`
+		AnnotationType  string                  `json:"annotationType,optional"`
+		PageNumber      int                     `json:"pageNumber,optional"`
+		AtEmployeeIDs   []string                `json:"atEmployeeIds,optional"`
+		AtEmployeeNames []string                `json:"atEmployeeNames,optional"`
+		Replies         []AttachmentCommentInfo `json:"replies,optional"` // 回复列表
+		CreateTime      string                  `json:"createTime"`
+		UpdateTime      string                  `json:"updateTime"`
+	}
+	// 附件信息
+	AttachmentInfo {
+		FileID      string `json:"fileId"`
+		FileURL     string `json:"fileUrl"`
+		FileName    string `json:"fileName"`
+		FileSize    int64  `json:"fileSize"`
+		FileType    string `json:"fileType"`
+		Module      string `json:"module"`
+		Category    string `json:"category"`
+		RelatedID   string `json:"relatedId,optional"`
+		TaskNodeID  string `json:"taskNodeId,optional"`
+		UploaderID  string `json:"uploaderId,optional"`
+		Description string `json:"description,optional"`
+		Tags        string `json:"tags,optional"`
+		CreateTime  string `json:"createTime"`
+		UpdateTime  string `json:"updateTime"`
+	}
+	// 标注数据请求
+	AnnotationDataReq {
+		X      float64 `json:"x,optional"`
+		Y      float64 `json:"y,optional"`
+		Width  float64 `json:"width,optional"`
+		Height float64 `json:"height,optional"`
+		StartX float64 `json:"startX,optional"`
+		StartY float64 `json:"startY,optional"`
+		EndX   float64 `json:"endX,optional"`
+		EndY   float64 `json:"endY,optional"`
+		Page   int     `json:"page,optional"`
+		Type   string  `json:"type,optional"` // point/rectangle/circle
+		Color  string  `json:"color,optional"`
+		Text   string  `json:"text,optional"`
 	}
 )
 
@@ -115,6 +294,15 @@ type (
 		Address           string `json:"address,optional"`
 		Phone             string `json:"phone,optional"`
 		Email             string `json:"email,optional"`
+	}
+	// 生成邀请码请求
+	GenerateInviteCodeRequest {
+		ExpireDays int `json:"expireDays,optional"` // 有效期（天）
+		MaxUses    int `json:"maxUses,optional"` // 最大使用次数，0表示不限制
+	}
+	// 解析邀请码请求
+	ParseInviteCodeRequest {
+		InviteCode string `json:"inviteCode"`
 	}
 	// 公司信息响应
 	CompanyInfo {
@@ -337,7 +525,7 @@ type (
 	JoinCompanyRequest {
 		CompanyID    string `json:"companyId"`
 		DepartmentID string `json:"departmentId,optional"` // 可选，不填则加入默认部门
-		PositionID   string `json:"positionId,optional"`   // 可选，不填则使用默认职位
+		PositionID   string `json:"positionId,optional"` // 可选，不填则使用默认职位
 	}
 	// 申请加入公司请求
 	ApplyJoinCompanyRequest {
@@ -618,6 +806,16 @@ type (
 	UpdatePrerequisiteNodesRequest {
 		NodeID            string `json:"nodeId"` // 任务节点ID
 		PrerequisiteNodes string `json:"prerequisiteNodes"` // 前置节点ID列表，逗号分隔，支持"start"
+	}
+	// 提交任务节点完成审批请求
+	SubmitTaskNodeCompletionApprovalRequest {
+		NodeID string `json:"nodeId"`
+	}
+	// 审批任务节点完成请求
+	ApproveTaskNodeCompletionRequest {
+		ApprovalID string `json:"approvalId"`
+		Approved   int    `json:"approved"` // 1-同意 2-拒绝
+		Comment    string `json:"comment,optional"`
 	}
 	// 任务节点信息响应
 	TaskNodeInfo {
@@ -1102,6 +1300,14 @@ service taskprojectapi {
 	@doc "批量完成/取消完成清单"
 	@handler BatchCompleteChecklist
 	post /batch/complete (BatchCompleteChecklistRequest) returns (BaseResponse)
+
+	@doc "提交任务节点完成审批"
+	@handler SubmitTaskNodeCompletionApproval
+	post /submit/approval (SubmitTaskNodeCompletionApprovalRequest) returns (BaseResponse)
+
+	@doc "审批任务节点完成"
+	@handler ApproveTaskNodeCompletion
+	post /approve/completion (ApproveTaskNodeCompletionRequest) returns (BaseResponse)
 
 	@doc "获取我的清单列表"
 	@handler GetMyChecklist

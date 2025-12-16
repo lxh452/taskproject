@@ -41,6 +41,7 @@ func (s *SQLExecutorService) AutoMigrate(ctx context.Context) error {
 		"task.sql",
 		"task_checklist.sql",
 		"handover_approval.sql",
+		"task_node_completion_approval.sql",
 		"join_application.sql",
 		"add_has_joine_company.sql", // 注意：实际文件名是 add_has_joine_company.sql（少了一个d）
 	}

@@ -1,0 +1,233 @@
+package checklist
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
+
+	"task_Project/model/task"
+	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
+	"task_Project/task/internal/utils"
+
+	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+)
+
+type ApproveTaskNodeCompletionLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewApproveTaskNodeCompletionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApproveTaskNodeCompletionLogic {
+	return &ApproveTaskNodeCompletionLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.ApproveTaskNodeCompletionRequest) (resp *types.BaseResponse, err error) {
+	// 1. 参数验证
+	if req.ApprovalID == "" {
+		return utils.Response.BusinessError("审批ID不能为空"), nil
+	}
+	if req.Approved != 1 && req.Approved != 2 {
+		return utils.Response.BusinessError("审批结果无效，1-同意，2-拒绝"), nil
+	}
+
+	// 2. 获取当前用户ID
+	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeId == "" {
+		return nil, errors.New("获取员工信息失败，请重新登录后再试")
+	}
+
+	// 3. 获取审批记录
+	approval, err := l.svcCtx.TaskNodeCompletionApprovalModel.FindOne(l.ctx, req.ApprovalID)
+	if err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return utils.Response.BusinessError("审批记录不存在"), nil
+		}
+		return nil, err
+	}
+
+	// 4. 检查审批状态：只有待审批（状态0）的记录才能审批
+	if approval.ApprovalType != 0 {
+		return utils.Response.BusinessError("该审批记录已处理，无法重复审批"), nil
+	}
+
+	// 5. 验证权限：只有审批人（项目负责人）可以审批
+	if approval.ApproverId != employeeId {
+		return utils.Response.BusinessError("无权限审批，只有项目负责人可以审批"), nil
+	}
+
+	// 6. 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, approval.TaskNodeId)
+	if err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return utils.Response.BusinessError("任务节点不存在"), nil
+		}
+		return nil, err
+	}
+
+	// 7. 获取审批人姓名
+	approverName := ""
+	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, employeeId)
+	if err == nil {
+		approverName = employee.RealName
+	}
+
+	// 8. 更新审批记录（包含审批人姓名）
+	approval.ApprovalType = int64(req.Approved)
+	approval.ApproverName = approverName
+	approval.Comment = sql.NullString{String: req.Comment, Valid: req.Comment != ""}
+	approval.UpdateTime = time.Now()
+	err = l.svcCtx.TaskNodeCompletionApprovalModel.Update(l.ctx, approval)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新审批记录失败: %v", err)
+		return nil, err
+	}
+
+	// 9. 如果审批通过，更新节点状态为已完成（状态2）
+	if req.Approved == 1 {
+		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, approval.TaskNodeId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
+			return nil, err
+		}
+
+		// 更新节点完成时间
+		updatedNode := *taskNode
+		updatedNode.NodeFinishTime = sql.NullTime{Time: time.Now(), Valid: true}
+		updatedNode.UpdateTime = time.Now()
+		err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedNode)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点完成时间失败: %v", err)
+		}
+
+		// 更新任务整体进度
+		err = l.updateTaskProgress(approval.TaskNodeId)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务整体进度失败: %v", err)
+		}
+
+		// 发送通知给节点执行人
+		if l.svcCtx.NotificationMQService != nil && taskNode.ExecutorId != "" {
+			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+				svc.TaskNodeCompleted,
+				[]string{taskNode.ExecutorId},
+				approval.TaskNodeId,
+				svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: approval.TaskNodeId},
+			)
+			notificationEvent.Title = "任务节点审批通过"
+			notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批已通过", taskNode.NodeName)
+			notificationEvent.Priority = 1
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
+				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+			}
+		}
+	} else {
+		// 如果审批拒绝，将节点状态改回进行中（状态1）
+		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, approval.TaskNodeId, 1)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
+			return nil, err
+		}
+
+		// 发送通知给节点执行人
+		if l.svcCtx.NotificationMQService != nil && taskNode.ExecutorId != "" {
+			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+				svc.TaskNodeCompletionApproval,
+				[]string{taskNode.ExecutorId},
+				approval.TaskNodeId,
+				svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: approval.TaskNodeId},
+			)
+			notificationEvent.Title = "任务节点审批被拒绝"
+			notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批被拒绝，请继续完善工作", taskNode.NodeName)
+			notificationEvent.Priority = 2
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
+				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+			}
+		}
+	}
+
+	// 10. 创建任务日志
+	logContent := fmt.Sprintf("任务节点 %s 完成审批：%s", taskNode.NodeName, map[int]string{1: "通过", 2: "拒绝"}[req.Approved])
+	if req.Comment != "" {
+		logContent += fmt.Sprintf("，审批意见：%s", req.Comment)
+	}
+	taskLog := &task.TaskLog{
+		LogId:      utils.Common.GenerateID(),
+		TaskId:     taskNode.TaskId,
+		TaskNodeId: utils.Common.ToSqlNullString(approval.TaskNodeId),
+		LogType:    2, // 更新类型
+		LogContent: logContent,
+		EmployeeId: employeeId,
+		CreateTime: time.Now(),
+	}
+	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("创建任务日志失败: %v", err)
+	}
+
+	return utils.Response.Success(map[string]interface{}{
+		"approvalId": req.ApprovalID,
+		"approved":   req.Approved,
+		"message":    fmt.Sprintf("审批%s成功", map[int]string{1: "通过", 2: "拒绝"}[req.Approved]),
+	}), nil
+}
+
+// updateTaskProgress 根据所有任务节点进度更新任务整体进度
+func (l *ApproveTaskNodeCompletionLogic) updateTaskProgress(taskNodeId string) error {
+	// 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
+	if err != nil {
+		return err
+	}
+
+	// 获取该任务的所有节点
+	nodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, taskNode.TaskId)
+	if err != nil {
+		return err
+	}
+
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	// 计算平均进度和完成节点数（只统计状态为已完成（状态2）的节点）
+	var totalProgress int64
+	var completedCount int64
+	for _, node := range nodes {
+		totalProgress += node.Progress
+		if node.NodeStatus == 2 { // 状态为已完成
+			completedCount++
+		}
+	}
+	avgProgress := int(totalProgress / int64(len(nodes)))
+
+	// 更新任务进度
+	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
+	}
+
+	// 当所有节点都完成时（平均进度达到100%），更新任务状态为已完成
+	if avgProgress == 100 {
+		err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+		}
+	}
+
+	// 更新任务节点统计
+	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
+	}
+
+	return nil
+}
