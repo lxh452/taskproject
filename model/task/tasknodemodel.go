@@ -279,7 +279,7 @@ func (m *customTaskNodeModel) SearchTaskNodes(ctx context.Context, keyword strin
 
 // UpdateStatus 更新任务节点状态
 func (m *customTaskNodeModel) UpdateStatus(ctx context.Context, id string, status int) error {
-	query := `UPDATE task_node SET status = ?, update_time = NOW() WHERE task_node_id = ? AND delete_time IS NULL`
+	query := `UPDATE task_node SET node_status = ?, update_time = NOW() WHERE task_node_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }

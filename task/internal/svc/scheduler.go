@@ -128,7 +128,7 @@ func (s *SchedulerService) checkTaskDeadlines() {
 // 每日汇报提醒定时任务
 func (s *SchedulerService) startDailyReportReminder() {
 	// 每天下午5点30分提醒
-	ticker := time.NewTicker(30 * time.Minute)
+	ticker := time.NewTicker(20 * time.Minute)
 
 	defer ticker.Stop()
 
@@ -138,7 +138,7 @@ func (s *SchedulerService) startDailyReportReminder() {
 			return
 		case <-ticker.C:
 			now := time.Now()
-			if now.Hour() == 18 && now.Minute() >= 00 && now.Minute() < 31 {
+			if now.Hour() == 17 && now.Minute() >= 00 && now.Minute() < 31 {
 				s.sendDailyReportReminders()
 			}
 		}

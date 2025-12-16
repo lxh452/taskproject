@@ -24,6 +24,9 @@ CREATE TABLE `task` (
     `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `delete_time` TIMESTAMP NULL COMMENT '删除时间',
+    `total_node_count` INT NOT NULL DEFAULT 0 COMMENT '总任务节点数' ,
+    `completed_node_count` INT NOT NULL DEFAULT 0 COMMENT '已完成任务节点数',
+
     
     PRIMARY KEY (`task_id`),
     KEY `idx_task_company` (`company_id`),
@@ -60,6 +63,8 @@ CREATE TABLE `task_node` (
     `leader_id` VARCHAR(32) NOT NULL COMMENT '节点负责人员工ID',
     `progress` TINYINT NOT NULL DEFAULT 0 COMMENT '完成进度 0-100',
     `node_priority` TINYINT NOT NULL DEFAULT 0 COMMENT '节点优先级 0-低 1-中 2-高 3-紧急',
+    `total_checklist_count` INT NOT NULL DEFAULT 0 COMMENT '总任务清单数',
+    `completed_checklist_count` INT NOT NULL DEFAULT 0 COMMENT '已完成任务清单数',
     `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `delete_time` TIMESTAMP NULL COMMENT '删除时间',

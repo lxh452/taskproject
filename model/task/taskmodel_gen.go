@@ -37,28 +37,32 @@ type (
 	}
 
 	Task struct {
-		TaskId                 string         `db:"task_id"`                  // 任务id
-		CompanyId              string         `db:"company_id"`               // 公司id
-		TaskTitle              string         `db:"task_title"`               // 任务标题
-		TaskDetail             string         `db:"task_detail"`              // 任务详情
-		TaskStatus             int64          `db:"task_status"`              // 任务状态：0-未开始，1-进行中，2-已完成，3-逾期完成
-		TaskPriority           int64          `db:"task_priority"`            // 任务优先级：0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急
-		TaskType               int64          `db:"task_type"`                // 任务类型：0-单部门任务，1-跨部门任务
-		ResponsibleEmployeeIds sql.NullString `db:"responsible_employee_ids"` // 负责人员工ID列表
-		NodeEmployeeIds        sql.NullString `db:"node_employee_ids"`        // 节点员工ID列表
-		DepartmentIds          sql.NullString `db:"department_ids"`           // 涉及部门ID列表
-		TaskStartTime          time.Time      `db:"task_start_time"`          // 任务开始时间
-		TaskDeadline           time.Time      `db:"task_deadline"`            // 任务截止时间
-		TaskCreator            string         `db:"task_creator"`             // 任务创建者员工ID
-		TaskAssigner           sql.NullString `db:"task_assigner"`            // 任务分配者员工ID
-		AttachmentUrl          sql.NullString `db:"attachment_url"`           // 附件URL
-		CreateTime             time.Time      `db:"create_time"`              // 创建时间
-		UpdateTime             time.Time      `db:"update_time"`              // 更新时间
-		DeleteTime             sql.NullTime   `db:"delete_time"`              // 删除时间
-		LeaderId               sql.NullString `db:"leader_id"`                // 负责人
-		CompletedNodes         sql.NullString `db:"completed_nodes"`          // 完成任务节点
-		TotalNodes             sql.NullString `db:"total_nodes"`              // 总任务节点
-		TaskProgress           sql.NullString `db:"task_progress"`            // 任务进度
+		TaskId                 string          `db:"task_id"`                  // 任务id
+		CompanyId              string          `db:"company_id"`               // 公司id
+		TaskTitle              string          `db:"task_title"`               // 任务标题
+		TaskDetail             string          `db:"task_detail"`              // 任务详情
+		TaskStatus             int64           `db:"task_status"`              // 任务状态：0-未开始，1-进行中，2-已完成，3-逾期完成
+		TaskPriority           int64           `db:"task_priority"`            // 任务优先级：0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急
+		TaskType               int64           `db:"task_type"`                // 任务类型：0-单部门任务，1-跨部门任务
+		ResponsibleEmployeeIds sql.NullString  `db:"responsible_employee_ids"` // 负责人员工ID列表
+		NodeEmployeeIds        sql.NullString  `db:"node_employee_ids"`        // 节点员工ID列表
+		DepartmentIds          sql.NullString  `db:"department_ids"`           // 涉及部门ID列表
+		TaskStartTime          time.Time       `db:"task_start_time"`          // 任务开始时间
+		TaskDeadline           time.Time       `db:"task_deadline"`            // 任务截止时间
+		TaskCreator            string          `db:"task_creator"`             // 任务创建者员工ID
+		TaskAssigner           sql.NullString  `db:"task_assigner"`            // 任务分配者员工ID
+		AttachmentUrl          sql.NullString  `db:"attachment_url"`           // 附件URL
+		LeaderId               sql.NullString  `db:"leader_id"`                // 负责人
+		CreateTime             time.Time       `db:"create_time"`              // 创建时间
+		UpdateTime             time.Time       `db:"update_time"`              // 更新时间
+		DeleteTime             sql.NullTime    `db:"delete_time"`              // 删除时间
+		TaskProgress           int64           `db:"task_progress"`            // 任务整体进度 0-100
+		TotalNodes             int64           `db:"total_nodes"`              // 任务节点总数
+		CompletedNodes         int64           `db:"completed_nodes"`          // 已完成节点数
+		EstimatedHours         sql.NullFloat64 `db:"estimated_hours"`          // 预计工时（小时）
+		ActualHours            sql.NullFloat64 `db:"actual_hours"`             // 实际工时（小时）
+		TotalNodeCount         int64           `db:"total_node_count"`         // 总任务节点数
+		CompletedNodeCount     int64           `db:"completed_node_count"`     // 已完成任务节点数
 	}
 )
 
@@ -88,16 +92,22 @@ func (m *defaultTaskModel) FindOne(ctx context.Context, taskId string) (*Task, e
 		return nil, err
 	}
 }
-
 func (m *defaultTaskModel) Insert(ctx context.Context, data *Task) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, taskRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.TaskId, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskPriority, data.TaskType, data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline, data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.DeleteTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		m.table, taskRowsExpectAutoSet)
+
+	ret, err := m.conn.ExecCtx(ctx, query,
+		data.TaskId, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskPriority, data.TaskType,
+		data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline,
+		data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.LeaderId, data.DeleteTime,
+		data.TaskProgress, data.TotalNodes, data.CompletedNodes, data.EstimatedHours, data.ActualHours,
+		data.TotalNodeCount, data.CompletedNodeCount,
+	)
 	return ret, err
 }
-
 func (m *defaultTaskModel) Update(ctx context.Context, data *Task) error {
 	query := fmt.Sprintf("update %s set %s where `task_id` = ?", m.table, taskRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskPriority, data.TaskType, data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline, data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.DeleteTime, data.TaskId)
+	_, err := m.conn.ExecCtx(ctx, query, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskProgress, data.TotalNodes, data.CompletedNodes, data.EstimatedHours, data.ActualHours, data.TaskPriority, data.TaskType, data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline, data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.LeaderId, data.TotalNodeCount, data.CompletedNodeCount, data.DeleteTime, data.TaskId)
 	return err
 }
 

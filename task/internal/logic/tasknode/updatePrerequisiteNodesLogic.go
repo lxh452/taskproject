@@ -73,6 +73,11 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 		l.Logger.WithContext(l.ctx).Errorf("更新前置节点失败: %v", err)
 		return utils.Response.InternalError("更新前置节点失败"), nil
 	}
+	err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
+		return utils.Response.InternalError("更新任务节点失败"), err
+	}
 	// 如果创建好了流程证明该流程已经完善了，因此需要修正任务
 	err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, node.TaskId, 1)
 	if err != nil {

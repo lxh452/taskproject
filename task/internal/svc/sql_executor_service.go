@@ -44,6 +44,7 @@ func (s *SQLExecutorService) AutoMigrate(ctx context.Context) error {
 		"task_node_completion_approval.sql",
 		"join_application.sql",
 		"add_has_joine_company.sql", // 注意：实际文件名是 add_has_joine_company.sql（少了一个d）
+		"task_node_completion_approval.sql",
 	}
 
 	successCount := 0

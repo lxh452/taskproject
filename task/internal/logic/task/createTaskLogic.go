@@ -94,6 +94,11 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		TaskPriority:           int64(req.TaskPriority),
 		TaskType:               int64(req.TaskType), // 1: 单部门, 2: 跨部门
 		TaskStatus:             0,                   // 待开始
+		TaskProgress:           0,                   // 初始进度为0
+		TotalNodes:             0,                   // 初始节点数为0
+		CompletedNodes:         0,                   // 初始已完成节点数为0
+		TotalNodeCount:         0,                   // 初始总节点数为0
+		CompletedNodeCount:     0,                   // 初始已完成节点数为0
 		TaskCreator:            employeeId,
 		TaskStartTime:          time.Now(),
 		TaskDeadline:           deadline,
@@ -101,7 +106,7 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		NodeEmployeeIds:        utils.Common.ToSqlNullString(nodeEmployeeIDs),
 		DepartmentIds:          utils.Common.ToSqlNullString(departmentIds),
 		AttachmentUrl:          utils.Common.ToSqlNullString(attachmentURL),
-		CreateTime:             time.Now(),
+		LeaderId:               utils.Common.ToSqlNullString(employeeId),
 	}
 
 	_, err = l.svcCtx.TaskModel.Insert(l.ctx, newTask)
