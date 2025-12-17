@@ -219,6 +219,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	if storageType == "cos" {
 		// 使用COS存储
+		// 优先从环境变量读取，如果没有则使用配置文件中的值
 		secretId := c.FileStorage.COS.SecretId
 		secretKey := c.FileStorage.COS.SecretKey
 		bucket := c.FileStorage.COS.Bucket
@@ -234,7 +235,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 				secretId == "", secretKey == "", bucket, region)
 			storageType = "local"
 		} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
-			logx.Errorf("[ServiceContext] COS配置使用的是占位符，请替换为实际的SecretId和SecretKey，回退到本地存储")
+			logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY，或替换配置文件中的占位符，回退到本地存储")
 			storageType = "local"
 		} else {
 			cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
