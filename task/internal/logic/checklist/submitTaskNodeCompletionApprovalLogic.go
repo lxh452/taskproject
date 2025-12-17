@@ -32,7 +32,7 @@ func NewSubmitTaskNodeCompletionApprovalLogic(ctx context.Context, svcCtx *svc.S
 func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval(req *types.SubmitTaskNodeCompletionApprovalRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.NodeID == "" {
-		return utils.Response.BusinessError("任务节点ID不能为空"), nil
+		return utils.Response.BusinessError("task_node_not_found"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -45,7 +45,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, req.NodeID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 	}
 
 	if approverId == "" {
-		return utils.Response.BusinessError("无法找到项目负责人，无法提交审批"), nil
+		return utils.Response.ErrorWithKey("无法找到项目负责人，无法提交审批"), nil
 	}
 
 	// 获取审批人姓名

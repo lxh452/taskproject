@@ -84,8 +84,8 @@ type ServiceContext struct {
 	EmailTemplateService *EmailTemplateService // 邮件模板服务
 	EmailService         *EmailService         // 邮件服务
 
-	// 文件存储服务
-	FileStorageService *FileStorageService
+	// 文件存储服务（支持本地存储和COS）
+	FileStorageService FileStorageInterface
 
 	// SQL执行服务
 	SQLExecutorService *SQLExecutorService
@@ -211,16 +211,51 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 
 	// 初始化文件存储服务
-	storageRoot := c.FileStorage.StorageRoot
-	if storageRoot == "" {
-		storageRoot = "./uploads"
+	var fileStorageService FileStorageInterface
+	storageType := c.FileStorage.StorageType
+	if storageType == "" {
+		storageType = "local" // 默认使用本地存储
 	}
-	urlPrefix := c.FileStorage.URLPrefix
-	if urlPrefix == "" {
-		urlPrefix = "http://localhost:8888/static"
+
+	if storageType == "cos" {
+		// 使用COS存储
+		secretId := c.FileStorage.COS.SecretId
+		secretKey := c.FileStorage.COS.SecretKey
+		bucket := c.FileStorage.COS.Bucket
+		region := c.FileStorage.COS.Region
+		urlPrefix := c.FileStorage.URLPrefix
+		if urlPrefix == "" {
+			urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
+		}
+
+		if secretId == "" || secretKey == "" || bucket == "" || region == "" {
+			logx.Errorf("[ServiceContext] COS配置不完整，回退到本地存储")
+			storageType = "local"
+		} else {
+			cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
+			if err != nil {
+				logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v，回退到本地存储", err)
+				storageType = "local"
+			} else {
+				fileStorageService = cosService
+				logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
+			}
+		}
 	}
-	fileStorageService := NewFileStorageService(storageRoot, urlPrefix)
-	logx.Infof("[ServiceContext] FileStorageService initialized: root=%s, urlPrefix=%s", storageRoot, urlPrefix)
+
+	if storageType == "local" {
+		// 使用本地存储
+		storageRoot := c.FileStorage.StorageRoot
+		if storageRoot == "" {
+			storageRoot = "./uploads"
+		}
+		urlPrefix := c.FileStorage.URLPrefix
+		if urlPrefix == "" {
+			urlPrefix = "http://localhost:8888/static"
+		}
+		fileStorageService = NewFileStorageService(storageRoot, urlPrefix)
+		logx.Infof("[ServiceContext] 本地存储服务初始化成功: root=%s, urlPrefix=%s", storageRoot, urlPrefix)
+	}
 
 	s := &ServiceContext{
 		Config:          c,

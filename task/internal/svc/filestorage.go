@@ -12,8 +12,15 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-// FileStorageService 文件存储服务
-// 目前实现本地存储，后续可以替换为COS/OSS等云存储
+// FileStorageInterface 文件存储接口
+type FileStorageInterface interface {
+	SaveFile(module, category, relatedID, fileID, fileName string, file multipart.File) (string, string, error)
+	SaveFileFromBytes(module, category, relatedID, fileID, fileName string, data []byte) (string, string, error)
+	DeleteFile(key string) error
+	GetFileURL(key string) string
+}
+
+// FileStorageService 文件存储服务（本地存储实现）
 type FileStorageService struct {
 	// 本地存储根目录
 	StorageRoot string
@@ -137,9 +144,18 @@ func (s *FileStorageService) DeleteFile(filePath string) error {
 	return nil
 }
 
-// GetFilePath 获取文件完整路径
+// GetFilePath 获取文件完整路径（仅本地存储使用）
 func (s *FileStorageService) GetFilePath(relativePath string) string {
 	return filepath.Join(s.StorageRoot, relativePath)
+}
+
+// GetFileURL 获取文件访问URL（实现接口）
+func (s *FileStorageService) GetFileURL(key string) string {
+	if key == "" {
+		return ""
+	}
+	// 对于本地存储，key就是相对路径
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(s.URLPrefix, "/"), strings.ReplaceAll(key, "\\", "/"))
 }
 
 // sanitizeFileName 清理文件名，移除特殊字符
@@ -178,4 +194,3 @@ func sanitizeFileName(fileName string) string {
 	)
 	return replacer.Replace(fileName)
 }
-

@@ -10,10 +10,18 @@ System:
 
 # 文件存储配置
 FileStorage:
-  # 本地存储根目录（后续接入COS时可以改为临时目录或直接上传到云存储）
+  # 存储类型: local(本地存储) 或 cos(腾讯云COS)
+  StorageType: "cos"
+  # 本地存储根目录（当StorageType为local时使用）
   StorageRoot: "./upload"
-  # 文件访问URL前缀（本地开发时使用本地静态服务，生产环境替换为COS域名）
+  # 文件访问URL前缀（COS域名或本地静态服务地址）
   URLPrefix: "https://lxh452-task-1385490051.cos.ap-guangzhou.myqcloud.com"
+  # 腾讯云COS配置（当StorageType为cos时使用）
+  COS:
+    SecretId: "your-secret-id"  # 请替换为您的SecretId
+    SecretKey: "your-secret-key"  # 请替换为您的SecretKey
+    Bucket: "lxh452-task-1385490051"  # 存储桶名称
+    Region: "ap-guangzhou"  # 地域
 
 # 数据库配置
 MySQL:

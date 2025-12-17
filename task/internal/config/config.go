@@ -24,10 +24,19 @@ type Config struct {
 
 	// 文件存储配置
 	FileStorage struct {
-		// StorageRoot 本地存储根目录
+		// StorageRoot 本地存储根目录（当使用本地存储时）
 		StorageRoot string `json:"storageRoot"`
 		// URLPrefix 访问URL前缀
 		URLPrefix string `json:"urlPrefix"`
+		// StorageType 存储类型: local(本地) 或 cos(腾讯云COS)
+		StorageType string `json:"storageType"`
+		// COS配置（当StorageType为cos时使用）
+		COS struct {
+			SecretId  string `json:"secretId"`
+			SecretKey string `json:"secretKey"`
+			Bucket    string `json:"bucket"`
+			Region    string `json:"region"`
+		} `json:"cos"`
 	} `json:"fileStorage"`
 
 	// 数据库配置
