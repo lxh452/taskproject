@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"task_Project/task/internal/svc"
-	"task_Project/task/internal/utils"
-
 	"github.com/zeromicro/go-zero/core/logx"
+	"task_Project/task/internal/svc"
 )
 
 type ProxyFileLogic struct {
