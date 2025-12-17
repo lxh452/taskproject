@@ -32,9 +32,9 @@ func NewAutoDispatchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Auto
 
 // 根据路径请求确认自动派发
 func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *types.BaseResponse, err error) {
-	// 权限检查
-	userID, ok := utils.Common.GetCurrentUserID(l.ctx)
-	if !ok {
+	// 权限检查 - 使用EmployeeID而不是UserID
+	employeeID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	if !ok || employeeID == "" {
 		return utils.Response.UnauthorizedError(), nil
 	}
 
@@ -46,7 +46,7 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 	}
 
 	// 检查用户权限（只有任务负责人或管理员可以触发自动派发）
-	if !l.hasDispatchPermission(userID, taskInfo) {
+	if !l.hasDispatchPermission(employeeID, taskInfo) {
 		return utils.Response.BusinessError("无权限执行自动派发"), nil
 	}
 
@@ -126,14 +126,14 @@ type AutoDispatchResult struct {
 }
 
 // hasDispatchPermission 检查用户是否有派发权限
-func (l *AutoDispatchLogic) hasDispatchPermission(userID string, taskInfo *task.Task) bool {
+func (l *AutoDispatchLogic) hasDispatchPermission(employeeID string, taskInfo *task.Task) bool {
 	// 创建者可派发
-	if taskInfo.TaskCreator == userID {
+	if taskInfo.TaskCreator == employeeID {
 		return true
 	}
 
-	// 获取员工信息
-	employee, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userID)
+	// 获取员工信息（直接使用employeeID）
+	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, employeeID)
 	if err != nil {
 		return false
 	}

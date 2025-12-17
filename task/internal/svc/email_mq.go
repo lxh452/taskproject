@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"task_Project/task/internal/middleware"
@@ -212,6 +213,39 @@ func resolveEmailRecipients(ctx context.Context, svcCtx *ServiceContext, event *
 	emails := []string{}
 
 	switch event.EventType {
+	case "task.created":
+		// 任务创建时，如果已经指定了To字段，直接使用；否则根据EmployeeIDs或TaskID查询
+		if len(event.To) > 0 {
+			// 已经指定了收件人，直接使用
+			emails = event.To
+		} else if len(event.EmployeeIDs) > 0 {
+			// 根据EmployeeIDs查询邮箱
+			for _, employeeID := range event.EmployeeIDs {
+				employee, err := svcCtx.EmployeeModel.FindOne(ctx, employeeID)
+				if err == nil && employee.Email.Valid && employee.Email.String != "" {
+					emails = append(emails, employee.Email.String)
+				}
+			}
+		} else if event.TaskID != "" {
+			// 根据TaskID查询节点负责人
+			taskInfo, err := svcCtx.TaskModel.FindOne(ctx, event.TaskID)
+			if err == nil && taskInfo.NodeEmployeeIds.Valid && taskInfo.NodeEmployeeIds.String != "" {
+				nodeEmployeeIDs := strings.Split(taskInfo.NodeEmployeeIds.String, ",")
+				emailSet := make(map[string]bool)
+				for _, employeeID := range nodeEmployeeIDs {
+					if employeeID == "" {
+						continue
+					}
+					employee, err := svcCtx.EmployeeModel.FindOne(ctx, employeeID)
+					if err == nil && employee.Email.Valid && employee.Email.String != "" {
+						if !emailSet[employee.Email.String] {
+							emails = append(emails, employee.Email.String)
+							emailSet[employee.Email.String] = true
+						}
+					}
+				}
+			}
+		}
 	case "task.completed", "task.updated":
 		// 根据 TaskID 查询任务创建者和所有节点负责人/执行人的邮箱
 		if event.TaskID != "" {
@@ -348,6 +382,32 @@ func generateEmailContent(ctx context.Context, svcCtx *ServiceContext, event *Em
 	}
 
 	switch event.EventType {
+	case "task.created":
+		// 任务创建邮件内容生成
+		if event.Subject != "" && event.Body != "" {
+			// 如果已经指定了主题和内容，直接使用
+			return event.Subject, event.Body
+		}
+		// 否则使用模板生成
+		if event.TaskID != "" && svcCtx.EmailTemplateService != nil {
+			taskInfo, err := svcCtx.TaskModel.FindOne(ctx, event.TaskID)
+			if err == nil {
+				data := TaskCreatedData{
+					TaskTitle: taskInfo.TaskTitle,
+					TaskID:    event.TaskID,
+					Year:      time.Now().Year(),
+				}
+				body, err := svcCtx.EmailTemplateService.RenderTemplate("task_created", data)
+				if err == nil {
+					return "新任务创建通知", body
+				}
+			}
+		}
+		// 模板不可用，使用默认内容
+		if event.Body != "" {
+			return event.Subject, event.Body
+		}
+		return "新任务创建通知", "您有新的任务需要处理，请登录系统查看详情。"
 	case "task.completed":
 		if event.TaskID != "" {
 			taskInfo, err := svcCtx.TaskModel.FindOne(ctx, event.TaskID)

@@ -153,6 +153,14 @@ type OnboardingData struct {
 	Year           int
 }
 
+// TaskCreatedData 任务创建邮件数据
+type TaskCreatedData struct {
+	BaseURL   string
+	TaskTitle string
+	TaskID    string
+	Year      int
+}
+
 // TaskUpdatedData 任务更新邮件数据
 type TaskUpdatedData struct {
 	BaseURL    string

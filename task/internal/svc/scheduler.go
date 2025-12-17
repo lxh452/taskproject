@@ -94,7 +94,7 @@ func (s *SchedulerService) checkTaskDeadlines() {
 
 	// 发送截止提醒（通过消息队列，消费者会查询并发送）
 	for _, taskNode := range taskNodes {
-		if taskNode.NodeStatus == 2 { // 进行中
+		if taskNode.NodeStatus == 1 { // 进行中（状态1）
 			// 发布邮件事件（消费者会查询执行人并发送）
 			if s.svcCtx.EmailMQService != nil {
 				emailEvent := &EmailEvent{
