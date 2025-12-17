@@ -35,8 +35,41 @@ func (l *ProxyFileLogic) ProxyFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 获取当前用户ID（用于权限验证）
-	currentUserID, _ := utils.Common.GetCurrentUserID(l.ctx)
+	// 从请求头获取token并验证
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		logx.Errorf("代理文件请求缺少Authorization header")
+		http.Error(w, "未授权访问", http.StatusUnauthorized)
+		return
+	}
+
+	// 提取token（格式：Bearer <token>）
+	var token string
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	} else {
+		logx.Errorf("代理文件请求Authorization格式错误: %s", authHeader)
+		http.Error(w, "无效的授权格式", http.StatusUnauthorized)
+		return
+	}
+
+	// 解析token获取用户ID
+	claims, err := l.svcCtx.JWTMiddleware.ParseToken(token)
+	if err != nil {
+		logx.Errorf("Token解析失败: %v", err)
+		http.Error(w, "Token无效或已过期", http.StatusUnauthorized)
+		return
+	}
+
+	// 验证token是否在Redis中有效
+	if err := l.svcCtx.JWTMiddleware.ValidateTokenWithRedis(token, claims.UserID); err != nil {
+		logx.Errorf("Token验证失败: %v", err)
+		http.Error(w, "Token无效或已过期", http.StatusUnauthorized)
+		return
+	}
+
+	currentUserID := claims.UserID
+	logx.Infof("代理文件请求，用户ID: %s, 文件ID: %s", currentUserID, fileId)
 
 	// 从MongoDB查询文件信息
 	file, err := l.svcCtx.UploadFileModel.FindByFileID(l.ctx, fileId)
