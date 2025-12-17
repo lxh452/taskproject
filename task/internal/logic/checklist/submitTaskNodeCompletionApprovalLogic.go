@@ -165,6 +165,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		notificationEvent.Title = "任务节点完成审批"
 		notificationEvent.Content = fmt.Sprintf("任务节点 %s 已完成，等待您的审批", taskNode.NodeName)
 		notificationEvent.Priority = 2
+		notificationEvent.Category = "task_approval" // 设置分类，便于前端过滤
 		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
 			l.Logger.WithContext(l.ctx).Errorf("发布审批通知事件失败: %v", err)
 		}

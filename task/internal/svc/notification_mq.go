@@ -511,6 +511,8 @@ func (s *NotificationMQService) NewNotificationEvent(eventType string, employeeI
 		category = "employee"
 	case HandoverNotification:
 		category = "handover"
+	case TaskNodeCompletionApproval:
+		category = "task_approval"
 	default:
 		category = "task"
 	}
