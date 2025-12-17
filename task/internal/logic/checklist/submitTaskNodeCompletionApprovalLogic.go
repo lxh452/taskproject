@@ -53,12 +53,12 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 
 	// 4. 检查节点状态：只有进行中（状态1）的节点才能提交审批
 	if taskNode.NodeStatus != 1 {
-		return utils.Response.BusinessError("只有进行中的任务节点才能提交审批"), nil
+		return nil, errors.New("只有进行中的任务节点才能提交审批")
 	}
 
 	// 5. 检查节点进度：只有进度100%的节点才能提交审批
 	if taskNode.Progress < 100 {
-		return utils.Response.BusinessError("任务节点进度未达到100%，无法提交审批"), nil
+		return nil, errors.New("任务节点进度未达到100%，无法提交审批")
 	}
 
 	// 6. 验证权限：只有节点执行人可以提交审批
@@ -75,20 +75,20 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		}
 	}
 	if !hasPermission {
-		return utils.Response.BusinessError("无权限提交审批，只有节点执行人可以提交"), nil
+		return nil, errors.New("无权限提交审批，只有节点执行人可以提交")
 	}
 
 	// 7. 检查是否已有待审批的记录
 	existingApproval, err := l.svcCtx.TaskNodeCompletionApprovalModel.FindLatestByTaskNodeId(l.ctx, req.NodeID)
 	if err == nil && existingApproval != nil && existingApproval.ApprovalType == 0 {
-		return utils.Response.BusinessError("该节点已有待审批的记录，请勿重复提交"), nil
+		return nil, errors.New("该节点已有待审批的记录，请勿重复提交")
 	}
 
 	// 8. 获取任务信息，找到项目负责人（任务负责人）
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务不存在"), nil
+			return nil, errors.New("任务不存在")
 		}
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 	}
 
 	if approverId == "" {
-		return utils.Response.BusinessError("无法找到项目负责人，无法提交审批"), nil
+		return nil, errors.New("无法找到项目负责人，无法提交审批")
 	}
 
 	// 获取审批人姓名
