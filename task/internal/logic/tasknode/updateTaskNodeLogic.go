@@ -51,23 +51,47 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		return nil, err
 	}
 
-	// 6. 验证权限：只有节点执行人可以提交审批
+	// 4. 获取任务信息，用于验证任务负责人权限
+	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
+		return nil, err
+	}
+
+	// 5. 验证用户权限：节点负责人、执行人或任务负责人可以更新
 	hasPermission := false
-	// ExecutorId可能是逗号分隔的多个ID
-	executorIdStr := taskNode.ExecutorId
-	if executorIdStr != "" {
-		executorIds := strings.Split(executorIdStr, ",")
-		for _, executorId := range executorIds {
-			if strings.TrimSpace(executorId) == currentEmpID {
-				hasPermission = true
-				break
+
+	// 检查是否是节点负责人
+	if taskNode.LeaderId == currentEmpID {
+		hasPermission = true
+	}
+
+	// 检查是否是任务负责人
+	if !hasPermission && taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID {
+		hasPermission = true
+	}
+
+	// 检查是否是任务创建者
+	if !hasPermission && taskInfo.TaskCreator == currentEmpID {
+		hasPermission = true
+	}
+
+	// 检查是否是节点执行人（ExecutorId可能是逗号分隔的多个ID）
+	if !hasPermission {
+		executorIdStr := taskNode.ExecutorId
+		if executorIdStr != "" {
+			executorIds := strings.Split(executorIdStr, ",")
+			for _, executorId := range executorIds {
+				if strings.TrimSpace(executorId) == currentEmpID {
+					hasPermission = true
+					break
+				}
 			}
 		}
 	}
 
-	// 4. 验证用户权限
-	if taskNode.LeaderId != currentEmpID && !hasPermission {
-		return utils.Response.BusinessError("无权限更新此任务节点"), nil
+	if !hasPermission {
+		return utils.Response.BusinessError("无权限更新此任务节点，只有节点负责人、执行人或任务负责人可以更新"), nil
 	}
 
 	// 5. 构建更新数据
@@ -80,14 +104,20 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		updateFields = append(updateFields, "节点名称")
 	}
 
-	// 更新节点详情  只有负责人可以修改或者任务负责人
-	if req.NodeDetail != "" && taskNode.LeaderId == currentEmpID {
+	// 更新节点详情  只有节点负责人或任务负责人可以修改
+	canUpdateDetail := taskNode.LeaderId == currentEmpID ||
+		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
+		taskInfo.TaskCreator == currentEmpID
+	if req.NodeDetail != "" && canUpdateDetail {
 		updateData["node_detail"] = req.NodeDetail
 		updateFields = append(updateFields, "节点详情")
 	}
 
-	// 更新执行人 只有负责人可以修改或者任务负责人
-	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
+	// 更新执行人 只有节点负责人或任务负责人可以修改
+	canUpdateExecutor := taskNode.LeaderId == currentEmpID ||
+		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
+		taskInfo.TaskCreator == currentEmpID
+	if len(req.ExecutorID) > 0 && canUpdateExecutor {
 		// 支持多个执行人，用逗号分隔
 		executorIDs := make([]string, 0)
 		for _, executorID := range req.ExecutorID {
@@ -157,10 +187,16 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	if req.NodeName != "" {
 		updatedTaskNode.NodeName = req.NodeName
 	}
-	if req.NodeDetail != "" && taskNode.LeaderId == currentEmpID {
+	canUpdateDetail = taskNode.LeaderId == currentEmpID ||
+		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
+		taskInfo.TaskCreator == currentEmpID
+	if req.NodeDetail != "" && canUpdateDetail {
 		updatedTaskNode.NodeDetail = utils.Common.ToSqlNullString(req.NodeDetail)
 	}
-	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
+	canUpdateExecutor = taskNode.LeaderId == currentEmpID ||
+		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
+		taskInfo.TaskCreator == currentEmpID
+	if len(req.ExecutorID) > 0 && canUpdateExecutor {
 		// 支持多个执行人，用逗号分隔
 		executorIDs := make([]string, 0)
 		for _, executorID := range req.ExecutorID {

@@ -264,6 +264,27 @@ func resolveNotificationRecipients(ctx context.Context, svcCtx *ServiceContext, 
 				}
 			}
 		}
+	case TaskNodeCompletionApproval:
+		// 任务节点完成审批：通知任务负责人（项目负责人）
+		if event.NodeID != "" {
+			node, err := svcCtx.TaskNodeModel.FindOne(ctx, event.NodeID)
+			if err == nil {
+				// 获取任务信息，找到任务负责人
+				taskInfo, err := svcCtx.TaskModel.FindOne(ctx, node.TaskId)
+				if err == nil {
+					// 优先使用任务负责人，如果没有则使用任务创建者
+					if taskInfo.LeaderId.Valid && taskInfo.LeaderId.String != "" {
+						employeeIDSet[taskInfo.LeaderId.String] = true
+					} else if taskInfo.TaskCreator != "" {
+						employeeIDSet[taskInfo.TaskCreator] = true
+					}
+				}
+			}
+		}
+		// 如果指定了 EmployeeIDs，也加入（用于直接指定审批人）
+		for _, id := range event.EmployeeIDs {
+			employeeIDSet[id] = true
+		}
 	case TaskNodeExecutorChanged, TaskNodeDeleted, TaskNodeCompleted, TaskDeadlineReminder, TaskSlowProgress, TaskNodeExecutorLeft:
 		// 根据 NodeID 查询相关人员
 		if event.NodeID != "" {
