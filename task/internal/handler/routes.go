@@ -424,6 +424,24 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: task.CreateTaskDetailCommentHandler(serverCtx),
 			},
 			{
+				// 删除任务评论
+				Method:  http.MethodPost,
+				Path:    "/comment/delete",
+				Handler: task.DeleteTaskCommentHandler(serverCtx),
+			},
+			{
+				// 点赞/取消点赞任务评论
+				Method:  http.MethodPost,
+				Path:    "/comment/like",
+				Handler: task.LikeTaskCommentHandler(serverCtx),
+			},
+			{
+				// 获取任务评论列表
+				Method:  http.MethodPost,
+				Path:    "/comment/list",
+				Handler: task.GetTaskCommentsHandler(serverCtx),
+			},
+			{
 				// 任务完成
 				Method:  http.MethodPost,
 				Path:    "/complete",
@@ -532,10 +550,64 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// 上传头像
+				Method:  http.MethodPost,
+				Path:    "/avatar",
+				Handler: upload.UploadAvatarHandler(serverCtx),
+			},
+			{
+				// 创建附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/create",
+				Handler: upload.CreateAttachmentCommentHandler(serverCtx),
+			},
+			{
+				// 删除附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/delete",
+				Handler: upload.DeleteAttachmentCommentHandler(serverCtx),
+			},
+			{
+				// 获取附件评论列表
+				Method:  http.MethodPost,
+				Path:    "/comment/list",
+				Handler: upload.GetAttachmentCommentsHandler(serverCtx),
+			},
+			{
+				// 解决附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/resolve",
+				Handler: upload.ResolveAttachmentCommentHandler(serverCtx),
+			},
+			{
+				// 删除附件
+				Method:  http.MethodPost,
+				Path:    "/delete",
+				Handler: upload.DeleteAttachmentHandler(serverCtx),
+			},
+			{
 				// 文件上传（支持图片、PDF、Markdown等文件）
 				Method:  http.MethodPost,
 				Path:    "/file",
 				Handler: upload.UploadInfoHandler(serverCtx),
+			},
+			{
+				// 获取文件详情
+				Method:  http.MethodPost,
+				Path:    "/file/detail",
+				Handler: upload.GetFileDetailHandler(serverCtx),
+			},
+			{
+				// 获取任务附件列表
+				Method:  http.MethodPost,
+				Path:    "/task/attachments",
+				Handler: upload.GetTaskAttachmentsHandler(serverCtx),
+			},
+			{
+				// 获取任务节点附件列表
+				Method:  http.MethodPost,
+				Path:    "/tasknode/attachments",
+				Handler: upload.GetTaskNodeAttachmentsHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/v1/upload"),

@@ -1236,6 +1236,18 @@ service taskprojectapi {
 	@doc "创建任务评论"
 	@handler CreateTaskDetailComment
 	post /comment (CreateTaskDetailComment) returns (BaseResponse)
+
+	@doc "获取任务评论列表"
+	@handler GetTaskComments
+	post /comment/list (GetTaskCommentsRequest) returns (BaseResponse)
+
+	@doc "点赞/取消点赞任务评论"
+	@handler LikeTaskComment
+	post /comment/like (LikeCommentRequest) returns (BaseResponse)
+
+	@doc "删除任务评论"
+	@handler DeleteTaskComment
+	post /comment/delete (DeleteTaskCommentRequest) returns (BaseResponse)
 }
 
 @server (
@@ -1380,5 +1392,41 @@ service taskprojectapi {
 	@doc "文件上传（支持图片、PDF、Markdown等文件）"
 	@handler UploadInfo
 	post /file (UploadInfoRequest) returns (BaseResponse)
+
+	@doc "获取任务附件列表"
+	@handler GetTaskAttachments
+	post /task/attachments (GetTaskAttachmentsRequest) returns (BaseResponse)
+
+	@doc "获取任务节点附件列表"
+	@handler GetTaskNodeAttachments
+	post /tasknode/attachments (GetTaskNodeAttachmentsRequest) returns (BaseResponse)
+
+	@doc "获取文件详情"
+	@handler GetFileDetail
+	post /file/detail (GetFileDetailRequest) returns (BaseResponse)
+
+	@doc "删除附件"
+	@handler DeleteAttachment
+	post /delete (DeleteAttachmentRequest) returns (BaseResponse)
+
+	@doc "创建附件评论"
+	@handler CreateAttachmentComment
+	post /comment/create (CreateAttachmentCommentRequest) returns (BaseResponse)
+
+	@doc "获取附件评论列表"
+	@handler GetAttachmentComments
+	post /comment/list (GetAttachmentCommentsRequest) returns (BaseResponse)
+
+	@doc "解决附件评论"
+	@handler ResolveAttachmentComment
+	post /comment/resolve (ResolveAttachmentCommentRequest) returns (BaseResponse)
+
+	@doc "删除附件评论"
+	@handler DeleteAttachmentComment
+	post /comment/delete (DeleteAttachmentCommentRequest) returns (BaseResponse)
+
+	@doc "上传头像"
+	@handler UploadAvatar
+	post /avatar (UploadAvatarRequest) returns (BaseResponse)
 }
 
