@@ -660,6 +660,10 @@ type PositionRolesRequest struct {
 	PositionId string `json:"positionId"` // 查询职位关联的角色
 }
 
+type ProxyFileRequest struct {
+	FileID string `json:"fileId"`
+}
+
 type RegisterRequest struct {
 	Username         string `json:"username"`
 	Password         string `json:"password"`

@@ -598,6 +598,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: upload.GetFileDetailHandler(serverCtx),
 			},
 			{
+				// 代理文件内容（解决CORS问题）
+				Method:  http.MethodGet,
+				Path:    "/file/proxy",
+				Handler: upload.ProxyFileHandler(serverCtx),
+			},
+			{
 				// 获取任务附件列表
 				Method:  http.MethodPost,
 				Path:    "/task/attachments",

@@ -3,6 +3,7 @@ package svc
 import (
 	"context"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -146,4 +147,28 @@ func (s *COSStorageService) GetFileURL(key string) string {
 		return ""
 	}
 	return fmt.Sprintf("%s/%s", strings.TrimSuffix(s.urlPrefix, "/"), key)
+}
+
+// GetFile 从COS获取文件内容
+func (s *COSStorageService) GetFile(key string) ([]byte, error) {
+	if key == "" {
+		return nil, fmt.Errorf("文件Key不能为空")
+	}
+
+	ctx := context.Background()
+	resp, err := s.client.Object.Get(ctx, key, nil)
+	if err != nil {
+		logx.Errorf("从COS获取文件失败: key=%s, error=%v", key, err)
+		return nil, fmt.Errorf("获取文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取文件内容
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logx.Errorf("读取文件内容失败: key=%s, error=%v", key, err)
+		return nil, fmt.Errorf("读取文件内容失败: %v", err)
+	}
+
+	return data, nil
 }

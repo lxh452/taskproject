@@ -178,6 +178,10 @@ type (
 	GetFileDetailRequest {
 		FileID string `json:"fileId"`
 	}
+	// 代理文件内容请求（用于解决CORS问题）
+	ProxyFileRequest {
+		FileID string `json:"fileId"`
+	}
 	// 删除附件请求
 	DeleteAttachmentRequest {
 		FileID string `json:"fileId"`
@@ -1428,5 +1432,9 @@ service taskprojectapi {
 	@doc "上传头像"
 	@handler UploadAvatar
 	post /avatar (UploadAvatarRequest) returns (BaseResponse)
+
+	@doc "代理文件内容（解决CORS问题）"
+	@handler ProxyFile
+	get /file/proxy (ProxyFileRequest)
 }
 
