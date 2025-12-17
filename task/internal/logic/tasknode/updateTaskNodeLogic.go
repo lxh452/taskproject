@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"task_Project/model/task"
@@ -50,8 +51,22 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		return nil, err
 	}
 
+	// 6. 验证权限：只有节点执行人可以提交审批
+	hasPermission := false
+	// ExecutorId可能是逗号分隔的多个ID
+	executorIdStr := taskNode.ExecutorId
+	if executorIdStr != "" {
+		executorIds := strings.Split(executorIdStr, ",")
+		for _, executorId := range executorIds {
+			if strings.TrimSpace(executorId) == currentEmpID {
+				hasPermission = true
+				break
+			}
+		}
+	}
+
 	// 4. 验证用户权限
-	if taskNode.LeaderId != currentEmpID && taskNode.ExecutorId != currentEmpID {
+	if taskNode.LeaderId != currentEmpID && !hasPermission {
 		return utils.Response.BusinessError("无权限更新此任务节点"), nil
 	}
 
