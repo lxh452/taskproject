@@ -18,8 +18,8 @@ FileStorage:
   URLPrefix: "https://lxh452-task-1385490051.cos.ap-guangzhou.myqcloud.com"
   # 腾讯云COS配置（当StorageType为cos时使用）
   COS:
-    SecretId: "your-secret-id"  # 请替换为您的SecretId
-    SecretKey: "your-secret-key"  # 请替换为您的SecretKey
+    SecretId: ""  # 请替换为您的SecretId
+    SecretKey: ""  # 请替换为您的SecretKey
     Bucket: "lxh452-task-1385490051"  # 存储桶名称
     Region: "ap-guangzhou"  # 地域
 

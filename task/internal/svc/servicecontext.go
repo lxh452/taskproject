@@ -228,8 +228,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 			urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
 		}
 
+		// 检查配置是否完整
 		if secretId == "" || secretKey == "" || bucket == "" || region == "" {
-			logx.Errorf("[ServiceContext] COS配置不完整，回退到本地存储")
+			logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，回退到本地存储",
+				secretId == "", secretKey == "", bucket, region)
+			storageType = "local"
+		} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
+			logx.Errorf("[ServiceContext] COS配置使用的是占位符，请替换为实际的SecretId和SecretKey，回退到本地存储")
 			storageType = "local"
 		} else {
 			cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
