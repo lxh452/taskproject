@@ -34,10 +34,24 @@ func (l *GetAttachmentsLogic) GetTaskAttachments(req *types.GetTaskAttachmentsRe
 	}
 
 	// 从MongoDB查询任务相关的附件
+	// 查询条件：module="task" 且 relatedId=taskID
 	files, err := l.svcCtx.UploadFileModel.FindByModuleAndRelatedID(l.ctx, "task", req.TaskID)
 	if err != nil {
 		logx.Errorf("查询任务附件失败: %v", err)
 		return utils.Response.InternalError("查询附件失败"), nil
+	}
+
+	// 同时查询任务节点的附件（通过TaskNodeID）
+	// 获取任务的所有节点
+	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
+	if err == nil {
+		// 为每个节点查询附件
+		for _, node := range taskNodes {
+			nodeFiles, err := l.svcCtx.UploadFileModel.FindByTaskNodeID(l.ctx, node.TaskNodeId)
+			if err == nil {
+				files = append(files, nodeFiles...)
+			}
+		}
 	}
 
 	// 转换为响应格式
@@ -74,10 +88,16 @@ func (l *GetAttachmentsLogic) GetTaskNodeAttachments(req *types.GetTaskNodeAttac
 	}
 
 	// 从MongoDB查询任务节点相关的附件
-	files, err := l.svcCtx.UploadFileModel.FindByModuleAndRelatedID(l.ctx, "tasknode", req.TaskNodeID)
+	// 优先通过TaskNodeID查询（这是主要方式）
+	files, err := l.svcCtx.UploadFileModel.FindByTaskNodeID(l.ctx, req.TaskNodeID)
 	if err != nil {
 		logx.Errorf("查询任务节点附件失败: %v", err)
-		return utils.Response.InternalError("查询附件失败"), nil
+		// 如果通过TaskNodeID查询失败，尝试通过module和relatedId查询（兼容旧数据）
+		files, err = l.svcCtx.UploadFileModel.FindByModuleAndRelatedID(l.ctx, "tasknode", req.TaskNodeID)
+		if err != nil {
+			logx.Errorf("查询任务节点附件失败（兼容查询）: %v", err)
+			return utils.Response.InternalError("查询附件失败"), nil
+		}
 	}
 
 	// 转换为响应格式
