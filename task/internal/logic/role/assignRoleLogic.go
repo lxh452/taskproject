@@ -39,19 +39,19 @@ func (l *AssignRoleLogic) AssignRole(req *types.AssignRoleRequest) (resp *types.
 	// 验证职位是否存在
 	_, err = l.svcCtx.PositionModel.FindOne(l.ctx, req.PositionId)
 	if err != nil {
-		return utils.Response.BusinessError("职位不存在"), nil
+		return utils.Response.BusinessError("Format error"), nil
 	}
 
 	// 验证角色是否存在
 	_, err = l.svcCtx.RoleModel.FindOne(l.ctx, req.RoleId)
 	if err != nil {
-		return utils.Response.BusinessError("角色不存在"), nil
+		return utils.Response.BusinessError("Format error"), nil
 	}
 
 	// 检查是否已经分配过
 	_, err = l.svcCtx.PositionRoleModel.FindOneByPositionIdRoleId(l.ctx, req.PositionId, req.RoleId)
 	if err == nil {
-		return utils.Response.BusinessError("该职位已拥有此角色"), nil
+		return utils.Response.BusinessError("Format error"), nil
 	}
 
 	var expire sql.NullTime

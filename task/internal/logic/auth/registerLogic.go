@@ -63,10 +63,10 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		codeKey := "email_code:register:" + req.Email
 		storedCode, err := l.svcCtx.RedisClient.Get(codeKey)
 		if err != nil || storedCode == "" {
-			return utils.Response.BusinessError("验证码已过期，请重新获取"), nil
+			return utils.Response.BusinessError("code_error"), nil
 		}
 		if storedCode != req.VerificationCode {
-			return utils.Response.BusinessError("验证码错误"), nil
+			return utils.Response.BusinessError("code_error"), nil
 		}
 		// 验证成功后删除验证码
 		l.svcCtx.RedisClient.Del(codeKey)

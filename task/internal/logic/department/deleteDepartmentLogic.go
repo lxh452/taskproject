@@ -49,7 +49,7 @@ func (l *DeleteDepartmentLogic) DeleteDepartment(req *types.DeleteDepartmentRequ
 	}
 
 	if employeeCount > 0 {
-		return utils.Response.BusinessError("部门还有员工，无法删除"), nil
+		return utils.Response.BusinessError("The department still has employees and cannot be deleted."), nil
 	}
 
 	// 检查是否有子部门
@@ -60,7 +60,7 @@ func (l *DeleteDepartmentLogic) DeleteDepartment(req *types.DeleteDepartmentRequ
 	}
 
 	if len(subDepartmentCount) > 0 {
-		return utils.Response.BusinessError("部门还有子部门，无法删除"), nil
+		return utils.Response.BusinessError("The department still has employees and cannot be deleted."), nil
 	}
 
 	// 软删除部门

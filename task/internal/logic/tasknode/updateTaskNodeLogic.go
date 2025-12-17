@@ -33,7 +33,7 @@ func NewUpdateTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Up
 func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.NodeID == "" {
-		return utils.Response.BusinessError("任务节点ID不能为空"), nil
+		return utils.Response.BusinessError("task_node_not_found"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -46,7 +46,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.NodeID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 
 	if !hasPermission {
-		return utils.Response.BusinessError("无权限更新此任务节点，只有节点负责人、执行人或任务负责人可以更新"), nil
+		return utils.Response.BusinessError("permission_denied"), nil
 	}
 
 	// 5. 构建更新数据
@@ -152,7 +152,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	if req.NodeDeadline != "" {
 		deadline, err := time.Parse("2006-01-02", req.NodeDeadline)
 		if err != nil {
-			return utils.Response.BusinessError("截止时间格式错误"), nil
+			return utils.Response.BusinessError("Format error"), nil
 		}
 		updateData["node_deadline"] = deadline
 		updateFields = append(updateFields, "截止时间")
@@ -162,7 +162,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	if req.NodeFinishTime != "" {
 		finishTime, err := time.Parse("2006-01-02 15:04:05", req.NodeFinishTime)
 		if err != nil {
-			return utils.Response.BusinessError("完成时间格式错误"), nil
+			return utils.Response.BusinessError("Format error"), nil
 		}
 		updateData["node_finish_time"] = finishTime
 		updateFields = append(updateFields, "完成时间")
@@ -177,7 +177,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 
 	if len(updateData) == 0 {
-		return utils.Response.BusinessError("没有需要更新的字段"), nil
+		return utils.Response.BusinessError("invalid_params"), nil
 	}
 
 	updateData["update_time"] = time.Now()

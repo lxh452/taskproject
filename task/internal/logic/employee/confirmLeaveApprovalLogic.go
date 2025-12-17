@@ -48,7 +48,7 @@ func (l *ConfirmLeaveApprovalLogic) ConfirmLeaveApproval(req *types.ConfirmLeave
 
 	// 3. 检查审批状态
 	if approval.HandoverStatus != 1 { // 不是待处理状态
-		return utils.Response.BusinessError("审批记录状态不正确"), nil
+		return utils.Response.BusinessError("data_not_found"), nil
 	}
 
 	// 4. 获取员工信息

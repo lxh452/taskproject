@@ -35,27 +35,27 @@ func NewCreateTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskTitle == "" {
-		return utils.Response.BusinessError("任务标题不能为空"), nil
+		return utils.Response.BusinessError("Task title cannot be empty"), nil
 	}
 	if req.CompanyID == "" {
-		return utils.Response.BusinessError("公司ID不能为空"), nil
+		return utils.Response.BusinessError("company_not_found"), nil
 	}
 	if req.TaskDeadline == "" {
-		return utils.Response.BusinessError("任务截止时间不能为空"), nil
+		return utils.Response.BusinessError("The task deadline cannot be empty"), nil
 	}
 
 	// 2. 解析截止时间
 	deadline, err := time.Parse("2006-01-02", req.TaskDeadline)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("输出错误", err.Error())
-		return utils.Response.BusinessError("任务截止时间格式错误"), nil
+		return utils.Response.BusinessError("Task deadline format is incorrect"), nil
 	}
 
 	// 3. 验证公司是否存在
 	_, err = l.svcCtx.CompanyModel.FindOne(l.ctx, req.CompanyID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("输出错误", err.Error())
-		return utils.Response.BusinessError("公司不存在"), nil
+		return utils.Response.BusinessError("company_not_found"), nil
 	}
 	// 1. 从上下文获取当前员工ID
 	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)

@@ -50,7 +50,7 @@ func (l *DeleteCompanyLogic) DeleteCompany(req *types.DeleteCompanyRequest) (res
 	}
 
 	if employeeCount > 0 {
-		return utils.Response.BusinessError("公司还有员工，无法删除"), nil
+		return utils.Response.BusinessError("The company still has employees and cannot be deleted."), nil
 	}
 
 	// 软删除公司

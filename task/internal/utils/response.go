@@ -98,11 +98,17 @@ var BusinessErrorMessages = map[string]string{
 	"permission_denied":       "权限不足",
 
 	// 任务相关错误
-	"task_not_found":      "任务不存在",
-	"task_node_not_found": "任务节点不存在",
-	"task_log_error":      "任务日志创建失败",
-	"taskProgress":        "无权限更新此任务节点的进度",
-	"no_root_update":      "无权限更新此任务节点的前置节点",
+	"task_not_found":                    "任务不存在",
+	"task_node_not_found":               "任务节点不存在",
+	"task_log_error":                    "任务日志创建失败",
+	"taskProgress":                      "无权限更新此任务节点的进度",
+	"no_root_update":                    "无权限更新此任务节点的前置节点",
+	"The task deadline cannot be empty": "任务截止时间不能为空",
+	"Task deadline format is incorrect": "任务截止时间格式错误",
+	"Task title cannot be empty":        "任务标题不能为空",
+	"The company still has employees and cannot be deleted.":    "公司还有员工，无法删除",
+	"The department still has employees and cannot be deleted.": "部门还有员工，无法删除",
+	"Format error": "格式错误",
 }
 
 // ResponseHelper 响应工具类
