@@ -88,18 +88,28 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 
 	// 更新执行人 只有负责人可以修改或者任务负责人
 	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
-		// 取第一个执行人
-		newExecutorID := req.ExecutorID[0]
-		// 验证新执行人是否存在
-		_, err = l.svcCtx.EmployeeModel.FindOne(l.ctx, newExecutorID)
-		if err != nil {
-			if errors.Is(err, sqlx.ErrNotFound) {
-				return utils.Response.BusinessError("指定的执行人不存在"), nil
+		// 支持多个执行人，用逗号分隔
+		executorIDs := make([]string, 0)
+		for _, executorID := range req.ExecutorID {
+			executorID = strings.TrimSpace(executorID)
+			if executorID == "" {
+				continue
 			}
-			return nil, err
+			// 验证执行人是否存在
+			_, err = l.svcCtx.EmployeeModel.FindOne(l.ctx, executorID)
+			if err != nil {
+				if errors.Is(err, sqlx.ErrNotFound) {
+					return utils.Response.BusinessError(fmt.Sprintf("指定的执行人 %s 不存在", executorID)), nil
+				}
+				return nil, err
+			}
+			executorIDs = append(executorIDs, executorID)
 		}
-		updateData["executor_id"] = newExecutorID
-		updateFields = append(updateFields, "执行人")
+		if len(executorIDs) > 0 {
+			newExecutorID := strings.Join(executorIDs, ",")
+			updateData["executor_id"] = newExecutorID
+			updateFields = append(updateFields, "执行人")
+		}
 	}
 
 	// 更新节点状态
@@ -151,7 +161,17 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		updatedTaskNode.NodeDetail = utils.Common.ToSqlNullString(req.NodeDetail)
 	}
 	if len(req.ExecutorID) > 0 && taskNode.LeaderId == currentEmpID {
-		updatedTaskNode.ExecutorId = req.ExecutorID[0]
+		// 支持多个执行人，用逗号分隔
+		executorIDs := make([]string, 0)
+		for _, executorID := range req.ExecutorID {
+			executorID = strings.TrimSpace(executorID)
+			if executorID != "" {
+				executorIDs = append(executorIDs, executorID)
+			}
+		}
+		if len(executorIDs) > 0 {
+			updatedTaskNode.ExecutorId = strings.Join(executorIDs, ",")
+		}
 	}
 	if len(req.NodeStatus) > 0 {
 		updatedTaskNode.NodeStatus = int64(req.NodeStatus[0])
@@ -196,7 +216,20 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	}
 
 	// 8. 如果更新了执行人，发送通知和邮件（通过消息队列，消费者会查询并发送）
-	if len(req.ExecutorID) > 0 && req.ExecutorID[0] != taskNode.ExecutorId {
+	newExecutorID := ""
+	if len(req.ExecutorID) > 0 {
+		executorIDs := make([]string, 0)
+		for _, executorID := range req.ExecutorID {
+			executorID = strings.TrimSpace(executorID)
+			if executorID != "" {
+				executorIDs = append(executorIDs, executorID)
+			}
+		}
+		if len(executorIDs) > 0 {
+			newExecutorID = strings.Join(executorIDs, ",")
+		}
+	}
+	if newExecutorID != "" && newExecutorID != taskNode.ExecutorId {
 		// 发布邮件事件（消费者会查询新执行人并发送）
 		if l.svcCtx.EmailMQService != nil {
 			emailEvent := &svc.EmailEvent{
