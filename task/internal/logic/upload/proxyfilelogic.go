@@ -69,6 +69,16 @@ func (l *ProxyFileLogic) ProxyFile(w http.ResponseWriter, r *http.Request) {
 	currentUserID := claims.UserID
 	logx.Infof("代理文件请求，用户ID: %s, 文件ID: %s", currentUserID, fileId)
 
+	// 将用户信息更新到context（确保后续操作可以使用）
+	ctx := l.ctx
+	ctx = context.WithValue(ctx, "userId", claims.UserID)
+	ctx = context.WithValue(ctx, "username", claims.Username)
+	ctx = context.WithValue(ctx, "realName", claims.RealName)
+	ctx = context.WithValue(ctx, "role", claims.Role)
+	ctx = context.WithValue(ctx, "employeeId", claims.EmployeeID)
+	ctx = context.WithValue(ctx, "companyId", claims.CompanyID)
+	l.ctx = ctx
+
 	// 从MongoDB查询文件信息
 	file, err := l.svcCtx.UploadFileModel.FindByFileID(l.ctx, fileId)
 	if err != nil {
