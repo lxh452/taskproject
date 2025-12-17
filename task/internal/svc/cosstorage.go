@@ -24,6 +24,20 @@ type COSStorageService struct {
 
 // NewCOSStorageService 创建COS存储服务
 func NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix string) (*COSStorageService, error) {
+	// 验证配置
+	if secretId == "" {
+		return nil, fmt.Errorf("SecretId不能为空")
+	}
+	if secretKey == "" {
+		return nil, fmt.Errorf("SecretKey不能为空")
+	}
+	if bucket == "" {
+		return nil, fmt.Errorf("Bucket不能为空")
+	}
+	if region == "" {
+		return nil, fmt.Errorf("Region不能为空")
+	}
+
 	// 构建COS客户端
 	u, err := url.Parse(fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region))
 	if err != nil {
