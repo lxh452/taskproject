@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"task_Project/model/upload"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -41,6 +42,12 @@ func (l *GetAttachmentsLogic) GetTaskAttachments(req *types.GetTaskAttachmentsRe
 		return utils.Response.InternalError("查询附件失败"), nil
 	}
 
+	// 使用map去重，避免重复显示
+	fileMap := make(map[string]*upload.Upload_file)
+	for _, f := range files {
+		fileMap[f.FileID] = f
+	}
+
 	// 同时查询任务节点的附件（通过TaskNodeID）
 	// 获取任务的所有节点
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
@@ -49,14 +56,25 @@ func (l *GetAttachmentsLogic) GetTaskAttachments(req *types.GetTaskAttachmentsRe
 		for _, node := range taskNodes {
 			nodeFiles, err := l.svcCtx.UploadFileModel.FindByTaskNodeID(l.ctx, node.TaskNodeId)
 			if err == nil {
-				files = append(files, nodeFiles...)
+				// 只添加不重复的文件
+				for _, f := range nodeFiles {
+					if _, exists := fileMap[f.FileID]; !exists {
+						fileMap[f.FileID] = f
+					}
+				}
 			}
 		}
 	}
 
+	// 将map转换为slice
+	uniqueFiles := make([]*upload.Upload_file, 0, len(fileMap))
+	for _, f := range fileMap {
+		uniqueFiles = append(uniqueFiles, f)
+	}
+
 	// 转换为响应格式
-	attachments := make([]types.AttachmentInfo, 0, len(files))
-	for _, f := range files {
+	attachments := make([]types.AttachmentInfo, 0, len(uniqueFiles))
+	for _, f := range uniqueFiles {
 		attachments = append(attachments, types.AttachmentInfo{
 			FileID:      f.FileID,
 			FileName:    f.FileName,

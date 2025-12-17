@@ -210,57 +210,46 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		emailService = NewEmailService(emailTemplateService, emailMQService, emailMiddleware, c.System.BaseURL)
 	}
 
-	// 初始化文件存储服务
+	// 初始化文件存储服务（仅支持COS存储）
 	var fileStorageService FileStorageInterface
 	storageType := c.FileStorage.StorageType
 	if storageType == "" {
-		storageType = "local" // 默认使用本地存储
+		storageType = "cos" // 默认使用COS存储
 	}
 
-	if storageType == "cos" {
-		// 使用COS存储
-		// 优先从环境变量读取，如果没有则使用配置文件中的值
-		secretId := c.FileStorage.COS.SecretId
-		secretKey := c.FileStorage.COS.SecretKey
-		bucket := c.FileStorage.COS.Bucket
-		region := c.FileStorage.COS.Region
-		urlPrefix := c.FileStorage.URLPrefix
-		if urlPrefix == "" {
-			urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
-		}
+	if storageType != "cos" {
+		logx.Errorf("[ServiceContext] 仅支持COS存储，当前配置为: %s，强制使用COS存储", storageType)
+		storageType = "cos"
+	}
 
-		// 检查配置是否完整
-		if secretId == "" || secretKey == "" || bucket == "" || region == "" {
-			logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，回退到本地存储",
-				secretId == "", secretKey == "", bucket, region)
-			storageType = "local"
-		} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
-			logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY，或替换配置文件中的占位符，回退到本地存储")
-			storageType = "local"
+	// 使用COS存储
+	// 优先从环境变量读取，如果没有则使用配置文件中的值
+	secretId := c.FileStorage.COS.SecretId
+	secretKey := c.FileStorage.COS.SecretKey
+	bucket := c.FileStorage.COS.Bucket
+	region := c.FileStorage.COS.Region
+	urlPrefix := c.FileStorage.URLPrefix
+	if urlPrefix == "" {
+		urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
+	}
+
+	// 检查配置是否完整
+	if secretId == "" || secretKey == "" || bucket == "" || region == "" {
+		logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，请配置COS或设置环境变量",
+			secretId == "", secretKey == "", bucket, region)
+		panic("COS配置不完整，无法启动服务")
+	} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
+		logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY")
+		panic("COS配置使用的是占位符，无法启动服务")
+	} else {
+		cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
+		if err != nil {
+			logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v", err)
+			panic(fmt.Sprintf("初始化COS存储服务失败: %v", err))
 		} else {
-			cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
-			if err != nil {
-				logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v，回退到本地存储", err)
-				storageType = "local"
-			} else {
-				fileStorageService = cosService
-				logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
-			}
+			fileStorageService = cosService
+			logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
 		}
-	}
-
-	if storageType == "local" {
-		// 使用本地存储
-		storageRoot := c.FileStorage.StorageRoot
-		if storageRoot == "" {
-			storageRoot = "./uploads"
-		}
-		urlPrefix := c.FileStorage.URLPrefix
-		if urlPrefix == "" {
-			urlPrefix = "http://localhost:8888/static"
-		}
-		fileStorageService = NewFileStorageService(storageRoot, urlPrefix)
-		logx.Infof("[ServiceContext] 本地存储服务初始化成功: root=%s, urlPrefix=%s", storageRoot, urlPrefix)
 	}
 
 	s := &ServiceContext{
