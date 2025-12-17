@@ -238,6 +238,38 @@ func (c *Config) ApplyEnvOverrides() {
 		overrideCount++
 	}
 
+	// FileStorage - COS配置
+	if v := os.Getenv("TENCENT_CLOUD_SECRET_ID"); v != "" {
+		c.FileStorage.COS.SecretId = v
+		overrideCount++
+		logx.Info("[Config] TENCENT_CLOUD_SECRET_ID 已从环境变量覆盖")
+	}
+	if v := os.Getenv("TENCENT_CLOUD_SECRET_KEY"); v != "" {
+		c.FileStorage.COS.SecretKey = v
+		overrideCount++
+		logx.Info("[Config] TENCENT_CLOUD_SECRET_KEY 已从环境变量覆盖")
+	}
+	if v := os.Getenv("TENCENT_CLOUD_COS_BUCKET"); v != "" {
+		c.FileStorage.COS.Bucket = v
+		overrideCount++
+		logx.Info("[Config] TENCENT_CLOUD_COS_BUCKET 已从环境变量覆盖")
+	}
+	if v := os.Getenv("TENCENT_CLOUD_COS_REGION"); v != "" {
+		c.FileStorage.COS.Region = v
+		overrideCount++
+		logx.Info("[Config] TENCENT_CLOUD_COS_REGION 已从环境变量覆盖")
+	}
+	if v := os.Getenv("TENCENT_CLOUD_COS_URL_PREFIX"); v != "" {
+		c.FileStorage.URLPrefix = v
+		overrideCount++
+		logx.Info("[Config] TENCENT_CLOUD_COS_URL_PREFIX 已从环境变量覆盖")
+	}
+	if v := os.Getenv("FILE_STORAGE_TYPE"); v != "" {
+		c.FileStorage.StorageType = v
+		overrideCount++
+		logx.Infof("[Config] FILE_STORAGE_TYPE 已从环境变量覆盖: %s", v)
+	}
+
 	// Server (go-zero RestConf)
 	if v := os.Getenv("PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
