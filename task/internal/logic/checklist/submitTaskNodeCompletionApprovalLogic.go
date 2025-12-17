@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"task_Project/model/task"
@@ -32,7 +33,7 @@ func NewSubmitTaskNodeCompletionApprovalLogic(ctx context.Context, svcCtx *svc.S
 func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval(req *types.SubmitTaskNodeCompletionApprovalRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.NodeID == "" {
-		return utils.Response.BusinessError("task_node_not_found"), nil
+		return utils.Response.ValidationError("任务节点ID不能为空"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -62,11 +63,15 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 
 	// 6. 验证权限：只有节点执行人可以提交审批
 	hasPermission := false
-	executorIds := []string{taskNode.ExecutorId}
-	for _, executorId := range executorIds {
-		if executorId == employeeId {
-			hasPermission = true
-			break
+	// ExecutorId可能是逗号分隔的多个ID
+	executorIdStr := taskNode.ExecutorId
+	if executorIdStr != "" {
+		executorIds := strings.Split(executorIdStr, ",")
+		for _, executorId := range executorIds {
+			if strings.TrimSpace(executorId) == employeeId {
+				hasPermission = true
+				break
+			}
 		}
 	}
 	if !hasPermission {
@@ -98,7 +103,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 	}
 
 	if approverId == "" {
-		return utils.Response.ErrorWithKey("无法找到项目负责人，无法提交审批"), nil
+		return utils.Response.BusinessError("无法找到项目负责人，无法提交审批"), nil
 	}
 
 	// 获取审批人姓名

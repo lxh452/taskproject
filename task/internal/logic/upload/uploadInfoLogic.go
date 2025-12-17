@@ -6,6 +6,7 @@ package upload
 import (
 	"context"
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -68,7 +69,7 @@ func (l *UploadInfoLogic) UploadInfo(req *types.UploadInfoRequest, handler *mult
 	// 生成文件ID
 	fileID := utils.Common.GenId("file")
 
-	// 使用FileStorageService保存文件到本地
+	// 使用FileStorageService保存文件
 	filePath, fileURL, err := l.svcCtx.FileStorageService.SaveFile(
 		req.Module,
 		req.Category,
@@ -79,7 +80,7 @@ func (l *UploadInfoLogic) UploadInfo(req *types.UploadInfoRequest, handler *mult
 	)
 	if err != nil {
 		logx.Errorf("保存文件失败: %v", err)
-		return nil, errors.New("文件保存失败")
+		return nil, fmt.Errorf("文件保存失败: %v", err)
 	}
 
 	// 保存文件信息到MongoDB
