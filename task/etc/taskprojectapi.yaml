@@ -27,9 +27,9 @@ FileStorage:
     Bucket: "lxh452-task-1385490051"  # 存储桶名称
     Region: "ap-guangzhou"  # 地域
 
-# 数据库配置
+# 数据库配置（优化连接参数，防止连接泄漏）
 MySQL:
-  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s"
+  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
 
 # Redis配置
 Redis:
@@ -82,6 +82,6 @@ Mongo:
   Collection: task_project
   Timeout: 10s
   MaxIdleConns: 10
-  MaxOpenConns: 100
-  MaxConnLifetime: 10s
-  MaxConnIdleTime: 10s
+  MaxOpenConns: 50
+  MaxConnLifetime: 30m
+  MaxConnIdleTime: 10m

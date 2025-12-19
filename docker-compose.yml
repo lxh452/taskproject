@@ -6,6 +6,14 @@ services:
     image: mysql:8.0
     container_name: task_project_mysql
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: task_project
@@ -21,6 +29,11 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-authentication-plugin=mysql_native_password
+      - --wait-timeout=28800
+      - --interactive-timeout=28800
+      - --max-connections=200
+      - --max-allowed-packet=64M
+      - --innodb-buffer-pool-size=512M
     networks:
       - task_network
     healthcheck:
@@ -34,6 +47,14 @@ services:
     image: redis:7-alpine
     container_name: task_project_redis
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
@@ -52,6 +73,14 @@ services:
     image: mongo:6.0
     container_name: task_project_mongodb
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
@@ -75,6 +104,14 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: task_project_rabbitmq
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -92,6 +129,52 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # 后端API服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task_project_backend
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    environment:
+      # 数据库配置（优化连接参数）
+      MYSQL_DATASOURCE: "root:123456@tcp(task_project_mysql:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
+      # Redis配置
+      REDIS_HOST: "task_project_redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "your_redis_password_123"
+      REDIS_DB: "0"
+      # MongoDB配置
+      MONGO_HOST: "task_project_mongodb"
+      MONGO_PORT: "27017"
+      MONGO_DATABASE: "task_project"
+      MONGO_USERNAME: "admin"
+      MONGO_PASSWORD: "admin123"
+      MONGO_AUTHSOURCE: "admin"
+      # RabbitMQ配置 (使用URL格式)
+      RABBITMQ_URL: "amqp://guest:guest@task_project_rabbitmq:5672/"
+    ports:
+      - "8888:8888"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - task_network
 
 volumes:
   mysql_data:

@@ -79,7 +79,8 @@ func (s *SchedulerService) startDeadlineReminder() {
 
 // 检查任务截止时间
 func (s *SchedulerService) checkTaskDeadlines() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// 获取即将截止的任务节点（24小时内）
 	deadline := time.Now().Add(24 * time.Hour)
@@ -147,7 +148,8 @@ func (s *SchedulerService) startDailyReportReminder() {
 
 // 发送每日汇报提醒
 func (s *SchedulerService) sendDailyReportReminders() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
 	// 获取所有在职员工
 	employees, err := s.svcCtx.EmployeeModel.FindByStatus(ctx, 1) // 在职
@@ -188,7 +190,8 @@ func (s *SchedulerService) startSlowProgressDetection() {
 
 // 检查进度缓慢的任务
 func (s *SchedulerService) checkSlowProgress() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
 	// 获取进行中的任务节点
 	taskNodes, err := s.svcCtx.TaskNodeModel.FindByStatus(ctx, 1) // 进行中
@@ -242,7 +245,8 @@ func (s *SchedulerService) startEmployeeLeaveDetection() {
 
 // 检查员工离职
 func (s *SchedulerService) checkEmployeeLeave() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
 	// 获取离职员工
 	employees, err := s.svcCtx.EmployeeModel.FindByStatus(ctx, 0) // 离职
@@ -388,7 +392,8 @@ func (s *SchedulerService) startTaskNodeIdleCheck() {
 
 // 检查任务节点闲置状态
 func (s *SchedulerService) checkTaskNodeIdle() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
 	logx.Info("开始检查任务节点闲置状态")
 
 	// 1. 获取所有进行中的任务节点

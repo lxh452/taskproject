@@ -14,6 +14,7 @@ import (
 	"task_Project/model/user_auth"
 	"task_Project/task/internal/config"
 	"task_Project/task/internal/middleware"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
@@ -152,6 +153,32 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
 
+	// 配置 MySQL 连接池（重要！防止连接泄漏和耗尽）
+	db := conn.DB()
+	db.SetMaxOpenConns(25)                  // 最大打开连接数
+	db.SetMaxIdleConns(10)                  // 最大空闲连接数
+	db.SetConnMaxLifetime(30 * time.Minute) // 连接最大生存时间（30分钟）
+	db.SetConnMaxIdleTime(10 * time.Minute) // 空闲连接最大时间（10分钟）
+	logx.Infof("[ServiceContext] MySQL 连接池配置: MaxOpenConns=25, MaxIdleConns=10, ConnMaxLifetime=30m, ConnMaxIdleTime=10m")
+
+	// 启动连接池监控（每5分钟记录一次连接池状态）
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				stats := db.Stats()
+				logx.Infof("[MySQL连接池监控] OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%v, MaxIdleClosed=%d, MaxLifetimeClosed=%d",
+					stats.OpenConnections, stats.InUse, stats.Idle, stats.WaitCount, stats.WaitDuration, stats.MaxIdleClosed, stats.MaxLifetimeClosed)
+				// 如果等待连接数过多，发出警告
+				if stats.WaitCount > 0 {
+					logx.Errorf("[MySQL连接池警告] 有 %d 个请求在等待数据库连接，可能存在连接泄漏！", stats.WaitCount)
+				}
+			}
+		}
+	}()
+
 	// 初始化事务服务
 	transactionService := NewTransactionService(conn)
 	transactionHelper := NewTransactionHelper(conn)
@@ -224,8 +251,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 使用COS存储
 	// 优先从环境变量读取，如果没有则使用配置文件中的值
-	secretId := c.FileStorage.COS.SecretId
-	secretKey := c.FileStorage.COS.SecretKey
+	//secretId := c.FileStorage.COS.SecretId
+	//secretKey := c.FileStorage.COS.SecretKey
 	bucket := c.FileStorage.COS.Bucket
 	region := c.FileStorage.COS.Region
 	urlPrefix := c.FileStorage.URLPrefix
@@ -233,24 +260,24 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
 	}
 
-	// 检查配置是否完整
-	if secretId == "" || secretKey == "" || bucket == "" || region == "" {
-		logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，请配置COS或设置环境变量",
-			secretId == "", secretKey == "", bucket, region)
-		panic("COS配置不完整，无法启动服务")
-	} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
-		logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY")
-		panic("COS配置使用的是占位符，无法启动服务")
-	} else {
-		cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
-		if err != nil {
-			logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v", err)
-			panic(fmt.Sprintf("初始化COS存储服务失败: %v", err))
-		} else {
-			fileStorageService = cosService
-			logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
-		}
-	}
+	//// 检查配置是否完整
+	//if secretId == "" || secretKey == "" || bucket == "" || region == "" {
+	//	logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，请配置COS或设置环境变量",
+	//		secretId == "", secretKey == "", bucket, region)
+	//	panic("COS配置不完整，无法启动服务")
+	//} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
+	//	logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY")
+	//	panic("COS配置使用的是占位符，无法启动服务")
+	//} else {
+	//	cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
+	//	if err != nil {
+	//		logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v", err)
+	//		panic(fmt.Sprintf("初始化COS存储服务失败: %v", err))
+	//	} else {
+	//		fileStorageService = cosService
+	//		logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
+	//	}
+	//}
 
 	s := &ServiceContext{
 		Config:          c,

@@ -15,7 +15,8 @@ ENV GO111MODULE=on \
     GOARCH=amd64
 
 # 先复制依赖文件，加速构建缓存
-COPY go.mod go.sum ./
+COPY go.mod ./
+COPY go.sum* ./
 RUN go mod download
 
 # 再复制全部源码
@@ -25,7 +26,7 @@ COPY . .
 RUN go build -ldflags="-s -w" -o /app/taskprojectapi ./task/taskprojectapi.go
 
 # ============ 运行阶段 ============
-FROM alpine:3.18
+FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

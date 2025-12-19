@@ -132,12 +132,8 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		return nil, err
 	}
 
-	// 10. 设置节点状态为待审批（状态4）
-	err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, req.NodeID, 4)
-	if err != nil {
-		l.Logger.WithContext(l.ctx).Errorf("更新节点状态失败: %v", err)
-		return nil, err
-	}
+	// 10. 注意：节点状态保持为进行中（状态1），不改为待审批状态
+	// 审批状态通过审批记录（TaskNodeCompletionApproval）来管理，而不是节点状态
 
 	// 11. 创建任务日志
 	taskLog := &task.TaskLog{
@@ -159,8 +155,8 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
 			svc.TaskNodeCompletionApproval,
 			[]string{approverId},
-			req.NodeID,
-			svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: req.NodeID},
+			approvalId, // 使用审批ID作为RelatedID，便于前端直接获取审批记录
+			svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: taskNode.TaskNodeId},
 		)
 		notificationEvent.Title = "任务节点完成审批"
 		notificationEvent.Content = fmt.Sprintf("任务节点 %s 已完成，等待您的审批", taskNode.NodeName)
