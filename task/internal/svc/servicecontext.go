@@ -154,30 +154,35 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
 
 	// 配置 MySQL 连接池（重要！防止连接泄漏和耗尽）
-	db := conn.DB()
-	db.SetMaxOpenConns(25)                  // 最大打开连接数
-	db.SetMaxIdleConns(10)                  // 最大空闲连接数
-	db.SetConnMaxLifetime(30 * time.Minute) // 连接最大生存时间（30分钟）
-	db.SetConnMaxIdleTime(10 * time.Minute) // 空闲连接最大时间（10分钟）
-	logx.Infof("[ServiceContext] MySQL 连接池配置: MaxOpenConns=25, MaxIdleConns=10, ConnMaxLifetime=30m, ConnMaxIdleTime=10m")
+	// 使用 RawDB() 方法获取底层的 *sql.DB
+	db, err := conn.RawDB()
+	if err != nil {
+		logx.Errorf("[ServiceContext] 获取底层数据库连接失败: %v", err)
+	} else {
+		db.SetMaxOpenConns(25)                  // 最大打开连接数
+		db.SetMaxIdleConns(10)                  // 最大空闲连接数
+		db.SetConnMaxLifetime(30 * time.Minute) // 连接最大生存时间（30分钟）
+		db.SetConnMaxIdleTime(10 * time.Minute) // 空闲连接最大时间（10分钟）
+		logx.Infof("[ServiceContext] MySQL 连接池配置: MaxOpenConns=25, MaxIdleConns=10, ConnMaxLifetime=30m, ConnMaxIdleTime=10m")
 
-	// 启动连接池监控（每5分钟记录一次连接池状态）
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				stats := db.Stats()
-				logx.Infof("[MySQL连接池监控] OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%v, MaxIdleClosed=%d, MaxLifetimeClosed=%d",
-					stats.OpenConnections, stats.InUse, stats.Idle, stats.WaitCount, stats.WaitDuration, stats.MaxIdleClosed, stats.MaxLifetimeClosed)
-				// 如果等待连接数过多，发出警告
-				if stats.WaitCount > 0 {
-					logx.Errorf("[MySQL连接池警告] 有 %d 个请求在等待数据库连接，可能存在连接泄漏！", stats.WaitCount)
+		// 启动连接池监控（每5分钟记录一次连接池状态）
+		go func() {
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					stats := db.Stats()
+					logx.Infof("[MySQL连接池监控] OpenConnections=%d, InUse=%d, Idle=%d, WaitCount=%d, WaitDuration=%v, MaxIdleClosed=%d, MaxLifetimeClosed=%d",
+						stats.OpenConnections, stats.InUse, stats.Idle, stats.WaitCount, stats.WaitDuration, stats.MaxIdleClosed, stats.MaxLifetimeClosed)
+					// 如果等待连接数过多，发出警告
+					if stats.WaitCount > 0 {
+						logx.Errorf("[MySQL连接池警告] 有 %d 个请求在等待数据库连接，可能存在连接泄漏！", stats.WaitCount)
+					}
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// 初始化事务服务
 	transactionService := NewTransactionService(conn)
