@@ -10,6 +10,7 @@ import (
 	"task_Project/task/internal/logic/upload"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
+	"task_Project/task/internal/utils"
 )
 
 // 文件上传（支持图片、PDF、Markdown等文件）
@@ -34,9 +35,17 @@ func UploadInfoHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := upload.NewUploadInfoLogic(r.Context(), svcCtx)
 		resp, err := l.UploadInfo(&req, handler, fileData)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.OkJsonCtx(r.Context(), w, utils.Response.ValidationError(err.Error()))
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			// 返回标准格式
+			httpx.OkJsonCtx(r.Context(), w, utils.Response.Success(map[string]interface{}{
+				"fileId":    resp.FileID,
+				"fileName":  resp.FileName,
+				"fileUrl":   resp.FileURL,
+				"fileType":  resp.FileType,
+				"fileSize":  resp.FileSize,
+				"relatedId": resp.RelatedID,
+			}))
 		}
 	}
 }

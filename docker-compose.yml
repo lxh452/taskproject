@@ -59,11 +59,11 @@ services:
       - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass "your_redis_password_123" --bind 0.0.0.0
+    command: redis-server --appendonly yes --bind 0.0.0.0
     networks:
       - task_network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "your_redis_password_123", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -151,7 +151,7 @@ services:
       # Redis配置
       REDIS_HOST: "task_project_redis"
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: "your_redis_password_123"
+      REDIS_PASSWORD: ""
       REDIS_DB: "0"
       # MongoDB配置
       MONGO_HOST: "task_project_mongodb"

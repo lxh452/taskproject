@@ -22,6 +22,14 @@ func getStringValue(ns sql.NullString) string {
 	return ""
 }
 
+// getTimeValue 从sql.NullTime获取时间字符串
+func getTimeValue(nt sql.NullTime) string {
+	if nt.Valid {
+		return nt.Time.Format("2006-01-02 15:04:05")
+	}
+	return ""
+}
+
 type GetTaskNodeLogic struct {
 	logx.Logger
 	ctx    context.Context
@@ -87,12 +95,12 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 		return utils.Response.BusinessError("无权限查看此任务节点"), nil
 	}
 
-	// 5. 获取该节点的审批列表
-	approvals, err := l.svcCtx.TaskNodeCompletionApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
+	// 5. 获取该节点的审批列表（使用HandoverApprovalModel）
+	approvals, err := l.svcCtx.HandoverApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取审批列表失败: %v", err)
 		// 审批列表获取失败不影响节点详情返回，使用空列表
-		approvals = []*task.TaskNodeCompletionApproval{}
+		approvals = []*task.HandoverApproval{}
 	}
 
 	// 6. 转换为响应格式
@@ -104,13 +112,13 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 	for _, approval := range approvals {
 		approvalList = append(approvalList, map[string]interface{}{
 			"approvalId":   approval.ApprovalId,
-			"taskNodeId":   approval.TaskNodeId,
+			"taskNodeId":   getStringValue(approval.TaskNodeId),
 			"approverId":   approval.ApproverId,
 			"approverName": approval.ApproverName,
 			"approvalType": approval.ApprovalType, // 0-待审批 1-同意 2-拒绝
 			"comment":      getStringValue(approval.Comment),
 			"createTime":   approval.CreateTime.Format("2006-01-02 15:04:05"),
-			"updateTime":   approval.UpdateTime.Format("2006-01-02 15:04:05"),
+			"updateTime":   getTimeValue(approval.UpdateTime),
 		})
 	}
 

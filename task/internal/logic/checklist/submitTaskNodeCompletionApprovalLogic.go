@@ -2,6 +2,7 @@ package checklist
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -78,8 +79,8 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		return nil, errors.New("无权限提交审批，只有节点执行人可以提交")
 	}
 
-	// 7. 检查是否已有待审批的记录
-	existingApproval, err := l.svcCtx.TaskNodeCompletionApprovalModel.FindLatestByTaskNodeId(l.ctx, req.NodeID)
+	// 7. 检查是否已有待审批的记录（使用HandoverApprovalModel）
+	existingApproval, err := l.svcCtx.HandoverApprovalModel.FindLatestByTaskNodeId(l.ctx, req.NodeID)
 	if err == nil && existingApproval != nil && existingApproval.ApprovalType == 0 {
 		return nil, errors.New("该节点已有待审批的记录，请勿重复提交")
 	}
@@ -115,25 +116,27 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		}
 	}
 
-	// 9. 创建审批记录
+	// 9. 创建审批记录（使用HandoverApprovalModel）
 	approvalId := utils.Common.GenId("approval")
-	approval := &task.TaskNodeCompletionApproval{
+	approval := &task.HandoverApproval{
 		ApprovalId:   approvalId,
-		TaskNodeId:   req.NodeID,
+		HandoverId:   "",                                              // 任务节点完成审批不关联交接
+		TaskNodeId:   sql.NullString{String: req.NodeID, Valid: true}, // 关联任务节点
+		ApprovalStep: 3,                                               // 3-任务节点完成审批
 		ApproverId:   approverId,
 		ApproverName: approverName,
 		ApprovalType: 0, // 0-待审批
 		CreateTime:   time.Now(),
-		UpdateTime:   time.Now(),
+		UpdateTime:   sql.NullTime{Time: time.Now(), Valid: true},
 	}
-	_, err = l.svcCtx.TaskNodeCompletionApprovalModel.Insert(l.ctx, approval)
+	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approval)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("创建审批记录失败: %v", err)
 		return nil, err
 	}
 
 	// 10. 注意：节点状态保持为进行中（状态1），不改为待审批状态
-	// 审批状态通过审批记录（TaskNodeCompletionApproval）来管理，而不是节点状态
+	// 审批状态通过审批记录（HandoverApproval）来管理，而不是节点状态
 
 	// 11. 创建任务日志
 	taskLog := &task.TaskLog{

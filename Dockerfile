@@ -4,7 +4,7 @@
 ## - MySQL / RabbitMQ / Redis / MongoDB 都使用外部服务（通过配置文件连接）
 
 # ============ 构建阶段 ============
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /build
 

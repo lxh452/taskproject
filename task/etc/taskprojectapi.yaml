@@ -35,7 +35,7 @@ MySQL:
 Redis:
   Host: "localhost"
   Port: 6379
-  Password: "your_redis_password_123"
+  Password: ""
   DB: 0
 
 # JWT配置
