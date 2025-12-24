@@ -208,6 +208,11 @@ services:
       MONGO_PASSWORD: "${MONGO_PASSWORD:-admin123}"
       MONGO_AUTHSOURCE: "admin"
       RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@task_project_rabbitmq:5672/"
+      # COS 文件存储配置
+      TENCENT_CLOUD_SECRET_ID: "${TENCENT_CLOUD_SECRET_ID}"
+      TENCENT_CLOUD_SECRET_KEY: "${TENCENT_CLOUD_SECRET_KEY}"
+      TENCENT_CLOUD_COS_BUCKET: "${TENCENT_CLOUD_COS_BUCKET:-lxh452-task-1385490051}"
+      TENCENT_CLOUD_COS_REGION: "${TENCENT_CLOUD_COS_REGION:-ap-guangzhou}"
       TZ: Asia/Shanghai
       GIN_MODE: release
     ports:
