@@ -152,10 +152,13 @@ func (l *BatchCompleteChecklistLogic) updateTaskProgress(taskNodeId string) erro
 	// 计算平均进度和完成节点数（只统计状态为已完成（状态2）的节点）
 	var totalProgress int64
 	var completedCount int64
+	allNodesCompleted := true
 	for _, node := range nodes {
 		totalProgress += int64(node.Progress)
 		if node.NodeStatus == 2 { // 状态为已完成
 			completedCount++
+		} else {
+			allNodesCompleted = false
 		}
 	}
 	avgProgress := int(totalProgress / int64(len(nodes)))
@@ -164,6 +167,15 @@ func (l *BatchCompleteChecklistLogic) updateTaskProgress(taskNodeId string) erro
 	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
+	}
+
+	// 只有当所有节点都完成（状态2）且平均进度达到100%时，才更新任务状态为已完成
+	if allNodesCompleted && avgProgress == 100 {
+		err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+		}
+		l.Logger.WithContext(l.ctx).Infof("任务 %s 所有节点已完成，任务状态更新为已完成", taskNode.TaskId)
 	}
 
 	// 更新任务节点统计

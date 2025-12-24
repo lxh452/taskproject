@@ -15,6 +15,14 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+// FileStorageInterface 文件存储接口
+type FileStorageInterface interface {
+	SaveFile(module, category, relatedID, fileID, fileName string, file multipart.File) (string, string, error)
+	SaveFileFromBytes(module, category, relatedID, fileID, fileName string, data []byte) (string, string, error)
+	DeleteFile(key string) error
+	GetFileURL(key string) string
+}
+
 // COSStorageService 腾讯云COS存储服务
 type COSStorageService struct {
 	client    *cos.Client
@@ -171,4 +179,41 @@ func (s *COSStorageService) GetFile(key string) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// sanitizeFileName 清理文件名，移除特殊字符
+func sanitizeFileName(fileName string) string {
+	// 移除路径分隔符和特殊字符
+	fileName = filepath.Base(fileName)
+	// 替换特殊字符
+	replacer := strings.NewReplacer(
+		" ", "_",
+		"(", "",
+		")", "",
+		"[", "",
+		"]", "",
+		"{", "",
+		"}", "",
+		"<", "",
+		">", "",
+		":", "",
+		";", "",
+		"'", "",
+		"\"", "",
+		"|", "",
+		"?", "",
+		"*", "",
+		"&", "",
+		"#", "",
+		"%", "",
+		"$", "",
+		"@", "",
+		"!", "",
+		"=", "",
+		"+", "",
+		"`", "",
+		"~", "",
+		"^", "",
+	)
+	return replacer.Replace(fileName)
 }

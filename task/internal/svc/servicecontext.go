@@ -50,13 +50,12 @@ type ServiceContext struct {
 	PositionRoleModel role.PositionRoleModel
 
 	// 任务相关模型
-	TaskModel                       task.TaskModel
-	TaskNodeModel                   task.TaskNodeModel
-	TaskLogModel                    task.TaskLogModel
-	TaskHandoverModel               task.TaskHandoverModel
-	HandoverApprovalModel           task.HandoverApprovalModel
-	TaskChecklistModel              task.TaskChecklistModel
-	TaskNodeCompletionApprovalModel task.TaskNodeCompletionApprovalModel
+	TaskModel             task.TaskModel
+	TaskNodeModel         task.TaskNodeModel
+	TaskLogModel          task.TaskLogModel
+	TaskHandoverModel     task.TaskHandoverModel
+	HandoverApprovalModel task.HandoverApprovalModel
+	TaskChecklistModel    task.TaskChecklistModel
 
 	// 通知相关模型
 	NotificationModel user_auth.NotificationModel
@@ -85,7 +84,7 @@ type ServiceContext struct {
 	EmailTemplateService *EmailTemplateService // 邮件模板服务
 	EmailService         *EmailService         // 邮件服务
 
-	// 文件存储服务（支持本地存储和COS）
+	// 文件存储服务（COS存储）
 	FileStorageService FileStorageInterface
 
 	// SQL执行服务
@@ -204,7 +203,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	taskHandoverModel := task.NewTaskHandoverModel(conn)
 	handoverApprovalModel := task.NewHandoverApprovalModel(conn)
 	taskChecklistModel := task.NewTaskChecklistModel(conn)
-	taskNodeCompletionApprovalModel := task.NewTaskNodeCompletionApprovalModel(conn)
 
 	// 初始化 RabbitMQ
 	var mqClient *MQClient
@@ -244,20 +242,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 初始化文件存储服务（仅支持COS存储）
 	var fileStorageService FileStorageInterface
-	storageType := c.FileStorage.StorageType
-	if storageType == "" {
-		storageType = "cos" // 默认使用COS存储
-	}
-
-	if storageType != "cos" {
-		logx.Errorf("[ServiceContext] 仅支持COS存储，当前配置为: %s，强制使用COS存储", storageType)
-		storageType = "cos"
-	}
 
 	// 使用COS存储
-	// 优先从环境变量读取，如果没有则使用配置文件中的值
-	//secretId := c.FileStorage.COS.SecretId
-	//secretKey := c.FileStorage.COS.SecretKey
+	secretId := c.FileStorage.COS.SecretId
+	secretKey := c.FileStorage.COS.SecretKey
 	bucket := c.FileStorage.COS.Bucket
 	region := c.FileStorage.COS.Region
 	urlPrefix := c.FileStorage.URLPrefix
@@ -265,24 +253,20 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		urlPrefix = fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
 	}
 
-	//// 检查配置是否完整
-	//if secretId == "" || secretKey == "" || bucket == "" || region == "" {
-	//	logx.Errorf("[ServiceContext] COS配置不完整: secretId为空=%v, secretKey为空=%v, bucket=%s, region=%s，请配置COS或设置环境变量",
-	//		secretId == "", secretKey == "", bucket, region)
-	//	panic("COS配置不完整，无法启动服务")
-	//} else if secretId == "your-secret-id" || secretKey == "your-secret-key" {
-	//	logx.Errorf("[ServiceContext] COS配置使用的是占位符，请设置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY")
-	//	panic("COS配置使用的是占位符，无法启动服务")
-	//} else {
-	//	cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
-	//	if err != nil {
-	//		logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v", err)
-	//		panic(fmt.Sprintf("初始化COS存储服务失败: %v", err))
-	//	} else {
-	//		fileStorageService = cosService
-	//		logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
-	//	}
-	//}
+	// 检查配置是否完整
+	if secretId == "" || secretKey == "" || bucket == "" || region == "" {
+		logx.Errorf("[ServiceContext] COS配置不完整: secretId=%v, secretKey=%v, bucket=%s, region=%s",
+			secretId != "", secretKey != "", bucket, region)
+		panic("COS配置不完整，无法启动服务。请配置环境变量 TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY")
+	}
+
+	cosService, err := NewCOSStorageService(secretId, secretKey, bucket, region, urlPrefix)
+	if err != nil {
+		logx.Errorf("[ServiceContext] 初始化COS存储服务失败: %v", err)
+		panic(fmt.Sprintf("初始化COS存储服务失败: %v", err))
+	}
+	fileStorageService = cosService
+	logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
 
 	s := &ServiceContext{
 		Config:          c,
@@ -311,13 +295,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		PositionRoleModel: positionRoleModel,
 
 		// 任务相关模型
-		TaskModel:                       taskModel,
-		TaskNodeModel:                   taskNodeModel,
-		TaskLogModel:                    taskLogModel,
-		TaskHandoverModel:               taskHandoverModel,
-		HandoverApprovalModel:           handoverApprovalModel,
-		TaskChecklistModel:              taskChecklistModel,
-		TaskNodeCompletionApprovalModel: taskNodeCompletionApprovalModel,
+		TaskModel:             taskModel,
+		TaskNodeModel:         taskNodeModel,
+		TaskLogModel:          taskLogModel,
+		TaskHandoverModel:     taskHandoverModel,
+		HandoverApprovalModel: handoverApprovalModel,
+		TaskChecklistModel:    taskChecklistModel,
 
 		// 通知相关模型
 		NotificationModel: user_auth.NewNotificationModel(conn),

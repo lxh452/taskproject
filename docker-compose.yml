@@ -214,7 +214,6 @@ services:
       - "${BACKEND_PORT:-8888}:8888"
     volumes:
       - ./logs/backend:/app/logs
-      - ./task/uploads:/app/uploads
       - backend_tmp:/tmp
     logging:
       driver: "json-file"
