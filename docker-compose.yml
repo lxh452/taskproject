@@ -69,15 +69,22 @@ services:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
-    command: >
-      redis-server 
-      --appendonly yes 
-      --bind 0.0.0.0 
-      --maxmemory 256mb 
-      --maxmemory-policy allkeys-lru
-      --save 900 1
-      --save 300 10
-      --save 60 10000
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --bind
+      - 0.0.0.0
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
     logging:
       driver: "json-file"
       options:
