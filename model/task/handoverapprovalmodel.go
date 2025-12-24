@@ -33,6 +33,7 @@ type (
 		// 任务节点完成审批相关方法
 		FindByTaskNodeId(ctx context.Context, taskNodeId string) ([]*HandoverApproval, error)
 		FindLatestByTaskNodeId(ctx context.Context, taskNodeId string) (*HandoverApproval, error)
+		FindTaskNodeApprovalsByApprover(ctx context.Context, approverId string, page, pageSize int) ([]*HandoverApproval, int64, error)
 		Update(ctx context.Context, data *HandoverApproval) error
 	}
 
@@ -118,4 +119,22 @@ func (m *defaultHandoverApprovalModel) Update(ctx context.Context, data *Handove
 	query := fmt.Sprintf("UPDATE %s SET approver_id = ?, approver_name = ?, approval_type = ?, comment = ?, update_time = ? WHERE approval_id = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, data.ApproverId, data.ApproverName, data.ApprovalType, data.Comment, data.UpdateTime, data.ApprovalId)
 	return err
+}
+
+// FindTaskNodeApprovalsByApprover 查询与指定审批人相关的任务节点完成审批记录
+func (m *defaultHandoverApprovalModel) FindTaskNodeApprovalsByApprover(ctx context.Context, approverId string, page, pageSize int) ([]*HandoverApproval, int64, error) {
+	// 查询总数
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE approval_step = 3 AND approver_id = ?", m.table)
+	var total int64
+	err := m.conn.QueryRowCtx(ctx, &total, countQuery, approverId)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 查询列表
+	offset := (page - 1) * pageSize
+	query := fmt.Sprintf("SELECT id, approval_id, handover_id, COALESCE(task_node_id, '') as task_node_id, approval_step, approver_id, approver_name, approval_type, comment, create_time, update_time FROM %s WHERE approval_step = 3 AND approver_id = ? ORDER BY create_time DESC LIMIT ? OFFSET ?", m.table)
+	var approvals []*HandoverApproval
+	err = m.conn.QueryRowsCtx(ctx, &approvals, query, approverId, pageSize, offset)
+	return approvals, total, err
 }

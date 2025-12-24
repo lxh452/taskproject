@@ -128,6 +128,7 @@ func (l *GetHandoverListLogic) GetHandoverList(req *types.HandoverListRequest) (
 			"handoverReason":   handoverReason,
 			"handoverNote":     handoverNote,
 			"handoverStatus":   handover.HandoverStatus,
+			"approvalType":     "handover", // 标记为交接审批
 			"createTime":       handover.CreateTime.Format("2006-01-02 15:04:05"),
 			"updateTime":       handover.UpdateTime.Format("2006-01-02 15:04:05"),
 		}
@@ -139,7 +140,89 @@ func (l *GetHandoverListLogic) GetHandoverList(req *types.HandoverListRequest) (
 		handoverInfos = append(handoverInfos, handoverInfo)
 	}
 
-	// 7. 构建分页响应
+	// 7. 查询任务节点完成审批记录（作为审批人）
+	nodeApprovals, nodeTotal, err := l.svcCtx.HandoverApprovalModel.FindTaskNodeApprovalsByApprover(l.ctx, employee.Id, page, pageSize)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("查询任务节点审批列表失败: employeeId=%s, error=%v", employee.Id, err)
+	} else {
+		l.Logger.WithContext(l.ctx).Infof("查询到 %d 条任务节点审批记录, 总数: %d", len(nodeApprovals), nodeTotal)
+
+		// 转换任务节点审批记录
+		for _, approval := range nodeApprovals {
+			// 状态过滤
+			if req.Status > 0 {
+				// 将审批类型映射到交接状态: 0-待审批->1, 1-同意->2, 2-拒绝->3
+				mappedStatus := approval.ApprovalType + 1
+				if mappedStatus != int64(req.Status) {
+					continue
+				}
+			}
+
+			// 获取任务节点信息
+			taskNodeId := ""
+			if approval.TaskNodeId.Valid {
+				taskNodeId = approval.TaskNodeId.String
+			}
+
+			nodeName := ""
+			taskId := ""
+			taskTitle := ""
+			fromEmployeeId := ""
+			fromEmployeeName := ""
+
+			if taskNodeId != "" {
+				if taskNode, nodeErr := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId); nodeErr == nil {
+					nodeName = taskNode.NodeName
+					taskId = taskNode.TaskId
+					fromEmployeeId = taskNode.ExecutorId
+
+					// 获取任务标题
+					if task, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId); taskErr == nil {
+						taskTitle = task.TaskTitle
+					}
+
+					// 获取执行人姓名
+					if fromEmployeeId != "" {
+						if fromEmp, fromErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, fromEmployeeId); fromErr == nil {
+							fromEmployeeName = fromEmp.RealName
+						}
+					}
+				}
+			}
+
+			// 将审批类型映射到交接状态: 0-待审批->1, 1-同意->2, 2-拒绝->3
+			handoverStatus := approval.ApprovalType + 1
+
+			nodeApprovalInfo := map[string]interface{}{
+				"handoverId":       approval.ApprovalId, // 使用审批ID作为handoverId
+				"taskId":           taskId,
+				"taskNodeId":       taskNodeId,
+				"taskTitle":        taskTitle + " - " + nodeName, // 任务标题 + 节点名称
+				"fromEmployeeId":   fromEmployeeId,
+				"fromEmployeeName": fromEmployeeName,
+				"toEmployeeId":     approval.ApproverId,
+				"toEmployeeName":   approval.ApproverName,
+				"approverId":       approval.ApproverId,
+				"approverName":     approval.ApproverName,
+				"handoverReason":   "任务节点完成审批",
+				"handoverNote":     "",
+				"handoverStatus":   handoverStatus,
+				"approvalType":     "node_completion", // 标记为任务节点完成审批
+				"createTime":       approval.CreateTime.Format("2006-01-02 15:04:05"),
+			}
+
+			if approval.UpdateTime.Valid {
+				nodeApprovalInfo["updateTime"] = approval.UpdateTime.Time.Format("2006-01-02 15:04:05")
+			}
+
+			handoverInfos = append(handoverInfos, nodeApprovalInfo)
+		}
+
+		// 更新总数
+		total += nodeTotal
+	}
+
+	// 8. 构建分页响应
 	converter := utils.NewConverter()
 	pageResponse := converter.ToPageResponse(handoverInfos, int(total), page, pageSize)
 
