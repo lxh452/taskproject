@@ -44,7 +44,9 @@ type TaskNodeWithTitle struct {
 	NodeStatus     int64  `json:"nodeStatus"`
 	NodeFinishTime string `json:"nodeFinishTime"`
 	ExecutorId     string `json:"executorId"`
+	ExecutorName   string `json:"executorName"` // 执行人姓名
 	LeaderId       string `json:"leaderId"`
+	LeaderName     string `json:"leaderName"` // 负责人姓名
 	Progress       int64  `json:"progress"`
 	NodePriority   int64  `json:"nodePriority"`
 }
@@ -97,6 +99,8 @@ func (l *GetUserTaskNodeLogic) convertToTaskNodeWithTitle(nodes []*task.TaskNode
 
 	// 缓存任务信息，避免重复查询
 	taskCache := make(map[string]string)
+	// 缓存员工姓名，避免重复查询
+	employeeCache := make(map[string]string)
 
 	for _, node := range nodes {
 		taskTitle := ""
@@ -108,6 +112,34 @@ func (l *GetUserTaskNodeLogic) convertToTaskNodeWithTitle(nodes []*task.TaskNode
 			if err == nil {
 				taskTitle = taskInfo.TaskTitle
 				taskCache[node.TaskId] = taskTitle
+			}
+		}
+
+		// 获取执行人姓名
+		executorName := ""
+		if node.ExecutorId != "" {
+			if name, ok := employeeCache[node.ExecutorId]; ok {
+				executorName = name
+			} else {
+				emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, node.ExecutorId)
+				if err == nil {
+					executorName = emp.RealName
+					employeeCache[node.ExecutorId] = executorName
+				}
+			}
+		}
+
+		// 获取负责人姓名
+		leaderName := ""
+		if node.LeaderId != "" {
+			if name, ok := employeeCache[node.LeaderId]; ok {
+				leaderName = name
+			} else {
+				emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, node.LeaderId)
+				if err == nil {
+					leaderName = emp.RealName
+					employeeCache[node.LeaderId] = leaderName
+				}
 			}
 		}
 
@@ -140,7 +172,9 @@ func (l *GetUserTaskNodeLogic) convertToTaskNodeWithTitle(nodes []*task.TaskNode
 			NodeStatus:     node.NodeStatus,
 			NodeFinishTime: nodeFinishTime,
 			ExecutorId:     node.ExecutorId,
+			ExecutorName:   executorName,
 			LeaderId:       node.LeaderId,
+			LeaderName:     leaderName,
 			Progress:       node.Progress,
 			NodePriority:   node.NodePriority,
 		})
