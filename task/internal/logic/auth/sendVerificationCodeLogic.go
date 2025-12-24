@@ -61,7 +61,7 @@ func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerifica
 	}
 
 	// 6. 设置发送频率限制（60秒）
-	l.svcCtx.RedisClient.SetnxEx(rateLimitKey, "1", 3600)
+	l.svcCtx.RedisClient.SetnxEx(rateLimitKey, "1", 15)
 
 	// 7. 发送验证码邮件
 	err = l.sendVerificationEmail(req.Email, code, req.Type)

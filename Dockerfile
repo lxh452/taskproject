@@ -40,6 +40,9 @@ COPY --from=builder /app/taskprojectapi ./taskprojectapi
 # 拷贝配置目录（你可以在打包前修改 task/etc/taskprojectapi.yaml，把 MySQL/RabbitMQ 主机改成外部地址）
 COPY --from=builder /build/task/etc ./task/etc
 
+# 拷贝邮件模板目录
+COPY --from=builder /build/task/internal/templates ./task/internal/templates
+
 # 暴露 HTTP 端口
 EXPOSE 8888
 
