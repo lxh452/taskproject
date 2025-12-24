@@ -25,6 +25,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./model/sql:/docker-entrypoint-initdb.d
+      - ./logs/mysql:/var/log/mysql
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -34,6 +35,11 @@ services:
       - --max-connections=200
       - --max-allowed-packet=64M
       - --innodb-buffer-pool-size=512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       - task_network
     healthcheck:
@@ -60,6 +66,11 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --bind 0.0.0.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - task_network
     healthcheck:
@@ -91,6 +102,11 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - task_network
     healthcheck:
@@ -118,10 +134,15 @@ services:
       RABBITMQ_DEFAULT_VHOST: /
       TZ: Asia/Shanghai
     ports:
-      - "5672:5672"    # AMQP 端口
-      - "15672:15672"  # Management UI 端口
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - task_network
     healthcheck:
@@ -146,24 +167,29 @@ services:
           cpus: '1'
           memory: 1G
     environment:
-      # 数据库配置（优化连接参数）
       MYSQL_DATASOURCE: "root:123456@tcp(task_project_mysql:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
-      # Redis配置
       REDIS_HOST: "task_project_redis"
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
-      # MongoDB配置
       MONGO_HOST: "task_project_mongodb"
       MONGO_PORT: "27017"
       MONGO_DATABASE: "task_project"
       MONGO_USERNAME: "admin"
       MONGO_PASSWORD: "admin123"
       MONGO_AUTHSOURCE: "admin"
-      # RabbitMQ配置 (使用URL格式)
       RABBITMQ_URL: "amqp://guest:guest@task_project_rabbitmq:5672/"
+      TZ: Asia/Shanghai
     ports:
       - "8888:8888"
+    volumes:
+      - ./logs/backend:/app/logs
+      - ./task/uploads:/app/uploads
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "5"
     depends_on:
       mysql:
         condition: service_healthy
