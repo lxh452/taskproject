@@ -971,6 +971,14 @@ service taskprojectapi {
 	@doc "用户登出"
 	@handler Logout
 	post /logout returns (BaseResponse)
+
+	@doc "发送验证码"
+	@handler SendVerificationCode
+	post /send-code (SendVerificationCodeRequest) returns (BaseResponse)
+
+	@doc "重置密码"
+	@handler ResetPassword
+	post /reset-password (ResetPasswordRequest) returns (BaseResponse)
 }
 
 // ===== Role & PositionRole API =====
@@ -1238,8 +1246,8 @@ service taskprojectapi {
 	put /detail (UpdateTaskDetailRequest) returns (BaseResponse)
 
 	@doc "创建任务评论"
-	@handler CreateTaskDetailComment
-	post /comment (CreateTaskDetailComment) returns (BaseResponse)
+	@handler CreateTaskComment
+	post /comment/create (CreateTaskCommentRequest) returns (BaseResponse)
 
 	@doc "获取任务评论列表"
 	@handler GetTaskComments

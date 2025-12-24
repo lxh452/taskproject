@@ -1,3 +1,6 @@
+// Code scaffolded by goctl. Safe to edit.
+// goctl 1.9.2
+
 package task
 
 import (
@@ -9,17 +12,17 @@ import (
 	"task_Project/task/internal/types"
 )
 
-// 创建任务评论
-func CreateTaskCommentHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+// 获取任务评论列表
+func GetTaskCommentsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.CreateTaskCommentRequest
+		var req types.GetTaskCommentsRequest
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
-		l := task.NewTaskCommentLogic(r.Context(), svcCtx)
-		resp, err := l.CreateComment(&req)
+		l := task.NewGetTaskCommentsLogic(r.Context(), svcCtx)
+		resp, err := l.GetTaskComments(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
