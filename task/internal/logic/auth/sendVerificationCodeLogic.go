@@ -45,7 +45,7 @@ func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerifica
 	// 3. 检查发送频率限制（1分钟内只能发送一次）
 	rateLimitKey := fmt.Sprintf("email_code_rate:%s", req.Email)
 	exists, _ := l.svcCtx.RedisClient.Exists(rateLimitKey)
-	if !exists {
+	if exists {
 		return utils.Response.BusinessError("send_to_fast"), nil
 	}
 
