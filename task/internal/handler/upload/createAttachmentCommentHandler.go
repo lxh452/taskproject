@@ -22,7 +22,7 @@ func CreateAttachmentCommentHandler(svcCtx *svc.ServiceContext) http.HandlerFunc
 		}
 
 		l := upload.NewCreateAttachmentCommentLogic(r.Context(), svcCtx)
-		resp, err := l.CreateAttachmentComment(&req)
+		resp, err := l.CreateComment(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
