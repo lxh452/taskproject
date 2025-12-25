@@ -30,7 +30,7 @@
                     <tr>
                         <td style="padding: 0 40px;">
                             <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #111827;">任务完成通知</h1>
-                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{.EmployeeName}}，以下任务已标记为完成</p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">以下任务节点已标记为完成</p>
                         </td>
                     </tr>
                     <!-- 任务信息 -->
@@ -43,16 +43,18 @@
                                         <p style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">{{.TaskTitle}}</p>
                                     </td>
                                 </tr>
+                                {{if .NodeName}}
                                 <tr>
                                     <td style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">完成时间</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.CompletedTime}}</p>
+                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">节点名称</p>
+                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.NodeName}}</p>
                                     </td>
                                 </tr>
+                                {{end}}
                                 <tr>
                                     <td style="padding: 16px 24px;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">完成人</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.CompletedBy}}</p>
+                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">完成时间</p>
+                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.CompleteTime}}</p>
                                     </td>
                                 </tr>
                             </table>
@@ -62,9 +64,9 @@
                     <tr>
                         <td style="padding: 0 40px 32px;">
                             {{if .BaseURL}}
-                            <a href="{{.BaseURL}}/#/tasks/detail/{{.TaskId}}" style="display: inline-block; padding: 12px 24px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">查看任务详情</a>
+                            <a href="{{.BaseURL}}/#/tasks/detail/{{.TaskID}}" style="display: inline-block; padding: 12px 24px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">查看任务详情</a>
                             {{else}}
-                            <a href="/#/tasks/detail/{{.TaskId}}" style="display: inline-block; padding: 12px 24px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">查看任务详情</a>
+                            <a href="/#/tasks/detail/{{.TaskID}}" style="display: inline-block; padding: 12px 24px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">查看任务详情</a>
                             {{end}}
                         </td>
                     </tr>

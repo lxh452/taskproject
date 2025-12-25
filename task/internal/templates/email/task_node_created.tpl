@@ -30,7 +30,7 @@
                     <tr>
                         <td style="padding: 0 40px;">
                             <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #111827;">任务节点分配通知</h1>
-                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{.EmployeeName}}，您被分配了一个新的任务节点</p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{if .EmployeeName}}{{.EmployeeName}}，{{end}}您被分配了一个新的任务节点</p>
                         </td>
                     </tr>
                     <!-- 节点信息 -->

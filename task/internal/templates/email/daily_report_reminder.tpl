@@ -33,20 +33,13 @@
                             <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{.EmployeeName}}，请在下班前完成今日工作日报的提交</p>
                         </td>
                     </tr>
-                    <!-- 任务摘要 -->
+                    <!-- 提示信息 -->
                     <tr>
                         <td style="padding: 0 40px 24px;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
                                 <tr>
-                                    <td style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">今日待完成任务</p>
-                                        <p style="margin: 0; font-size: 24px; font-weight: 600; color: #111827;">{{.PendingTasks}}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 16px 24px;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">日期</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.ReportDate}}</p>
+                                    <td style="padding: 20px 24px;">
+                                        <p style="margin: 0; font-size: 14px; color: #374151;">请登录系统填写今日工作内容和进展情况。</p>
                                     </td>
                                 </tr>
                             </table>

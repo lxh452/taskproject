@@ -62,7 +62,23 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 
 	// 检查用户是否被锁定
 	if userInfo.LockedUntil.Valid && userInfo.LockedUntil.Time.After(time.Now()) {
-		return utils.Response.BusinessError("user_locked"), nil
+		// 计算剩余锁定时间
+		remainingMinutes := int(userInfo.LockedUntil.Time.Sub(time.Now()).Minutes()) + 1
+		logx.Infof("用户 %s 仍处于锁定状态，剩余 %d 分钟", userInfo.Username, remainingMinutes)
+		return utils.Response.BusinessError(fmt.Sprintf("账户已锁定，请在 %d 分钟后重试", remainingMinutes)), nil
+	}
+
+	// 如果锁定时间已过期，自动解锁（重置失败次数和锁定状态）
+	if userInfo.LockedUntil.Valid && userInfo.LockedUntil.Time.Before(time.Now()) {
+		logx.Infof("用户 %s 锁定已过期，自动解锁", userInfo.Username)
+		// 重置登录失败次数
+		if err := l.svcCtx.UserModel.UpdateLoginFailedCount(l.ctx, userInfo.Id, 0); err != nil {
+			logx.Errorf("重置登录失败次数失败: %v", err)
+		}
+		// 清除锁定状态
+		if err := l.svcCtx.UserModel.ClearLockStatus(l.ctx, userInfo.Id); err != nil {
+			logx.Errorf("清除锁定状态失败: %v", err)
+		}
 	}
 
 	// 验证密码
@@ -75,17 +91,19 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 			logx.Errorf("更新登录失败次数失败: %v", updateErr)
 		}
 
-		// 如果失败次数达到5次，锁定用户1小时
+		// 如果失败次数达到5次，锁定用户10分钟
 		if failedCount >= 5 {
-			lockUntil := time.Now().Add(time.Hour)
+			lockUntil := time.Now().Add(10 * time.Minute)
 			lockErr := l.svcCtx.UserModel.UpdateLockStatus(l.ctx, userInfo.Id, lockUntil.Format("2006-01-02 15:04:05"))
 			if lockErr != nil {
 				logx.Errorf("锁定用户失败: %v", lockErr)
 			}
-			return utils.Response.BusinessError("login_failed_too_many"), nil
+			logx.Infof("用户 %s 登录失败次数达到5次，锁定10分钟", userInfo.Username)
+			return utils.Response.BusinessError("登录失败次数过多，账户已锁定10分钟"), nil
 		}
 
-		return utils.Response.BusinessError("login_failed"), nil
+		remainingAttempts := 5 - failedCount
+		return utils.Response.BusinessError(fmt.Sprintf("用户名或密码错误，还剩 %d 次尝试机会", remainingAttempts)), nil
 	}
 
 	// 如果用户已加入公司，查询员工ID

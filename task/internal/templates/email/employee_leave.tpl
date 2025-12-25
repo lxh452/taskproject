@@ -30,40 +30,42 @@
                     <tr>
                         <td style="padding: 0 40px;">
                             <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #111827;">员工离职通知</h1>
-                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">以下员工已办理离职手续</p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">员工 {{.EmployeeName}} 已办理离职手续，以下任务节点需要交接处理</p>
                         </td>
                     </tr>
-                    <!-- 员工信息 -->
+                    <!-- 任务节点列表 -->
+                    {{if .TaskNodes}}
                     <tr>
                         <td style="padding: 0 40px 24px;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
                                 <tr>
-                                    <td style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">员工姓名</p>
-                                        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">{{.LeavingEmployeeName}}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">所属部门</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.DepartmentName}}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 16px 24px;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">离职日期</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.LeaveDate}}</p>
+                                    <td style="padding: 20px 24px;">
+                                        <p style="margin: 0 0 12px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">待交接任务节点</p>
+                                        <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
+                                            {{range .TaskNodes}}
+                                            <li style="margin-bottom: 8px;">{{.}}</li>
+                                            {{end}}
+                                        </ul>
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
+                    {{end}}
                     <!-- 提示信息 -->
                     <tr>
                         <td style="padding: 0 40px 32px;">
                             <p style="margin: 0; font-size: 13px; color: #6b7280;">请相关人员及时处理工作交接事宜。</p>
                         </td>
                     </tr>
+                    <!-- 操作按钮 -->
+                    {{if .BaseURL}}
+                    <tr>
+                        <td style="padding: 0 40px 32px;">
+                            <a href="{{.BaseURL}}" style="display: inline-block; padding: 12px 24px; background: #64748b; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">查看详情</a>
+                        </td>
+                    </tr>
+                    {{end}}
                     <!-- 页脚 -->
                     <tr>
                         <td style="padding: 24px 40px; background: #f9fafb; border-top: 1px solid #e5e7eb;">

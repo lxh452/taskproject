@@ -6,6 +6,7 @@ package tasknode
 import (
 	"context"
 	"errors"
+	"strings"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -73,7 +74,10 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 		l.Logger.WithContext(l.ctx).Errorf("更新前置节点失败: %v", err)
 		return utils.Response.InternalError("更新前置节点失败"), nil
 	}
-	err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+	preNodes := strings.Split(req.PrerequisiteNodes, ",")
+	if len(preNodes) < 2 {
+		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+	}
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
 		return utils.Response.InternalError("更新任务节点失败"), err

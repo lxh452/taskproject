@@ -69,8 +69,11 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 	for _, taskNode := range taskNodes {
 		// 跳过已经有执行人的节点
 		if taskNode.ExecutorId != "" {
+			l.Logger.WithContext(l.ctx).Infof("任务节点 %s 已有执行人 %s，跳过", taskNode.TaskNodeId, taskNode.ExecutorId)
 			continue
 		}
+
+		l.Logger.WithContext(l.ctx).Infof("开始派发任务节点: %s (%s)", taskNode.TaskNodeId, taskNode.NodeName)
 
 		// 执行自动派发
 		err := dispatchService.AutoDispatchTask(l.ctx, taskNode.TaskNodeId)
@@ -84,6 +87,7 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 			})
 			failCount++
 		} else {
+			l.Logger.WithContext(l.ctx).Infof("自动派发任务节点 %s 成功", taskNode.TaskNodeId)
 			dispatchResults = append(dispatchResults, DispatchResult{
 				TaskNodeID: taskNode.TaskNodeId,
 				NodeName:   taskNode.NodeName,

@@ -157,37 +157,53 @@ func (d *DispatchService) SelectBestEmployee(ctx context.Context, candidateIDs [
 
 // AutoDispatchTask 自动派发任务
 func (d *DispatchService) AutoDispatchTask(ctx context.Context, taskNodeID string) error {
+	logx.Infof("开始自动派发任务节点: %s", taskNodeID)
+
 	// 获取任务节点信息
 	taskNode, err := d.svcCtx.TaskNodeModel.FindOne(ctx, taskNodeID)
 	if err != nil {
+		logx.Errorf("获取任务节点失败: %v", err)
 		return err
 	}
+
+	logx.Infof("任务节点信息: 名称=%s, 部门=%s, 当前执行人=%s", taskNode.NodeName, taskNode.DepartmentId, taskNode.ExecutorId)
 
 	// 获取候选员工列表
 	candidates, err := d.getCandidateEmployees(ctx, taskNode)
 	if err != nil {
+		logx.Errorf("获取候选员工失败: %v", err)
 		return err
 	}
 
 	if len(candidates) == 0 {
-		return nil // 没有候选员工
+		logx.Infof("任务节点 %s 没有候选员工可派发", taskNodeID)
+		return fmt.Errorf("没有可用的候选员工")
 	}
+
+	logx.Infof("任务节点 %s 有 %d 个候选员工", taskNodeID, len(candidates))
 
 	// 选择最佳员工
 	bestEmployee, err := d.SelectBestEmployee(ctx, candidates, taskNode)
 	if err != nil {
+		logx.Errorf("选择最佳员工失败: %v", err)
 		return err
 	}
 
 	if bestEmployee == nil {
-		return nil // 没有合适的员工
+		logx.Infof("任务节点 %s 没有合适的员工", taskNodeID)
+		return fmt.Errorf("没有合适的员工")
 	}
+
+	logx.Infof("任务节点 %s 选择员工: %s, 评分: %.2f", taskNodeID, bestEmployee.EmployeeID, bestEmployee.Score)
 
 	// 更新任务节点执行人
 	err = d.svcCtx.TaskNodeModel.UpdateExecutor(ctx, taskNodeID, bestEmployee.EmployeeID)
 	if err != nil {
+		logx.Errorf("更新任务节点执行人失败: %v", err)
 		return err
 	}
+
+	logx.Infof("任务节点 %s 已派发给员工 %s", taskNodeID, bestEmployee.EmployeeID)
 
 	// 发送派发通知邮件
 	go d.sendDispatchNotification(ctx, taskNode, bestEmployee.EmployeeID, bestEmployee.Reason)
@@ -301,41 +317,28 @@ func (d *DispatchService) getCandidateEmployees(ctx context.Context, taskNode *t
 		return candidates, err
 	}
 
+	logx.Infof("自动派发: 部门 %s 共有 %d 名员工", taskNode.DepartmentId, len(employees))
+
 	// 2. 过滤候选员工
 	for _, employee := range employees {
 		// 排除已离职员工
 		if employee.Status != 1 {
+			logx.Infof("自动派发: 员工 %s 状态为 %d，跳过", employee.RealName, employee.Status)
 			continue
 		}
 
-		// 检查技能匹配（如果有技能要求）
-		// TaskNode 没有 RequiredSkills 字段，使用岗位/员工技能匹配
-		if employee.Skills.Valid && employee.Skills.String != "" && taskNode.NodeDetail.Valid && taskNode.NodeDetail.String != "" {
-			if !d.hasRequiredSkills(employee, taskNode.NodeDetail.String) { // 简化：从节点详情里提取关键词
-				continue
-			}
-		}
-
-		// 检查角色标签匹配（如果有角色要求）
-		if employee.RoleTags.Valid && employee.RoleTags.String != "" {
-			// 简化：若节点优先级高，则需要包含 "priority" 类标签
-			required := ""
-			if taskNode.NodePriority >= 2 {
-				required = "priority"
-			}
-			if required != "" && !d.hasRequiredRoles(employee, required) {
-				continue
-			}
-		}
-
-		// 检查工作负载（避免过度分配）
-		if d.isOverloaded(ctx, employee.EmployeeId) {
+		// 检查工作负载（避免过度分配）- 使用 employee.Id 而不是 employee.EmployeeId
+		if d.isOverloaded(ctx, employee.Id) {
+			logx.Infof("自动派发: 员工 %s 工作负载过高，跳过", employee.RealName)
 			continue
 		}
 
-		candidates = append(candidates, employee.EmployeeId)
+		// 使用 employee.Id（员工ID）而不是 employee.EmployeeId（工号）
+		candidates = append(candidates, employee.Id)
+		logx.Infof("自动派发: 员工 %s (ID: %s) 加入候选列表", employee.RealName, employee.Id)
 	}
 
+	logx.Infof("自动派发: 最终候选员工数量: %d", len(candidates))
 	return candidates, nil
 }
 

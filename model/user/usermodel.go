@@ -27,6 +27,7 @@ type (
 		UpdateLastLogin(ctx context.Context, id string, lastLoginTime, lastLoginIP string) error
 		UpdateLoginFailedCount(ctx context.Context, id string, count int) error
 		UpdateLockStatus(ctx context.Context, id string, lockedUntil string) error
+		ClearLockStatus(ctx context.Context, id string) error
 		UpdatePassword(ctx context.Context, id, passwordHash string) error
 		UpdateProfile(ctx context.Context, id, realName, avatar string, gender int, birthday string) error
 		UpdateStatus(ctx context.Context, id string, status int) error
@@ -163,6 +164,13 @@ func (m *customUserModel) UpdateLoginFailedCount(ctx context.Context, id string,
 func (m *customUserModel) UpdateLockStatus(ctx context.Context, id string, lockedUntil string) error {
 	query := fmt.Sprintf("UPDATE %s SET `locked_until` = ?, `update_time` = NOW() WHERE `id` = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, lockedUntil, id)
+	return err
+}
+
+// ClearLockStatus 清除锁定状态（自动解锁）
+func (m *customUserModel) ClearLockStatus(ctx context.Context, id string) error {
+	query := fmt.Sprintf("UPDATE %s SET `locked_until` = NULL, `login_failed_count` = 0, `update_time` = NOW() WHERE `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }
 

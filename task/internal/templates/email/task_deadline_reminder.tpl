@@ -30,7 +30,7 @@
                     <tr>
                         <td style="padding: 0 40px;">
                             <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #111827;">任务即将到期</h1>
-                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{.EmployeeName}}，您有任务节点即将到期，请及时处理</p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">您有任务节点即将到期，请及时处理</p>
                         </td>
                     </tr>
                     <!-- 任务信息 -->
@@ -39,14 +39,8 @@
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px;">
                                 <tr>
                                     <td style="padding: 20px 24px; border-bottom: 1px solid #fed7aa;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">任务名称</p>
-                                        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">{{.TaskTitle}}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 16px 24px; border-bottom: 1px solid #fed7aa;">
                                         <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">节点名称</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.NodeName}}</p>
+                                        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">{{.NodeName}}</p>
                                     </td>
                                 </tr>
                                 <tr>
@@ -57,21 +51,17 @@
                                 </tr>
                                 <tr>
                                     <td style="padding: 16px 24px;">
-                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">剩余时间</p>
-                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #ea580c;">{{.RemainingTime}}</p>
+                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">当前进度</p>
+                                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #ea580c;">{{.Progress}}%</p>
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
-                    <!-- 操作按钮 -->
+                    <!-- 提示信息 -->
                     <tr>
                         <td style="padding: 0 40px 32px;">
-                            {{if .BaseURL}}
-                            <a href="{{.BaseURL}}/#/tasks/detail/{{.TaskId}}" style="display: inline-block; padding: 12px 24px; background: #ea580c; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">立即处理</a>
-                            {{else}}
-                            <a href="/#/tasks/detail/{{.TaskId}}" style="display: inline-block; padding: 12px 24px; background: #ea580c; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 4px;">立即处理</a>
-                            {{end}}
+                            <p style="margin: 0; font-size: 13px; color: #6b7280;">请登录系统查看任务详情并及时完成。</p>
                         </td>
                     </tr>
                     <!-- 页脚 -->

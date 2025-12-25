@@ -82,11 +82,14 @@ func (s *InviteCodeService) GenerateInviteCode(ctx context.Context, companyID, c
 	// 存储到Redis
 	key := InviteCodeKeyPrefix + code
 	expireSeconds := expireDays * 24 * 60 * 60
+	logx.Infof("[InviteCodeService] 存储邀请码到Redis: key=%s, expireSeconds=%d, data=%s", key, expireSeconds, string(jsonData))
+
 	if err := s.redisClient.Setex(key, string(jsonData), expireSeconds); err != nil {
+		logx.Errorf("[InviteCodeService] 存储邀请码到Redis失败: key=%s, err=%v", key, err)
 		return "", fmt.Errorf("存储邀请码到Redis失败: %w", err)
 	}
 
-	logx.Infof("生成邀请码成功: code=%s, companyID=%s, expireDays=%d", code, companyID, expireDays)
+	logx.Infof("[InviteCodeService] 生成邀请码成功: code=%s, key=%s, companyID=%s, expireDays=%d", code, key, companyID, expireDays)
 	return code, nil
 }
 
@@ -100,13 +103,22 @@ func (s *InviteCodeService) ParseInviteCode(ctx context.Context, code string) (*
 
 	// 从Redis获取邀请码数据
 	key := InviteCodeKeyPrefix + code
+	logx.Infof("[InviteCodeService] 解析邀请码: code=%s, key=%s", code, key)
+
+	// 先检查key是否存在
+	exists, existsErr := s.redisClient.Exists(key)
+	logx.Infof("[InviteCodeService] 检查key是否存在: key=%s, exists=%v, err=%v", key, exists, existsErr)
+
 	jsonData, err := s.redisClient.Get(key)
 	if err != nil {
-		logx.Errorf("从Redis获取邀请码失败: code=%s, err=%v", code, err)
+		logx.Errorf("[InviteCodeService] 从Redis获取邀请码失败: code=%s, key=%s, err=%v", code, key, err)
 		return nil, errors.New("邀请码无效或已过期")
 	}
 
+	logx.Infof("[InviteCodeService] Redis返回数据: code=%s, dataLen=%d, data=%s", code, len(jsonData), jsonData)
+
 	if jsonData == "" {
+		logx.Errorf("[InviteCodeService] 邀请码数据为空: code=%s, key=%s", code, key)
 		return nil, errors.New("邀请码无效或已过期")
 	}
 

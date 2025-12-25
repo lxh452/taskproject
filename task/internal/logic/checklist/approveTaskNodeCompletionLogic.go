@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"task_Project/model/task"
@@ -111,6 +112,23 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 		if err != nil {
 			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
 			return nil, err
+		}
+		current, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
+		if err != nil {
+			return nil, err
+		}
+		//遍历查看哪个任务节点的前置节点是该节点，如果存在该节点修正他的状态让他进行中
+		nodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, current.TaskId)
+		if len(nodes) > 2 {
+			//遍历节点查看前置节点是否有该节点
+			for _, node := range nodes {
+				split := strings.Split(node.ExNodeIds, ",")
+				for _, v := range split {
+					if v == taskNodeId {
+						l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+					}
+				}
+			}
 		}
 
 		// 更新节点完成时间

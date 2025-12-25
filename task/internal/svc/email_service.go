@@ -131,11 +131,12 @@ func (s *EmailService) SendEmployeeLeaveEmail(ctx context.Context, recipientEmai
 // SendLoginSuccessEmail 发送登录成功邮件
 func (s *EmailService) SendLoginSuccessEmail(ctx context.Context, employeeEmail, username, loginTime, loginIP string) error {
 	data := LoginSuccessData{
-		BaseURL:   s.baseURL,
-		Username:  username,
-		LoginTime: loginTime,
-		LoginIP:   loginIP,
-		Year:      time.Now().Year(),
+		BaseURL:    s.baseURL,
+		Username:   username,
+		LoginTime:  loginTime,
+		LoginIP:    loginIP,
+		DeviceInfo: "Web 浏览器", // 默认设备信息
+		Year:       time.Now().Year(),
 	}
 
 	body, err := s.templateService.RenderTemplate("login_success", data)

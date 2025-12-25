@@ -52,7 +52,7 @@
                                 <tr>
                                     <td style="padding: 16px 24px;">
                                         <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">入职日期</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.HireDate}}</p>
+                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.OnboardingTime}}</p>
                                     </td>
                                 </tr>
                             </table>

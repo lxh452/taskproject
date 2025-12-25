@@ -22,19 +22,33 @@ func NewEmailTemplateService() (*EmailTemplateService, error) {
 		templates: make(map[string]*template.Template),
 	}
 
-	// 获取模板文件目录（相对于当前文件）
-	// email_template.go 在 task/internal/svc/
-	// 模板文件在 task/internal/templates/email/
-	templateDir := filepath.Join("task", "internal", "templates", "email")
+	// 获取模板文件目录
+	// 在 Docker 容器中，工作目录是 /app，模板在 /app/task/internal/templates/email/
+	// 在本地开发时，可能在项目根目录或 task 目录下运行
+	possiblePaths := []string{
+		"task/internal/templates/email",      // 从项目根目录运行
+		"./task/internal/templates/email",    // 从项目根目录运行（显式相对路径）
+		"internal/templates/email",           // 从 task 目录运行
+		"../templates/email",                 // 从 svc 目录运行
+		"/app/task/internal/templates/email", // Docker 容器绝对路径
+	}
 
-	// 如果当前工作目录不在项目根目录，尝试其他路径
-	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-		// 尝试从当前文件位置计算相对路径
-		templateDir = filepath.Join("..", "templates", "email")
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			// 尝试绝对路径（从工作目录）
-			templateDir = filepath.Join("internal", "templates", "email")
+	var templateDir string
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			templateDir = path
+			logx.Infof("[EmailTemplateService] Found template directory: %s", path)
+			break
 		}
+	}
+
+	if templateDir == "" {
+		logx.Errorf("[EmailTemplateService] Template directory not found, tried paths: %v", possiblePaths)
+		// 获取当前工作目录用于调试
+		if cwd, err := os.Getwd(); err == nil {
+			logx.Errorf("[EmailTemplateService] Current working directory: %s", cwd)
+		}
+		return nil, fmt.Errorf("template directory not found")
 	}
 
 	// 加载所有模板文件
@@ -130,11 +144,12 @@ type HandoverData struct {
 
 // LoginSuccessData 登录成功邮件数据
 type LoginSuccessData struct {
-	BaseURL   string
-	Username  string
-	LoginTime string
-	LoginIP   string
-	Year      int
+	BaseURL    string
+	Username   string
+	LoginTime  string
+	LoginIP    string
+	DeviceInfo string
+	Year       int
 }
 
 // RegisterSuccessData 注册成功邮件数据

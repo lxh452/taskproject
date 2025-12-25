@@ -30,7 +30,7 @@
                     <tr>
                         <td style="padding: 0 40px;">
                             <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #111827;">任务删除通知</h1>
-                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">{{.EmployeeName}}，您参与的任务已被删除</p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">您参与的任务已被删除</p>
                         </td>
                     </tr>
                     <!-- 任务信息 -->
@@ -49,12 +49,14 @@
                                         <p style="margin: 0; font-size: 14px; color: #374151;">{{.DeleteTime}}</p>
                                     </td>
                                 </tr>
+                                {{if .OperatorName}}
                                 <tr>
                                     <td style="padding: 16px 24px;">
                                         <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">操作人</p>
-                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.DeletedBy}}</p>
+                                        <p style="margin: 0; font-size: 14px; color: #374151;">{{.OperatorName}}</p>
                                     </td>
                                 </tr>
+                                {{end}}
                             </table>
                         </td>
                     </tr>
