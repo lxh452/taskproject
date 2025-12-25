@@ -77,11 +77,17 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 	// 获取当前用户的员工ID（节点的executor_id和leader_id都是员工ID）
 	currentEmployeeID, _ := utils.Common.GetCurrentEmployeeID(l.ctx)
 
+	// 调试日志
+	l.Logger.Infof("权限检查 - currentUserID: %s, currentEmployeeID: %s, taskCreator: %s, taskLeaderId: %s",
+		currentUserID, currentEmployeeID, taskInfo.TaskCreator, taskInfo.LeaderId.String)
+	l.Logger.Infof("权限检查 - nodeLeaderId: %s, nodeExecutorId: %s", taskNode.LeaderId, taskNode.ExecutorId)
+
 	hasPermission := false
 
-	// 检查是否是任务创建者（用户ID）
-	if taskInfo.TaskCreator == currentUserID {
+	// 检查是否是任务创建者（员工ID）
+	if currentEmployeeID != "" && taskInfo.TaskCreator == currentEmployeeID {
 		hasPermission = true
+		l.Logger.Infof("权限通过: 任务创建者")
 	}
 
 	// 检查是否是节点负责人或执行人（员工ID，支持逗号分隔的多个ID）
@@ -92,6 +98,7 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 			for _, lid := range leaderIds {
 				if strings.TrimSpace(lid) == currentEmployeeID {
 					hasPermission = true
+					l.Logger.Infof("权限通过: 节点负责人")
 					break
 				}
 			}
@@ -102,6 +109,7 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 			for _, eid := range executorIds {
 				if strings.TrimSpace(eid) == currentEmployeeID {
 					hasPermission = true
+					l.Logger.Infof("权限通过: 节点执行人")
 					break
 				}
 			}
@@ -112,16 +120,20 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 	if !hasPermission && currentEmployeeID != "" {
 		if taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmployeeID {
 			hasPermission = true
+			l.Logger.Infof("权限通过: 任务负责人")
 		}
 	}
 
 	// 检查是否是该节点的审批人（员工ID）
 	if !hasPermission && currentEmployeeID != "" {
 		approvals, err := l.svcCtx.HandoverApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
+		l.Logger.Infof("权限检查 - 审批记录数: %d", len(approvals))
 		if err == nil {
 			for _, approval := range approvals {
+				l.Logger.Infof("权限检查 - 审批人ID: %s, 当前员工ID: %s", approval.ApproverId, currentEmployeeID)
 				if approval.ApproverId == currentEmployeeID {
 					hasPermission = true
+					l.Logger.Infof("权限通过: 审批人")
 					break
 				}
 			}
