@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"task_Project/model/task"
 	"task_Project/task/internal/svc"
@@ -66,18 +67,65 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 		return nil, err
 	}
 
-	// 4. 验证用户权限（只有负责人、执行人或任务创建者可以查看）
+	// 4. 验证用户权限
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
 		return nil, err
 	}
 
+	// 获取当前用户的员工ID（节点的executor_id和leader_id都是员工ID）
+	currentEmployeeID, _ := utils.Common.GetCurrentEmployeeID(l.ctx)
+
 	hasPermission := false
-	if taskNode.LeaderId == currentUserID ||
-		taskNode.ExecutorId == currentUserID ||
-		taskInfo.TaskCreator == currentUserID {
+
+	// 检查是否是任务创建者（用户ID）
+	if taskInfo.TaskCreator == currentUserID {
 		hasPermission = true
+	}
+
+	// 检查是否是节点负责人或执行人（员工ID，支持逗号分隔的多个ID）
+	if !hasPermission && currentEmployeeID != "" {
+		// 检查是否在负责人列表中
+		if taskNode.LeaderId != "" {
+			leaderIds := strings.Split(taskNode.LeaderId, ",")
+			for _, lid := range leaderIds {
+				if strings.TrimSpace(lid) == currentEmployeeID {
+					hasPermission = true
+					break
+				}
+			}
+		}
+		// 检查是否在执行人列表中
+		if !hasPermission && taskNode.ExecutorId != "" {
+			executorIds := strings.Split(taskNode.ExecutorId, ",")
+			for _, eid := range executorIds {
+				if strings.TrimSpace(eid) == currentEmployeeID {
+					hasPermission = true
+					break
+				}
+			}
+		}
+	}
+
+	// 检查是否是任务负责人（员工ID）
+	if !hasPermission && currentEmployeeID != "" {
+		if taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmployeeID {
+			hasPermission = true
+		}
+	}
+
+	// 检查是否是该节点的审批人（员工ID）
+	if !hasPermission && currentEmployeeID != "" {
+		approvals, err := l.svcCtx.HandoverApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
+		if err == nil {
+			for _, approval := range approvals {
+				if approval.ApproverId == currentEmployeeID {
+					hasPermission = true
+					break
+				}
+			}
+		}
 	}
 
 	// 检查是否是部门负责人
@@ -87,19 +135,6 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 			department, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
 			if err == nil && department.ManagerId.String == currentUserID {
 				hasPermission = true
-			}
-		}
-	}
-
-	// 检查是否是该节点的审批人
-	if !hasPermission {
-		approvals, err := l.svcCtx.HandoverApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
-		if err == nil {
-			for _, approval := range approvals {
-				if approval.ApproverId == currentUserID {
-					hasPermission = true
-					break
-				}
 			}
 		}
 	}
