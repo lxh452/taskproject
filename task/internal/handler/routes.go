@@ -148,6 +148,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: company.GetCompanyListHandler(serverCtx),
 			},
 			{
+				// 生成邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/generate",
+				Handler: company.GenerateInviteCodeHandler(serverCtx),
+			},
+			{
+				// 解析邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/parse",
+				Handler: company.ParseInviteCodeHandler(serverCtx),
+			},
+			{
 				// 更新公司信息
 				Method:  http.MethodPut,
 				Path:    "/update",
