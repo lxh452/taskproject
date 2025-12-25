@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"task_Project/model/user_auth"
@@ -291,9 +292,15 @@ func resolveNotificationRecipients(ctx context.Context, svcCtx *ServiceContext, 
 			node, err := svcCtx.TaskNodeModel.FindOne(ctx, event.NodeID)
 			if err == nil {
 				if event.EventType == "task.deadline.reminder" {
-					// 截止提醒只通知执行人
+					// 截止提醒只通知执行人（支持多执行人）
 					if node.ExecutorId != "" {
-						employeeIDSet[node.ExecutorId] = true
+						executorIds := strings.Split(node.ExecutorId, ",")
+						for _, eid := range executorIds {
+							eid = strings.TrimSpace(eid)
+							if eid != "" {
+								employeeIDSet[eid] = true
+							}
+						}
 					}
 				} else if event.EventType == "task.slow.progress" {
 					// 进度缓慢通知负责人和执行人
@@ -301,7 +308,13 @@ func resolveNotificationRecipients(ctx context.Context, svcCtx *ServiceContext, 
 						employeeIDSet[node.LeaderId] = true
 					}
 					if node.ExecutorId != "" {
-						employeeIDSet[node.ExecutorId] = true
+						executorIds := strings.Split(node.ExecutorId, ",")
+						for _, eid := range executorIds {
+							eid = strings.TrimSpace(eid)
+							if eid != "" {
+								employeeIDSet[eid] = true
+							}
+						}
 					}
 				} else if event.EventType == "task.node.executor.left" {
 					// 执行人离职，通知负责人
@@ -311,12 +324,18 @@ func resolveNotificationRecipients(ctx context.Context, svcCtx *ServiceContext, 
 						employeeIDSet[node.LeaderId] = true
 					}
 				} else {
-					// 其他情况通知负责人和执行人
+					// 其他情况通知负责人和执行人（支持多执行人）
 					if node.LeaderId != "" {
 						employeeIDSet[node.LeaderId] = true
 					}
 					if node.ExecutorId != "" {
-						employeeIDSet[node.ExecutorId] = true
+						executorIds := strings.Split(node.ExecutorId, ",")
+						for _, eid := range executorIds {
+							eid = strings.TrimSpace(eid)
+							if eid != "" {
+								employeeIDSet[eid] = true
+							}
+						}
 					}
 				}
 			}

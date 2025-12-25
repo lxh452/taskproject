@@ -286,13 +286,19 @@ func resolveEmailRecipients(ctx context.Context, svcCtx *ServiceContext, event *
 			}
 		}
 	case "task.node.executor.changed":
-		// 根据 NodeID 查询新执行人邮箱
+		// 根据 NodeID 查询新执行人邮箱（支持多执行人）
 		if event.NodeID != "" {
 			node, err := svcCtx.TaskNodeModel.FindOne(ctx, event.NodeID)
 			if err == nil && node.ExecutorId != "" {
-				executor, err := svcCtx.EmployeeModel.FindOne(ctx, node.ExecutorId)
-				if err == nil && executor.Email.Valid && executor.Email.String != "" {
-					emails = append(emails, executor.Email.String)
+				executorIds := strings.Split(node.ExecutorId, ",")
+				for _, eid := range executorIds {
+					eid = strings.TrimSpace(eid)
+					if eid != "" {
+						executor, err := svcCtx.EmployeeModel.FindOne(ctx, eid)
+						if err == nil && executor.Email.Valid && executor.Email.String != "" {
+							emails = append(emails, executor.Email.String)
+						}
+					}
 				}
 			}
 		}
@@ -301,12 +307,18 @@ func resolveEmailRecipients(ctx context.Context, svcCtx *ServiceContext, event *
 		if event.NodeID != "" {
 			node, err := svcCtx.TaskNodeModel.FindOne(ctx, event.NodeID)
 			if err == nil {
-				// 对于截止提醒和进度缓慢，通知执行人
+				// 对于截止提醒和进度缓慢，通知执行人（支持多执行人）
 				if event.EventType == "task.deadline.reminder" || event.EventType == "task.slow.progress" {
 					if node.ExecutorId != "" {
-						executor, err := svcCtx.EmployeeModel.FindOne(ctx, node.ExecutorId)
-						if err == nil && executor.Email.Valid && executor.Email.String != "" {
-							emails = append(emails, executor.Email.String)
+						executorIds := strings.Split(node.ExecutorId, ",")
+						for _, eid := range executorIds {
+							eid = strings.TrimSpace(eid)
+							if eid != "" {
+								executor, err := svcCtx.EmployeeModel.FindOne(ctx, eid)
+								if err == nil && executor.Email.Valid && executor.Email.String != "" {
+									emails = append(emails, executor.Email.String)
+								}
+							}
 						}
 					}
 					// 进度缓慢也通知负责人
