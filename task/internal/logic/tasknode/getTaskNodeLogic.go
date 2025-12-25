@@ -80,13 +80,26 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 		hasPermission = true
 	}
 
-	// 检查是否是部门负责人 或者是执行人
+	// 检查是否是部门负责人
 	if !hasPermission {
 		employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 		if err == nil {
 			department, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
 			if err == nil && department.ManagerId.String == currentUserID {
 				hasPermission = true
+			}
+		}
+	}
+
+	// 检查是否是该节点的审批人
+	if !hasPermission {
+		approvals, err := l.svcCtx.HandoverApprovalModel.FindByTaskNodeId(l.ctx, req.TaskNodeID)
+		if err == nil {
+			for _, approval := range approvals {
+				if approval.ApproverId == currentUserID {
+					hasPermission = true
+					break
+				}
 			}
 		}
 	}
