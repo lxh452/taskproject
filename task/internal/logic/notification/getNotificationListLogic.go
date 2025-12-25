@@ -43,7 +43,7 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
-		return utils.Response.BusinessError("用户未绑定员工信息"), nil
+		return utils.Response.BusinessError("user_not_bindemployee"), nil
 	}
 
 	// 4. 确定查询的员工ID（优先使用请求中的employeeId，否则使用当前员工ID）
@@ -56,7 +56,7 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 	if employeeID != employee.Id {
 		// TODO: 可以在这里添加管理员权限验证
 		// 暂时不允许查询其他员工的通知
-		return utils.Response.BusinessError("无权查询其他员工的通知"), nil
+		return utils.Response.BusinessError("notification_view_denied"), nil
 	}
 
 	// 6. 构建过滤条件

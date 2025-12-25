@@ -33,13 +33,13 @@ func (l *CreateNotificationLogic) CreateNotification(req *types.CreateNotificati
 	// 1. 参数验证
 	validator := utils.NewValidator()
 	if validator.IsEmpty(req.EmployeeID) {
-		return utils.Response.BusinessError("员工ID不能为空"), nil
+		return utils.Response.BusinessError("employee_not_found"), nil
 	}
 	if validator.IsEmpty(req.Title) {
-		return utils.Response.BusinessError("通知标题不能为空"), nil
+		return utils.Response.BusinessError("notification_title_required"), nil
 	}
 	if validator.IsEmpty(req.Content) {
-		return utils.Response.BusinessError("通知内容不能为空"), nil
+		return utils.Response.BusinessError("notification_content_required"), nil
 	}
 
 	// 2. 获取当前用户ID（用于权限验证）
@@ -57,20 +57,20 @@ func (l *CreateNotificationLogic) CreateNotificationInternal(req *types.CreateNo
 	// 1. 参数验证
 	validator := utils.NewValidator()
 	if validator.IsEmpty(req.EmployeeID) {
-		return utils.Response.BusinessError("员工ID不能为空"), nil
+		return utils.Response.BusinessError("employee_not_found"), nil
 	}
 	if validator.IsEmpty(req.Title) {
-		return utils.Response.BusinessError("通知标题不能为空"), nil
+		return utils.Response.BusinessError("notification_title_required"), nil
 	}
 	if validator.IsEmpty(req.Content) {
-		return utils.Response.BusinessError("通知内容不能为空"), nil
+		return utils.Response.BusinessError("notification_content_required"), nil
 	}
 
 	// 2. 验证员工是否存在，并获取员工主键ID
 	emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.EmployeeID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v %v", err, req.EmployeeID)
-		return utils.Response.BusinessError("员工不存在"), nil
+		return utils.Response.BusinessError("employee_not_found"), nil
 	}
 	// 使用员工主键 Id（通知表使用员工主键存储）
 	actualEmployeeID := emp.Id

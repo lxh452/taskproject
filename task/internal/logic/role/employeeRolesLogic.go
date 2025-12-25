@@ -36,7 +36,7 @@ func (l *EmployeeRolesLogic) EmployeeRoles(req *types.EmployeeRolesRequest) (res
 	// 查询员工信息，获取职位ID
 	employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, req.EmployeeId)
 	if err != nil {
-		return utils.Response.BusinessError("员工不存在"), nil
+		return utils.Response.BusinessError("employee_not_found"), nil
 	}
 
 	// 如果员工没有职位，返回空列表

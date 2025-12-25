@@ -34,7 +34,7 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 	resp = new(types.BaseResponse)
 	// 1. 参数验证
 	if req.NodeID == "" {
-		return utils.Response.BusinessError("任务节点ID不能为空"), nil
+		return utils.Response.BusinessError("task_node_id_required"), nil
 	}
 
 	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
@@ -45,7 +45,7 @@ func (l *UpdatePrerequisiteNodesLogic) UpdatePrerequisiteNodes(req *types.Update
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOneSafe(l.ctx, req.NodeID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		return nil, err
 	}

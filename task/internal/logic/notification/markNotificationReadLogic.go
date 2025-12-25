@@ -32,7 +32,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	// 1. 参数验证
 	validator := utils.NewValidator()
 	if validator.IsEmpty(req.NotificationID) {
-		return utils.Response.BusinessError("通知ID不能为空"), nil
+		return utils.Response.BusinessError("notification_id_required"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -45,14 +45,14 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentUserID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("查询员工失败: %v", err)
-		return utils.Response.BusinessError("用户未绑定员工信息"), nil
+		return utils.Response.BusinessError("user_not_bindemployee"), nil
 	}
 
 	// 4. 查询通知是否存在
 	notification, err := l.svcCtx.NotificationModel.FindOne(l.ctx, req.NotificationID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("通知不存在"), nil
+			return utils.Response.BusinessError("notification_not_found"), nil
 		}
 		l.Logger.WithContext(l.ctx).Errorf("查询通知失败: %v", err)
 		return nil, err
@@ -60,7 +60,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	fmt.Println("notification:", notification, employee.Id)
 	// 5. 验证权限：只能标记自己的通知为已读
 	if notification.EmployeeId != employee.Id {
-		return utils.Response.BusinessError("无权操作其他员工的通知"), nil
+		return utils.Response.BusinessError("notification_update_denied"), nil
 	}
 
 	// 6. 检查是否已经标记为已读

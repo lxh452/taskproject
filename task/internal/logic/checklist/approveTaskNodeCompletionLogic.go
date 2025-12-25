@@ -34,10 +34,10 @@ func NewApproveTaskNodeCompletionLogic(ctx context.Context, svcCtx *svc.ServiceC
 func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.ApproveTaskNodeCompletionRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.ApprovalID == "" {
-		return utils.Response.BusinessError("审批ID不能为空"), nil
+		return utils.Response.BusinessError("approval_id_required"), nil
 	}
 	if req.Approved != 1 && req.Approved != 2 {
-		return utils.Response.BusinessError("审批结果无效，1-同意，2-拒绝"), nil
+		return utils.Response.BusinessError("approval_result_invalid"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -50,24 +50,24 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 	approval, err := l.svcCtx.HandoverApprovalModel.FindOne(l.ctx, req.ApprovalID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("审批记录不存在"), nil
+			return utils.Response.BusinessError("approval_not_found"), nil
 		}
 		return nil, err
 	}
 
 	// 4. 检查审批类型：必须是任务节点完成审批（ApprovalStep=3）
 	if approval.ApprovalStep != 3 {
-		return utils.Response.BusinessError("该审批记录不是任务节点完成审批"), nil
+		return utils.Response.BusinessError("approval_type_invalid"), nil
 	}
 
 	// 5. 检查审批状态：只有待审批（状态0）的记录才能审批
 	if approval.ApprovalType != 0 {
-		return utils.Response.BusinessError("该审批记录已处理，无法重复审批"), nil
+		return utils.Response.BusinessError("approval_already_done"), nil
 	}
 
 	// 6. 验证权限：只有审批人（项目负责人）可以审批
 	if approval.ApproverId != employeeId {
-		return utils.Response.BusinessError("无权限审批，只有项目负责人可以审批"), nil
+		return utils.Response.BusinessError("approval_permission_denied"), nil
 	}
 
 	// 7. 获取任务节点ID
@@ -76,14 +76,14 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 		taskNodeId = approval.TaskNodeId.String
 	}
 	if taskNodeId == "" {
-		return utils.Response.BusinessError("审批记录缺少任务节点ID"), nil
+		return utils.Response.BusinessError("approval_missing_node_id"), nil
 	}
 
 	// 8. 获取任务节点信息
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		return nil, err
 	}

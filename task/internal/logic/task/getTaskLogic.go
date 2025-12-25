@@ -30,14 +30,14 @@ func NewGetTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTaskLo
 func (l *GetTaskLogic) GetTask(req *types.GetTaskRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskID == "" {
-		return utils.Response.BusinessError("任务ID不能为空"), nil
+		return utils.Response.BusinessError("task_id_required"), nil
 	}
 
 	// 2. 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务不存在"), nil
+			return utils.Response.BusinessError("task_not_found"), nil
 		}
 		return nil, err
 	}

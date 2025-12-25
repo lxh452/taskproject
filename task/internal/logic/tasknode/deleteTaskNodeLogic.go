@@ -32,7 +32,7 @@ func NewDeleteTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *De
 func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskNodeID == "" {
-		return utils.Response.BusinessError("任务节点ID不能为空"), nil
+		return utils.Response.BusinessError("task_node_id_required"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -45,19 +45,19 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, req.TaskNodeID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		return nil, err
 	}
 
 	// 4. 验证用户权限（只有节点负责人可以删除）
 	if taskNode.LeaderId != currentUserID {
-		return utils.Response.BusinessError("无权限删除此任务节点"), nil
+		return utils.Response.BusinessError("task_node_delete_denied"), nil
 	}
 
 	// 5. 检查任务节点状态
 	if taskNode.NodeStatus == 3 { // 已完成
-		return utils.Response.BusinessError("已完成的任务节点无法删除"), nil
+		return utils.Response.BusinessError("task_node_completed_no_delete"), nil
 	}
 
 	// 6. 检查是否有其他节点依赖此节点（暂时注释掉，因为方法不存在）

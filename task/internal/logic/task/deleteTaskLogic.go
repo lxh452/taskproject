@@ -32,7 +32,7 @@ func NewDeleteTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskID == "" {
-		return utils.Response.BusinessError("任务ID不能为空"), nil
+		return utils.Response.BusinessError("task_id_required"), nil
 	}
 
 	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
@@ -44,19 +44,19 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务不存在"), nil
+			return utils.Response.BusinessError("task_not_found"), nil
 		}
 		return nil, err
 	}
 
 	// 4. 验证用户权限（只有任务创建者可以删除）
 	if taskInfo.TaskCreator != employeeId {
-		return utils.Response.BusinessError("无权限删除此任务"), nil
+		return utils.Response.BusinessError("task_delete_denied"), nil
 	}
 
 	// 5. 检查任务状态
 	if taskInfo.TaskStatus == 3 { // 已完成
-		return utils.Response.BusinessError("已完成的任务无法删除"), nil
+		return utils.Response.BusinessError("task_completed_no_delete"), nil
 	}
 
 	// 6. 检查是否有进行中的任务节点
@@ -68,7 +68,7 @@ func (l *DeleteTaskLogic) DeleteTask(req *types.DeleteTaskRequest) (resp *types.
 
 	for _, node := range taskNodes {
 		if node.NodeStatus == 1 || node.NodeStatus == 2 { // 进行中或已完成
-			return utils.Response.BusinessError("任务有进行中的节点，无法删除"), nil
+			return utils.Response.BusinessError("task_has_active_nodes"), nil
 		}
 	}
 

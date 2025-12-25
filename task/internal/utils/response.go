@@ -63,21 +63,25 @@ var BusinessErrorMessages = map[string]string{
 	"code_error":              "验证码已过期，请重新获取",
 	"login_failed_too_many":   "密码错误次数过多，账户已被锁定",
 	"send_to_fast":            "发送频率过快，请稍后再试",
+	"user_not_bindemployee":   "用户未绑定员工信息",
 
 	// 公司相关错误
 	"company_not_found":     "公司不存在",
 	"company_name_exists":   "公司名称已存在",
 	"company_name_required": "公司名称不能为空",
+	"company_has_employees": "公司还有员工，无法删除",
 
 	// 部门相关错误
 	"department_not_found":     "部门不存在",
 	"department_name_exists":   "部门名称已存在",
 	"department_name_required": "部门名称不能为空",
+	"department_has_employees": "部门还有员工，无法删除",
 
 	// 职位相关错误
 	"position_not_found":     "职位不存在",
 	"position_name_exists":   "职位名称已存在",
 	"position_name_required": "职位名称不能为空",
+	"position_has_employees": "职位还有员工，无法删除",
 
 	// 员工相关错误
 	"employee_not_found":       "员工不存在",
@@ -96,16 +100,90 @@ var BusinessErrorMessages = map[string]string{
 	"data_not_found":          "数据不存在",
 	"operation_failed":        "操作失败",
 	"permission_denied":       "权限不足",
+	"format_error":            "格式错误",
 
 	// 任务相关错误
-	"task_not_found":                    "任务不存在",
-	"task_node_not_found":               "任务节点不存在",
-	"task_log_error":                    "任务日志创建失败",
-	"taskProgress":                      "无权限更新此任务节点的进度",
-	"no_root_update":                    "无权限更新此任务节点的前置节点",
-	"The task deadline cannot be empty": "任务截止时间不能为空",
-	"Task deadline format is incorrect": "任务截止时间格式错误",
-	"Task title cannot be empty":        "任务标题不能为空",
+	"task_not_found":           "任务不存在",
+	"task_id_required":         "任务ID不能为空",
+	"task_title_required":      "任务标题不能为空",
+	"task_deadline_required":   "任务截止时间不能为空",
+	"task_deadline_format":     "任务截止时间格式错误",
+	"task_already_completed":   "任务已经完成",
+	"task_has_active_nodes":    "任务有进行中的节点，无法删除",
+	"task_nodes_not_completed": "所有任务节点完成后才能标记任务完成",
+	"task_update_denied":       "无权限更新此任务，只有任务创建者或负责人可以修改",
+	"task_delete_denied":       "无权限删除此任务",
+	"task_complete_denied":     "无权限完成此任务",
+	"task_completed_no_delete": "已完成的任务无法删除",
+	"task_log_error":           "任务日志创建失败",
+	"task_nodes_fetch_failed":  "获取任务节点失败",
+
+	// 任务节点相关错误
+	"task_node_not_found":           "任务节点不存在",
+	"task_node_id_required":         "任务节点ID不能为空",
+	"task_node_view_denied":         "无权限查看此任务节点",
+	"task_node_delete_denied":       "无权限删除此任务节点",
+	"task_node_completed_no_delete": "已完成的任务节点无法删除",
+	"task_node_has_dependents":      "有其他任务节点依赖此节点，无法删除",
+	"task_node_progress_denied":     "无权限更新此任务节点的进度",
+	"task_node_prereq_denied":       "无权限更新此任务节点的前置节点",
+	"taskProgress":                  "无权限更新此任务节点的进度",
+	"no_root_update":                "无权限更新此任务节点的前置节点",
+	"progress_range_error":          "进度值必须在0-100之间",
+	"auto_dispatch_denied":          "无权限执行自动派发",
+
+	// 通知相关错误
+	"notification_not_found":        "通知不存在",
+	"notification_id_required":      "通知ID不能为空",
+	"notification_title_required":   "通知标题不能为空",
+	"notification_content_required": "通知内容不能为空",
+	"notification_view_denied":      "无权查询其他员工的通知",
+	"notification_update_denied":    "无权操作其他员工的通知",
+
+	// 交接相关错误
+	"handover_not_found":      "交接记录不存在",
+	"handover_id_required":    "交接ID不能为空",
+	"handover_status_invalid": "只有待接收人确认的交接才能进行拒绝操作",
+	"handover_reject_denied":  "只有交接接收人才能拒绝",
+
+	// 认证相关错误
+	"email_format_invalid":    "邮箱格式不正确",
+	"password_format_invalid": "密码必须8-32位，包含数字、大小写字母和特殊字符",
+	"login_locked":            "登录失败次数过多，账户已锁定10分钟",
+
+	// 员工相关错误（补充）
+	"employee_has_tasks":       "员工还有未完成的任务，无法删除",
+	"employee_not_in_company":  "您尚未加入任何公司",
+	"employee_already_left":    "员工已离职",
+	"founder_cannot_leave":     "不能给公司创始人递交离职申请",
+	"permission_verify_failed": "权限验证失败",
+	"invalid_leave_type":       "无效的离职类型",
+	"only_admin_can_view":      "只有公司创始人、人事部门或管理人员可以查看",
+	"only_admin_can_approve":   "只有公司创始人、人事部门或管理人员可以审批",
+	"only_admin_can_generate":  "只有公司创始人、人事部门或管理人员可以生成邀请码",
+
+	// 申请相关错误
+	"already_in_company":       "您已经加入了公司，无法再次申请",
+	"pending_application":      "您已有待审批的申请，请等待审批结果",
+	"invite_company_not_found": "邀请码对应的公司不存在",
+	"company_disabled":         "该公司已停用，无法申请加入",
+	"application_not_found":    "申请不存在",
+	"application_processed":    "该申请已处理",
+	"no_permission_approve":    "您无权审批此申请",
+
+	// 审批相关错误
+	"approval_id_required":       "审批ID不能为空",
+	"approval_result_invalid":    "审批结果无效，1-同意，2-拒绝",
+	"approval_not_found":         "审批记录不存在",
+	"approval_type_invalid":      "该审批记录不是任务节点完成审批",
+	"approval_already_done":      "该审批记录已处理，无法重复审批",
+	"approval_permission_denied": "无权限审批，只有项目负责人可以审批",
+	"approval_missing_node_id":   "审批记录缺少任务节点ID",
+
+	// 兼容旧的英文key
+	"The task deadline cannot be empty":                         "任务截止时间不能为空",
+	"Task deadline format is incorrect":                         "任务截止时间格式错误",
+	"Task title cannot be empty":                                "任务标题不能为空",
 	"The company still has employees and cannot be deleted.":    "公司还有员工，无法删除",
 	"The department still has employees and cannot be deleted.": "部门还有员工，无法删除",
 	"Format error": "格式错误",

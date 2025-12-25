@@ -41,21 +41,21 @@ func NewRejectHandoverLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Re
 func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.HandoverID == "" {
-		return utils.Response.BusinessError("交接ID不能为空"), nil
+		return utils.Response.BusinessError("handover_id_required"), nil
 	}
 
 	// 2. 获取交接记录
 	handover, err := l.svcCtx.TaskHandoverModel.FindOne(l.ctx, req.HandoverID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("交接记录不存在"), nil
+			return utils.Response.BusinessError("handover_not_found"), nil
 		}
 		return nil, err
 	}
 
 	// 3. 验证交接状态（只有待接收人确认的才能拒绝）
 	if handover.HandoverStatus != 0 {
-		return utils.Response.BusinessError("只有待接收人确认的交接才能进行拒绝操作"), nil
+		return utils.Response.BusinessError("handover_status_invalid"), nil
 	}
 
 	// 4. 获取当前用户ID（接收人）
@@ -66,7 +66,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 
 	// 5. 验证是否是交接接收人
 	if handover.ToEmployeeId != currentUserID {
-		return utils.Response.BusinessError("只有交接接收人才能拒绝"), nil
+		return utils.Response.BusinessError("handover_reject_denied"), nil
 	}
 
 	// 6. 获取当前用户信息

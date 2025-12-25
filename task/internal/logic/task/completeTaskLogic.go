@@ -32,7 +32,7 @@ func NewCompleteTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Comp
 func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskID == "" {
-		return utils.Response.BusinessError("任务ID不能为空"), nil
+		return utils.Response.BusinessError("task_id_required"), nil
 	}
 
 	employeeId, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
@@ -44,19 +44,19 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务不存在"), nil
+			return utils.Response.BusinessError("task_not_found"), nil
 		}
 		return nil, err
 	}
 
 	// 4. 验证用户权限（只有任务创建者可以标记任务完成）
 	if taskInfo.TaskCreator != employeeId {
-		return utils.Response.BusinessError("无权限完成此任务"), nil
+		return utils.Response.BusinessError("task_complete_denied"), nil
 	}
 
 	// 5. 检查任务状态
 	if taskInfo.TaskStatus == 3 { // 已完成
-		return utils.Response.BusinessError("任务已经完成"), nil
+		return utils.Response.BusinessError("task_already_completed"), nil
 	}
 
 	// 6. 检查所有任务节点是否都已完成
@@ -75,7 +75,7 @@ func (l *CompleteTaskLogic) CompleteTask(req *types.CompleteTaskRequest) (resp *
 	}
 
 	if !allNodesCompleted {
-		return utils.Response.BusinessError("所有任务节点完成后才能标记任务完成"), nil
+		return utils.Response.BusinessError("task_nodes_not_completed"), nil
 	}
 
 	// 7. 更新任务状态为已完成

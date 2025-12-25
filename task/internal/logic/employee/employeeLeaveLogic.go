@@ -54,12 +54,12 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 
 	// 4. 检查员工状态
 	if employee.Status == 0 { // 已离职
-		return utils.Response.BusinessError("员工已离职"), nil
+		return utils.Response.BusinessError("employee_already_left"), nil
 	}
 
 	// 5. 检查是否是创始人，禁止给创始人递交离职
 	if l.isFounder(employee) {
-		return utils.Response.BusinessError("不能给公司创始人递交离职申请"), nil
+		return utils.Response.BusinessError("founder_cannot_leave"), nil
 	}
 
 	// 5. 解析离职时间
@@ -77,7 +77,7 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 	leaveType, err := l.determineLeaveType(currentUserID, employee)
 	if err != nil {
 		logx.Errorf("判断离职类型失败: %v", err)
-		return utils.Response.BusinessError("权限验证失败"), nil
+		return utils.Response.BusinessError("permission_verify_failed"), nil
 	}
 
 	// 7. 根据离职类型执行不同逻辑
@@ -87,7 +87,7 @@ func (l *EmployeeLeaveLogic) EmployeeLeave(req *types.EmployeeLeaveRequest) (res
 	case "employee_initiated":
 		return l.handleEmployeeInitiatedLeave(employee, req, leaveDate)
 	default:
-		return utils.Response.BusinessError("无效的离职类型"), nil
+		return utils.Response.BusinessError("invalid_leave_type"), nil
 	}
 }
 

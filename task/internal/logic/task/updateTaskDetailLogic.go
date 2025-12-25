@@ -41,11 +41,11 @@ func (l *UpdateTaskDetailLogic) UpdateTaskDetail(req *types.UpdateTaskDetailRequ
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskId)
 	if err != nil {
 		logx.WithContext(l.ctx).Errorf("任务信息不存在: %v", err)
-		return utils.Response.BusinessError("任务信息不存在"), nil
+		return utils.Response.BusinessError("task_not_found"), nil
 	}
 	if taskInfo == nil {
 		logx.WithContext(l.ctx).Errorf("任务信息不存在: %v", err)
-		return utils.Response.BusinessError("任务信息不存在,请重新登录"), nil
+		return utils.Response.BusinessError("task_not_found"), nil
 	}
 	for _, file := range req.File {
 		l.svcCtx.TaskProjectDetailModel.Insert(l.ctx, &task.Task_project_detail{

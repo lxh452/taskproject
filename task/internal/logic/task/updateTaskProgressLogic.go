@@ -41,7 +41,7 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 		return utils.Response.BusinessError("task_node_not_found"), nil
 	}
 	if req.Progress < 0 || req.Progress > 100 {
-		return utils.Response.BusinessError("进度值必须在0-100之间"), nil
+		return utils.Response.BusinessError("progress_range_error"), nil
 	}
 
 	// 2. 获取当前用户ID

@@ -42,19 +42,19 @@ func (l *AutoDispatchLogic) AutoDispatch(req *types.AutoDispatchRequest) (resp *
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取任务信息失败: %v", err)
-		return utils.Response.BusinessError("任务不存在"), nil
+		return utils.Response.BusinessError("task_not_found"), nil
 	}
 
 	// 检查用户权限（只有任务负责人或管理员可以触发自动派发）
 	if !l.hasDispatchPermission(employeeID, taskInfo) {
-		return utils.Response.BusinessError("无权限执行自动派发"), nil
+		return utils.Response.BusinessError("auto_dispatch_denied"), nil
 	}
 
 	// 获取任务的所有节点
 	taskNodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, req.TaskID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取任务节点失败: %v", err)
-		return utils.Response.BusinessError("获取任务节点失败"), nil
+		return utils.Response.BusinessError("task_nodes_fetch_failed"), nil
 	}
 
 	// 创建派发服务

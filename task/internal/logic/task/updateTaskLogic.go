@@ -32,7 +32,7 @@ func NewUpdateTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskID == "" {
-		return utils.Response.BusinessError("任务ID不能为空"), nil
+		return utils.Response.BusinessError("task_id_required"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -44,7 +44,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, req.TaskID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务不存在"), nil
+			return utils.Response.BusinessError("task_not_found"), nil
 		}
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		leaderId = taskInfo.LeaderId.String
 	}
 	if taskInfo.TaskCreator != employeeId && leaderId != employeeId {
-		return utils.Response.BusinessError("无权限更新此任务，只有任务创建者或负责人可以修改"), nil
+		return utils.Response.BusinessError("task_update_denied"), nil
 	}
 
 	// 5. 验证任务状态
@@ -79,7 +79,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 		// 支持多种日期格式
 		deadline, parseErr := parseDeadline(req.Deadline)
 		if parseErr != nil {
-			return utils.Response.BusinessError("任务截止时间格式错误"), nil
+			return utils.Response.BusinessError("task_deadline_format"), nil
 		}
 		updateData["task_deadline"] = deadline
 	}
@@ -100,7 +100,7 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	if req.Deadline != "" {
 		deadline, parseErr := parseDeadline(req.Deadline)
 		if parseErr != nil {
-			return utils.Response.BusinessError("任务截止时间格式错误"), nil
+			return utils.Response.BusinessError("task_deadline_format"), nil
 		}
 		updatedTask.TaskDeadline = deadline
 	}

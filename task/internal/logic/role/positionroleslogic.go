@@ -36,7 +36,7 @@ func (l *PositionRolesLogic) PositionRoles(req *types.PositionRolesRequest) (res
 	// 验证职位是否存在
 	_, err = l.svcCtx.PositionModel.FindOne(l.ctx, req.PositionId)
 	if err != nil {
-		return utils.Response.BusinessError("职位不存在"), nil
+		return utils.Response.BusinessError("position_not_found"), nil
 	}
 
 	// 通过职位查询角色

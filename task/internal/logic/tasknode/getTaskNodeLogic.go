@@ -47,7 +47,7 @@ func NewGetTaskNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTa
 func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *types.BaseResponse, err error) {
 	// 1. 参数验证
 	if req.TaskNodeID == "" {
-		return utils.Response.BusinessError("任务节点ID不能为空"), nil
+		return utils.Response.BusinessError("task_node_id_required"), nil
 	}
 
 	// 2. 获取当前用户ID
@@ -60,7 +60,7 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, req.TaskNodeID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return utils.Response.BusinessError("任务节点不存在"), nil
+			return utils.Response.BusinessError("task_node_not_found"), nil
 		}
 		l.Logger.WithContext(l.ctx).Errorf("获取任务节点详情失败: %v", err)
 		return nil, err
@@ -92,7 +92,7 @@ func (l *GetTaskNodeLogic) GetTaskNode(req *types.GetTaskNodeRequest) (resp *typ
 	}
 
 	if !hasPermission {
-		return utils.Response.BusinessError("无权限查看此任务节点"), nil
+		return utils.Response.BusinessError("task_node_view_denied"), nil
 	}
 
 	// 5. 获取该节点的审批列表（使用HandoverApprovalModel）
