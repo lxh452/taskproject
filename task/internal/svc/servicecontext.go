@@ -91,6 +91,9 @@ type ServiceContext struct {
 	SQLExecutorService *SQLExecutorService
 
 	Scheduler *SchedulerService
+
+	// GLM AI服务（智能任务派发）
+	GLMService *GLMService
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -334,6 +337,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 		// SQL执行服务
 		SQLExecutorService: NewSQLExecutorService(conn, "./../model/sql"),
+	}
+
+	// 初始化GLM服务
+	if c.GLM.APIKey != "" {
+		s.GLMService = NewGLMService(GLMConfig{
+			APIKey:  c.GLM.APIKey,
+			BaseURL: c.GLM.BaseURL,
+		})
+		logx.Infof("[ServiceContext] GLM AI服务初始化成功")
+	} else {
+		logx.Infof("[ServiceContext] GLM API Key未配置，智能派发功能将不可用")
 	}
 
 	// 启动时自动执行数据库迁移

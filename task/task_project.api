@@ -616,6 +616,7 @@ type (
 	// 自动派发请求
 	AutoDispatchRequest {
 		TaskID string `json:"taskId"`
+		NodeID string `json:"nodeId,optional"` // 可选，指定节点ID时只推荐该节点
 	}
 	// 派发任务请求
 	DispatchTaskRequest {
@@ -1446,3 +1447,20 @@ service taskprojectapi {
 	get /file/proxy (ProxyFileRequest)
 }
 
+
+// AI助手相关类型
+type (
+	// AI建议请求
+	GetAiSuggestionRequest {
+	}
+)
+
+@server (
+	group:  ai
+	prefix: /api/v1/ai
+)
+service taskprojectapi {
+	@doc "获取AI工作建议"
+	@handler GetAiSuggestion
+	get /suggestion (GetAiSuggestionRequest) returns (BaseResponse)
+}

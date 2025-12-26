@@ -103,6 +103,13 @@ type Config struct {
 		MaxConnLifetime time.Duration `json:"maxConnLifetime"`
 		MaxConnIdleTime time.Duration `json:"maxConnIdleTime"`
 	} `json:"mongo"`
+
+	// GLM AI配置（智谱AI）
+	GLM struct {
+		APIKey  string `json:"apiKey"`
+		BaseURL string `json:"baseURL"`
+		Model   string `json:"model"`
+	} `json:"glm"`
 }
 
 // ApplyEnvOverrides 从环境变量覆盖配置
@@ -280,6 +287,21 @@ func (c *Config) ApplyEnvOverrides() {
 	}
 	if v := os.Getenv("HOST"); v != "" {
 		c.Host = v
+		overrideCount++
+	}
+
+	// GLM AI配置
+	if v := os.Getenv("GLM_API_KEY"); v != "" {
+		c.GLM.APIKey = v
+		overrideCount++
+		logx.Info("[Config] GLM_API_KEY 已从环境变量覆盖")
+	}
+	if v := os.Getenv("GLM_BASE_URL"); v != "" {
+		c.GLM.BaseURL = v
+		overrideCount++
+	}
+	if v := os.Getenv("GLM_MODEL"); v != "" {
+		c.GLM.Model = v
 		overrideCount++
 	}
 

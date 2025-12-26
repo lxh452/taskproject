@@ -131,6 +131,7 @@ var BusinessErrorMessages = map[string]string{
 	"no_root_update":                "无权限更新此任务节点的前置节点",
 	"progress_range_error":          "进度值必须在0-100之间",
 	"auto_dispatch_denied":          "无权限执行自动派发",
+	"ai_service_unavailable":        "AI服务未配置，请联系管理员配置GLM API Key",
 
 	// 通知相关错误
 	"notification_not_found":        "通知不存在",

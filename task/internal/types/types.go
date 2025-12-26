@@ -98,6 +98,7 @@ type AttachmentInfo struct {
 
 type AutoDispatchRequest struct {
 	TaskID string `json:"taskId"`
+	NodeID string `json:"nodeId,optional"` // 可选，指定节点ID时只推荐该节点
 }
 
 type BaseResponse struct {
@@ -963,4 +964,8 @@ type UploadInfoResponse struct {
 	FileName  string `json:"fileName"`           // 存储后的文件名
 	FileSize  int64  `json:"fileSize"`           // 文件大小
 	FileType  string `json:"fileType"`           // 文件类型
+}
+
+// AI建议请求
+type GetAiSuggestionRequest struct {
 }

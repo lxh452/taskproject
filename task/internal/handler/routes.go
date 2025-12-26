@@ -6,6 +6,7 @@ package handler
 import (
 	"net/http"
 
+	ai "task_Project/task/internal/handler/ai"
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
 	company "task_Project/task/internal/handler/company"
@@ -653,5 +654,17 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/api/v1/user"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 获取AI工作建议
+				Method:  http.MethodGet,
+				Path:    "/suggestion",
+				Handler: ai.GetAiSuggestionHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/ai"),
 	)
 }

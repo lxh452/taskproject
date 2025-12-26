@@ -46,6 +46,9 @@ func (s *SchedulerService) Stop() {
 
 // StartScheduler 启动定时任务
 func (s *SchedulerService) StartScheduler() {
+	if time.Now().Hour() > 18 {
+		return
+	}
 	// 启动任务截止提醒定时任务
 	go s.startDeadlineReminder()
 
@@ -259,11 +262,11 @@ func (s *SchedulerService) checkEmployeeLeave() {
 	for _, employee := range employees {
 		// 检查是否已经发送过通知
 		// TODO: 实现检查逻辑
-		// lastNotification, err := s.svcCtx.NotificationModel.FindByEmployeeAndType(ctx, employee.Id, "employee_leave")
-		// if err == nil && lastNotification != nil {
-		// 	// 已经发送过通知，跳过
-		// 	continue
-		// }
+		//lastNotification, err := s.svcCtx.NotificationModel.FindByEmployeeAndType(ctx, employee.Id, "employee_leave")
+		//if err == nil && lastNotification != nil {
+		//	// 已经发送过通知，跳过
+		//	continue
+		//}
 
 		// 获取员工当前负责的任务节点
 		taskNodes := []string{} // TODO: 实现获取任务节点逻辑
@@ -304,26 +307,6 @@ func (s *SchedulerService) checkEmployeeLeave() {
 			if err := s.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
 				logx.Errorf("发布通知事件失败: %v", err)
 			}
-		}
-	}
-}
-
-// 自动派发任务
-func (s *SchedulerService) AutoDispatchTasks() {
-	ctx := context.Background()
-
-	// 获取待派发的任务节点
-	taskNodes, err := s.svcCtx.TaskNodeModel.FindByStatus(ctx, 1) // 待开始
-	if err != nil {
-		logx.Errorf("查询待派发的任务节点失败: %v", err)
-		return
-	}
-
-	// 自动派发任务
-	dispatchService := NewDispatchService(s.svcCtx)
-	for _, taskNode := range taskNodes {
-		if err := dispatchService.AutoDispatchTask(ctx, taskNode.TaskNodeId); err != nil {
-			logx.Errorf("自动派发任务失败: %v", err)
 		}
 	}
 }
