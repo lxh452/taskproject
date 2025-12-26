@@ -1464,3 +1464,21 @@ service taskprojectapi {
 	@handler GetAiSuggestion
 	get /suggestion (GetAiSuggestionRequest) returns (BaseResponse)
 }
+
+// 仪表盘相关类型
+type (
+	// 仪表盘统计请求
+	GetDashboardStatsRequest {
+		Scope string `form:"scope,optional"` // 范围：personal（个人）或 department（部门），默认personal
+	}
+)
+
+@server (
+	group:  dashboard
+	prefix: /api/v1/dashboard
+)
+service taskprojectapi {
+	@doc "获取仪表盘统计数据"
+	@handler GetDashboardStats
+	get /stats (GetDashboardStatsRequest) returns (BaseResponse)
+}
