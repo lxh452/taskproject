@@ -46,5 +46,38 @@ func (l *GetEmployeeLogic) GetEmployee(req *types.GetEmployeeRequest) (resp *typ
 	converter := utils.NewConverter()
 	employeeInfo := converter.ToEmployeeInfo(employee)
 
-	return utils.Response.SuccessWithKey("employee", employeeInfo), nil
+	// 获取用户头像（从MongoDB）
+	avatarURL := ""
+	if l.svcCtx.UploadFileModel != nil && employee.UserId != "" {
+		avatarFiles, _ := l.svcCtx.UploadFileModel.FindByModuleAndRelatedID(l.ctx, "user", employee.UserId)
+		for _, f := range avatarFiles {
+			if f.Category == "avatar" {
+				avatarURL = f.FileURL
+				break
+			}
+		}
+	}
+
+	// 构建包含头像的员工信息
+	empMap := map[string]interface{}{
+		"id":           employeeInfo.ID,
+		"userId":       employeeInfo.UserID,
+		"companyId":    employeeInfo.CompanyID,
+		"departmentId": employeeInfo.DepartmentID,
+		"positionId":   employeeInfo.PositionID,
+		"employeeId":   employeeInfo.EmployeeID,
+		"realName":     employeeInfo.RealName,
+		"workEmail":    employeeInfo.WorkEmail,
+		"workPhone":    employeeInfo.WorkPhone,
+		"skills":       employeeInfo.Skills,
+		"roleTags":     employeeInfo.RoleTags,
+		"hireDate":     employeeInfo.HireDate,
+		"leaveDate":    employeeInfo.LeaveDate,
+		"status":       employeeInfo.Status,
+		"createTime":   employeeInfo.CreateTime,
+		"updateTime":   employeeInfo.UpdateTime,
+		"avatar":       avatarURL,
+	}
+
+	return utils.Response.SuccessWithKey("employee", empMap), nil
 }

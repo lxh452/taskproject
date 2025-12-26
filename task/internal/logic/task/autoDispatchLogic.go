@@ -220,33 +220,71 @@ func (l *AutoDispatchLogic) getCandidateEmployees(taskNode *task.TaskNode) ([]sv
 	return candidates, nil
 }
 
-// getActiveTaskCount 获取活跃任务数
+// getActiveTaskCount 获取活跃任务数（包括作为执行人和负责人的任务）
 func (l *AutoDispatchLogic) getActiveTaskCount(employeeID string) int {
-	nodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
-	if err != nil {
-		return 0
-	}
 	count := 0
-	for _, n := range nodes {
-		if n.NodeStatus == 1 { // 进行中
-			count++
+	nodeMap := make(map[string]bool) // 用于去重
+
+	// 统计作为执行人的活跃任务
+	executorNodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
+	if err == nil {
+		for _, n := range executorNodes {
+			if n.NodeStatus == 0 || n.NodeStatus == 1 { // 待处理或进行中
+				if !nodeMap[n.TaskNodeId] {
+					nodeMap[n.TaskNodeId] = true
+					count++
+				}
+			}
 		}
 	}
+
+	// 统计作为负责人的活跃任务
+	leaderNodes, _, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, employeeID, 1, 1000)
+	if err == nil {
+		for _, n := range leaderNodes {
+			if n.NodeStatus == 0 || n.NodeStatus == 1 { // 待处理或进行中
+				if !nodeMap[n.TaskNodeId] {
+					nodeMap[n.TaskNodeId] = true
+					count++
+				}
+			}
+		}
+	}
+
 	return count
 }
 
-// getCompletedTaskCount 获取已完成任务数
+// getCompletedTaskCount 获取已完成任务数（包括作为执行人和负责人的任务）
 func (l *AutoDispatchLogic) getCompletedTaskCount(employeeID string) int {
-	nodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
-	if err != nil {
-		return 0
-	}
 	count := 0
-	for _, n := range nodes {
-		if n.NodeStatus == 2 { // 已完成
-			count++
+	nodeMap := make(map[string]bool) // 用于去重
+
+	// 统计作为执行人的已完成任务
+	executorNodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
+	if err == nil {
+		for _, n := range executorNodes {
+			if n.NodeStatus == 2 { // 已完成
+				if !nodeMap[n.TaskNodeId] {
+					nodeMap[n.TaskNodeId] = true
+					count++
+				}
+			}
 		}
 	}
+
+	// 统计作为负责人的已完成任务
+	leaderNodes, _, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, employeeID, 1, 1000)
+	if err == nil {
+		for _, n := range leaderNodes {
+			if n.NodeStatus == 2 { // 已完成
+				if !nodeMap[n.TaskNodeId] {
+					nodeMap[n.TaskNodeId] = true
+					count++
+				}
+			}
+		}
+	}
+
 	return count
 }
 

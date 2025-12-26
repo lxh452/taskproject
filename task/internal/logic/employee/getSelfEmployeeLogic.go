@@ -80,12 +80,24 @@ func (l *GetSelfEmployeeLogic) GetSelfEmployee() (resp *types.BaseResponse, err 
 		}
 	}
 
+	// 获取用户头像（从MongoDB的upload_file集合中查询）
+	avatarURL := ""
+	if l.svcCtx.UploadFileModel != nil {
+		avatarFiles, _ := l.svcCtx.UploadFileModel.FindByModuleAndRelatedID(l.ctx, "user", userId)
+		for _, f := range avatarFiles {
+			if f.Category == "avatar" {
+				avatarURL = f.FileURL
+				break
+			}
+		}
+	}
+
 	// 构建包含额外信息的员工信息
 	empMap := map[string]interface{}{
-		"id":                employeeInfo.ID,
-		"userId":            employeeInfo.UserID,
-		"companyId":         employeeInfo.CompanyID,
-		"departmentId":      employeeInfo.DepartmentID,
+		"id":                 employeeInfo.ID,
+		"userId":             employeeInfo.UserID,
+		"companyId":          employeeInfo.CompanyID,
+		"departmentId":       employeeInfo.DepartmentID,
 		"positionId":         employeeInfo.PositionID,
 		"employeeId":         employeeInfo.EmployeeID,
 		"realName":           employeeInfo.RealName,
@@ -97,12 +109,13 @@ func (l *GetSelfEmployeeLogic) GetSelfEmployee() (resp *types.BaseResponse, err 
 		"leaveDate":          employeeInfo.LeaveDate,
 		"status":             employeeInfo.Status,
 		"createTime":         employeeInfo.CreateTime,
-		"updateTime":          employeeInfo.UpdateTime,
+		"updateTime":         employeeInfo.UpdateTime,
 		"positionLevel":      positionLevel,      // 职位级别
 		"positionCode":       positionCode,       // 职位代码
 		"isManagement":       isManagement,       // 是否管理岗
 		"departmentPriority": departmentPriority, // 部门优先级
 		"isFounder":          isFounder,          // 是否是创始人
+		"avatar":             avatarURL,          // 用户头像URL
 	}
 
 	return utils.Response.SuccessWithKey("employee", empMap), nil
