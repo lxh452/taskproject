@@ -28,27 +28,6 @@ func NewEmailService(templateService *EmailTemplateService, emailMQService *Emai
 	}
 }
 
-// SendTaskDispatchEmail 发送任务派发邮件
-func (s *EmailService) SendTaskDispatchEmail(ctx context.Context, employeeEmail, employeeName, taskTitle, nodeName, nodeDetail, deadline, taskId string) error {
-	data := TaskDispatchData{
-		BaseURL:      s.baseURL,
-		EmployeeName: employeeName,
-		TaskTitle:    taskTitle,
-		NodeName:     nodeName,
-		NodeDetail:   nodeDetail,
-		Deadline:     deadline,
-		TaskId:       taskId,
-		Year:         time.Now().Year(),
-	}
-
-	body, err := s.templateService.RenderTemplate("task_dispatch", data)
-	if err != nil {
-		return fmt.Errorf("failed to render template: %w", err)
-	}
-
-	return s.sendEmail(ctx, []string{employeeEmail}, "任务派发通知", body)
-}
-
 // SendTaskDeadlineReminderEmail 发送任务截止提醒邮件
 func (s *EmailService) SendTaskDeadlineReminderEmail(ctx context.Context, employeeEmail, nodeName, deadline string, progress int) error {
 	data := TaskDeadlineReminderData{

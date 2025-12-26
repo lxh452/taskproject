@@ -53,7 +53,6 @@ func NewEmailTemplateService() (*EmailTemplateService, error) {
 
 	// 加载所有模板文件
 	templateFiles := map[string]string{
-		"task_dispatch":           "task_dispatch.tpl",
 		"task_deadline_reminder":  "task_deadline_reminder.tpl",
 		"task_completed":          "task_completed.tpl",
 		"task_updated":            "task_updated.tpl",
@@ -62,7 +61,6 @@ func NewEmailTemplateService() (*EmailTemplateService, error) {
 		"task_node_created":       "task_node_created.tpl",
 		"task_node_executor_left": "task_node_executor_left.tpl",
 		"task_slow_progress":      "task_slow_progress.tpl",
-		"task_created":            "task_dispatch.tpl", // 复用 task_dispatch 模板
 		"handover":                "handover.tpl",
 		"employee_leave":          "employee_leave.tpl",
 		"cross_department":        "cross_department.tpl",
@@ -99,18 +97,6 @@ func (s *EmailTemplateService) RenderTemplate(templateName string, data interfac
 	}
 
 	return buf.String(), nil
-}
-
-// TaskDispatchData 任务派发邮件数据
-type TaskDispatchData struct {
-	BaseURL      string
-	EmployeeName string
-	TaskTitle    string
-	NodeName     string
-	NodeDetail   string
-	Deadline     string
-	TaskId       string
-	Year         int
 }
 
 // TaskDeadlineReminderData 任务截止提醒邮件数据

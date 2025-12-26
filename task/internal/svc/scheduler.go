@@ -388,7 +388,7 @@ func (s *SchedulerService) checkTaskNodeIdle() {
 
 	for _, node := range taskNodes {
 		// 2. 检查执行人是否有效
-		if err := s.validateAndFixTaskNodeExecutor(ctx, node); err != nil {
+		if err := s.validateTaskNodeExecutor(ctx, node); err != nil {
 			logx.Errorf("检查任务节点 %s 执行人失败: %v", node.TaskNodeId, err)
 			continue
 		}
@@ -402,12 +402,12 @@ func (s *SchedulerService) CheckTaskNodeIdle() {
 	s.checkTaskNodeIdle()
 }
 
-// 验证并修复任务节点执行人
-func (s *SchedulerService) validateAndFixTaskNodeExecutor(ctx context.Context, node *task.TaskNode) error {
+// 验证任务节点执行人（不再自动派发，只记录问题）
+func (s *SchedulerService) validateTaskNodeExecutor(ctx context.Context, node *task.TaskNode) error {
 	// 检查是否有执行人
 	if node.ExecutorId == "" {
-		logx.Infof("任务节点 %s 没有执行人，尝试自动派发", node.TaskNodeId)
-		return s.autoDispatchTaskNode(ctx, node)
+		logx.Infof("任务节点 %s 没有执行人，需要手动分配", node.TaskNodeId)
+		return nil
 	}
 
 	// 分割执行人ID（支持多个执行人）
@@ -455,48 +455,29 @@ func (s *SchedulerService) validateAndFixTaskNodeExecutor(ctx context.Context, n
 
 		logx.Infof("任务节点 %s 执行人已更新: %s -> %s", node.TaskNodeId, node.ExecutorId, newExecutorID)
 
-		// 如果所有执行人都无效，尝试自动派发
+		// 如果所有执行人都无效，创建交接记录等待手动分配
 		if len(validExecutors) == 0 {
-			logx.Infof("任务节点 %s 所有执行人都无效，尝试自动派发", node.TaskNodeId)
-			return s.autoDispatchTaskNode(ctx, node)
+			logx.Infof("任务节点 %s 所有执行人都无效，等待手动分配", node.TaskNodeId)
+			// 创建交接记录等待手动分配
+			handover := &task.TaskHandover{
+				HandoverId:     utils.Common.GenId("handover"),
+				TaskId:         node.TaskId,
+				FromEmployeeId: node.ExecutorId,
+				ToEmployeeId:   "", // 待分配
+				HandoverReason: sql.NullString{String: "系统检测到任务节点执行人已离职", Valid: true},
+				HandoverNote:   sql.NullString{String: "等待管理者手动分配接替者", Valid: true},
+				HandoverStatus: 1, // 待处理
+				CreateTime:     time.Now(),
+				UpdateTime:     time.Now(),
+			}
+
+			_, err = s.svcCtx.TaskHandoverModel.Insert(ctx, handover)
+			if err != nil {
+				logx.Errorf("创建交接记录失败: %v", err)
+			}
 		}
 	}
 
-	return nil
-}
-
-// 自动派发任务节点
-func (s *SchedulerService) autoDispatchTaskNode(ctx context.Context, node *task.TaskNode) error {
-	// 创建派发服务
-	dispatchService := NewDispatchService(s.svcCtx)
-
-	// 执行自动派发
-	err := dispatchService.AutoDispatchTask(ctx, node.TaskNodeId)
-	if err != nil {
-		logx.Errorf("自动派发任务节点 %s 失败: %v", node.TaskNodeId, err)
-
-		// 创建交接记录等待手动分配
-		handover := &task.TaskHandover{
-			HandoverId:     utils.Common.GenId("handover"),
-			TaskId:         node.TaskId,
-			FromEmployeeId: node.ExecutorId,
-			ToEmployeeId:   "", // 待分配
-			HandoverReason: sql.NullString{String: "系统检测到任务节点闲置，自动派发失败", Valid: true},
-			HandoverNote:   sql.NullString{String: "等待管理者分配接替者", Valid: true},
-			HandoverStatus: 1, // 待处理
-			CreateTime:     time.Now(),
-			UpdateTime:     time.Now(),
-		}
-
-		_, err = s.svcCtx.TaskHandoverModel.Insert(ctx, handover)
-		if err != nil {
-			logx.Errorf("创建交接记录失败: %v", err)
-		}
-
-		return err
-	}
-
-	logx.Infof("任务节点 %s 自动派发成功", node.TaskNodeId)
 	return nil
 }
 

@@ -969,3 +969,8 @@ type UploadInfoResponse struct {
 // AI建议请求
 type GetAiSuggestionRequest struct {
 }
+
+// 仪表盘统计请求
+type GetDashboardStatsRequest struct {
+	Scope string `json:"scope,optional"` // 范围：personal（个人）或 department（部门），默认personal
+}
