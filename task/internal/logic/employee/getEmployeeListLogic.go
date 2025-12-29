@@ -159,6 +159,7 @@ func (l *GetEmployeeListLogic) GetEmployeeList(req *types.EmployeeListRequest) (
 			"companyId":          empInfo.CompanyID,
 			"departmentId":       empInfo.DepartmentID,
 			"positionId":         empInfo.PositionID,
+			"supervisorId":       empInfo.SupervisorID,
 			"employeeId":         empInfo.EmployeeID,
 			"realName":           empInfo.RealName,
 			"workEmail":          empInfo.WorkEmail,

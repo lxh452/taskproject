@@ -145,15 +145,30 @@ func (l *CreateHandoverLogic) CreateHandover(req *types.CreateHandoverRequest) (
 		return nil, err
 	}
 
-	// 获取审批人（优先使用传入的，否则查找部门经理）
+	// 使用审批人查找器获取审批人（优先级：直属上级 > 部门经理 > 公司创始人）
 	var approverID string
+	var approverType string
 	if req.ApproverID != "" {
+		// 如果指定了审批人，使用指定的
 		approverID = req.ApproverID
-	} else if fromEmployee.DepartmentId.Valid && fromEmployee.DepartmentId.String != "" {
-		// 查找部门经理作为审批人
-		dept, deptErr := l.svcCtx.DepartmentModel.FindOne(l.ctx, fromEmployee.DepartmentId.String)
-		if deptErr == nil && dept.ManagerId.Valid && dept.ManagerId.String != "" {
-			approverID = dept.ManagerId.String
+		approverType = "specified"
+	} else {
+		// 使用审批人查找器
+		approverFinder := utils.NewApproverFinder(l.svcCtx.EmployeeModel, l.svcCtx.DepartmentModel, l.svcCtx.CompanyModel)
+		approverResult, findErr := approverFinder.FindApproverForHandover(l.ctx, req.FromEmployeeID, req.ToEmployeeID)
+		if findErr == nil && approverResult != nil {
+			approverID = approverResult.ApproverID
+			approverType = approverResult.ApproverType
+			l.Logger.WithContext(l.ctx).Infof("找到审批人: ID=%s, Name=%s, Type=%s", approverResult.ApproverID, approverResult.ApproverName, approverType)
+		} else {
+			// 兼容旧逻辑：如果新方法找不到，尝试部门经理
+			if fromEmployee.DepartmentId.Valid && fromEmployee.DepartmentId.String != "" {
+				dept, deptErr := l.svcCtx.DepartmentModel.FindOne(l.ctx, fromEmployee.DepartmentId.String)
+				if deptErr == nil && dept.ManagerId.Valid && dept.ManagerId.String != "" {
+					approverID = dept.ManagerId.String
+					approverType = "department_manager"
+				}
+			}
 		}
 	}
 

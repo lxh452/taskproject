@@ -75,35 +75,36 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 	}
 
 	// 5. 验证是否有审批权限
-	// 审批人可以是：指定的审批人、发起人的部门经理、或者有管理员权限的人
+	// 使用审批人查找器验证权限
+	approverFinder := utils.NewApproverFinder(l.svcCtx.EmployeeModel, l.svcCtx.DepartmentModel, l.svcCtx.CompanyModel)
 	hasApprovalPermission := false
+	var approvalRole string
 
 	// 检查是否是指定的审批人
 	if handover.ApproverId.Valid && handover.ApproverId.String == currentEmployeeID {
 		hasApprovalPermission = true
+		approvalRole = "designated_approver"
 	}
 
-	// 如果没有指定审批人，检查是否是发起人的部门经理
+	// 检查是否是发起人的上级（直属上级/部门经理/创始人）
 	if !hasApprovalPermission {
-		fromEmployee, fromErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.FromEmployeeId)
-		if fromErr == nil && fromEmployee.DepartmentId.Valid && fromEmployee.DepartmentId.String != "" {
-			dept, deptErr := l.svcCtx.DepartmentModel.FindOne(l.ctx, fromEmployee.DepartmentId.String)
-			if deptErr == nil && dept.ManagerId.Valid && dept.ManagerId.String == currentEmployeeID {
-				hasApprovalPermission = true
-			}
+		canApprove, role := approverFinder.CanApprove(l.ctx, currentEmployeeID, handover.FromEmployeeId)
+		if canApprove {
+			hasApprovalPermission = true
+			approvalRole = role
 		}
 	}
 
-	// 检查是否是接收人的部门经理
-	if !hasApprovalPermission {
-		toEmployee, toErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.ToEmployeeId)
-		if toErr == nil && toEmployee.DepartmentId.Valid && toEmployee.DepartmentId.String != "" {
-			dept, deptErr := l.svcCtx.DepartmentModel.FindOne(l.ctx, toEmployee.DepartmentId.String)
-			if deptErr == nil && dept.ManagerId.Valid && dept.ManagerId.String == currentEmployeeID {
-				hasApprovalPermission = true
-			}
+	// 检查是否是接收人的上级
+	if !hasApprovalPermission && handover.ToEmployeeId != "" {
+		canApprove, role := approverFinder.CanApprove(l.ctx, currentEmployeeID, handover.ToEmployeeId)
+		if canApprove {
+			hasApprovalPermission = true
+			approvalRole = role
 		}
 	}
+
+	l.Logger.WithContext(l.ctx).Infof("审批权限检查: hasPermission=%v, role=%s", hasApprovalPermission, approvalRole)
 
 	if !hasApprovalPermission {
 		return utils.Response.ValidationError("您没有审批此交接的权限，只有指定审批人或相关部门经理可以审批"), nil

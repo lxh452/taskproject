@@ -493,6 +493,7 @@ type (
 		CompanyID    string `json:"companyId"`
 		DepartmentID string `json:"departmentId"`
 		PositionID   string `json:"positionId"`
+		SupervisorID string `json:"supervisorId"`
 		EmployeeID   string `json:"employeeId"`
 		RealName     string `json:"realName"`
 		WorkEmail    string `json:"workEmail"`
@@ -518,6 +519,11 @@ type (
 		EmployeeID  string `json:"employeeId"`
 		LeaveReason string `json:"leaveReason"`
 		LeaveDate   string `json:"leaveDate,optional"`
+	}
+	// 更新员工直属上级请求
+	UpdateEmployeeSupervisorRequest {
+		EmployeeID   string `json:"employeeId"`
+		SupervisorID string `json:"supervisorId"`
 	}
 	// 确认离职审批请求
 	ConfirmLeaveApprovalRequest {
@@ -1184,6 +1190,10 @@ service taskprojectapi {
 	@doc "员工离职"
 	@handler EmployeeLeave
 	post /leave (EmployeeLeaveRequest) returns (BaseResponse)
+
+	@doc "更新员工直属上级"
+	@handler UpdateEmployeeSupervisor
+	put /supervisor (UpdateEmployeeSupervisorRequest) returns (BaseResponse)
 
 	@doc "确认离职审批"
 	@handler ConfirmLeaveApproval

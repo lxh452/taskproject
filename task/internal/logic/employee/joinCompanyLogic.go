@@ -132,6 +132,17 @@ func (l *JoinCompanyLogic) JoinCompany(req *types.JoinCompanyRequest) (resp *typ
 		return utils.Response.InternalError("加入公司失败"), nil
 	}
 
+	// 自动推断并设置直属上级
+	approverFinder := utils.NewApproverFinder(l.svcCtx.EmployeeModel, l.svcCtx.DepartmentModel, l.svcCtx.CompanyModel)
+	supervisorID, err := approverFinder.InferSupervisor(l.ctx, employeeID)
+	if err == nil && supervisorID != "" {
+		if updateErr := l.svcCtx.EmployeeModel.UpdateSupervisor(l.ctx, employeeID, supervisorID); updateErr != nil {
+			logx.Errorf("设置直属上级失败: %v", updateErr)
+		} else {
+			logx.Infof("员工 %s 的直属上级已自动设置为 %s", employeeID, supervisorID)
+		}
+	}
+
 	// 更新用户的加入公司状态
 	if updateErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, userID, true); updateErr != nil {
 		logx.Errorf("更新用户加入公司状态失败: %v", updateErr)
@@ -153,5 +164,3 @@ func (l *JoinCompanyLogic) JoinCompany(req *types.JoinCompanyRequest) (resp *typ
 		"positionId":   positionID,
 	}), nil
 }
-
-

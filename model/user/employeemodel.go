@@ -48,6 +48,11 @@ type (
 
 		// 选择性更新方法
 		SelectiveUpdate(ctx context.Context, id string, updateData map[string]interface{}) error
+
+		// 上级相关方法
+		FindSupervisor(ctx context.Context, employeeID string) (*Employee, error)
+		UpdateSupervisor(ctx context.Context, id, supervisorID string) error
+		FindSubordinates(ctx context.Context, supervisorID string) ([]*Employee, error)
 	}
 
 	customEmployeeModel struct {
@@ -400,4 +405,35 @@ func (m *customEmployeeModel) SelectiveUpdate(ctx context.Context, id string, up
 	query := fmt.Sprintf("UPDATE %s SET %s WHERE `id` = ?", m.table, strings.Join(setParts, ", "))
 	_, err := m.conn.ExecCtx(ctx, query, args...)
 	return err
+}
+
+// FindSupervisor 查找员工的直属上级
+func (m *customEmployeeModel) FindSupervisor(ctx context.Context, employeeID string) (*Employee, error) {
+	// 先查找员工
+	employee, err := m.FindOne(ctx, employeeID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果有直属上级，返回上级信息
+	if employee.SupervisorId.Valid && employee.SupervisorId.String != "" {
+		return m.FindOne(ctx, employee.SupervisorId.String)
+	}
+
+	return nil, ErrNotFound
+}
+
+// UpdateSupervisor 更新员工的直属上级
+func (m *customEmployeeModel) UpdateSupervisor(ctx context.Context, id, supervisorID string) error {
+	query := fmt.Sprintf("UPDATE %s SET `supervisor_id` = ?, `update_time` = NOW() WHERE `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, supervisorID, id)
+	return err
+}
+
+// FindSubordinates 查找员工的下属
+func (m *customEmployeeModel) FindSubordinates(ctx context.Context, supervisorID string) ([]*Employee, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE `supervisor_id` = ? AND `delete_time` IS NULL AND `status` = 1 ORDER BY `create_time` DESC", employeeRows, m.table)
+	var resp []*Employee
+	err := m.conn.QueryRowsCtx(ctx, &resp, query, supervisorID)
+	return resp, err
 }

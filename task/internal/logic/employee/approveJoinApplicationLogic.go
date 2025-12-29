@@ -245,7 +245,18 @@ func (l *ApproveJoinApplicationLogic) approveAndCreateEmployee(application *user
 			return err
 		}
 
-		// 3. 更新用户加入公司状态
+		// 3.5 自动推断并设置直属上级
+		approverFinder := utils.NewApproverFinder(l.svcCtx.EmployeeModel, l.svcCtx.DepartmentModel, l.svcCtx.CompanyModel)
+		supervisorID, inferErr := approverFinder.InferSupervisor(ctx, employeeID)
+		if inferErr == nil && supervisorID != "" {
+			if updateErr := empModelWithSession.UpdateSupervisor(ctx, employeeID, supervisorID); updateErr != nil {
+				logx.Errorf("设置直属上级失败: %v", updateErr)
+			} else {
+				logx.Infof("员工 %s 的直属上级已自动设置为 %s", employeeID, supervisorID)
+			}
+		}
+
+		// 4. 更新用户加入公司状态
 		userModelWithSession := l.svcCtx.TransactionHelper.GetUserModelWithSession(session)
 		if err := userModelWithSession.UpdateHasJoinedCompany(ctx, application.UserId, true); err != nil {
 			return err

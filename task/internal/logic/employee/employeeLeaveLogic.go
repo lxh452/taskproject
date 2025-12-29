@@ -167,47 +167,47 @@ func (l *EmployeeLeaveLogic) handleHRInitiatedLeave(employee *user.Employee, req
 func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employee, req *types.EmployeeLeaveRequest, leaveDate time.Time) (*types.BaseResponse, error) {
 	logx.Infof("员工 %s 主动申请离职", employee.RealName)
 
-	// 1. 创建离职审批记录
+	// 1. 使用审批人查找器查找合适的审批人
+	approverFinder := utils.NewApproverFinder(l.svcCtx.EmployeeModel, l.svcCtx.DepartmentModel, l.svcCtx.CompanyModel)
+	approverResult, err := approverFinder.FindApprover(l.ctx, employee.Id)
+	if err != nil {
+		logx.Errorf("查找审批人失败: %v", err)
+		return utils.Response.InternalError("查找审批人失败"), err
+	}
+
+	// 如果找不到审批人，不允许提交离职申请
+	if approverResult == nil {
+		return utils.Response.BusinessError("no_approver_found"), nil
+	}
+
+	// 2. 创建离职审批记录
 	approvalID := utils.Common.GenId("leave_approval")
 	approval := &task.TaskHandover{
 		HandoverId:     approvalID,
 		TaskId:         "", // 离职审批不关联具体任务
 		FromEmployeeId: employee.Id,
-		ToEmployeeId:   "", // 待审批
+		ToEmployeeId:   "", // 待审批时指定交接人
 		HandoverReason: sql.NullString{String: req.LeaveReason, Valid: true},
-		HandoverNote:   sql.NullString{String: "员工主动离职申请，等待HR和部门负责人审批", Valid: true},
-		HandoverStatus: 1, // 待处理
+		HandoverNote:   sql.NullString{String: "员工主动离职申请，等待上级审批", Valid: true},
+		HandoverStatus: 1, // 待上级审批（跳过接收人确认步骤）
+		ApproverId:     sql.NullString{String: approverResult.ApproverID, Valid: true},
 		CreateTime:     time.Now(),
 		UpdateTime:     time.Now(),
 	}
 
-	_, err := l.svcCtx.TaskHandoverModel.Insert(l.ctx, approval)
+	_, err = l.svcCtx.TaskHandoverModel.Insert(l.ctx, approval)
 	if err != nil {
 		logx.Errorf("创建离职审批记录失败: %v", err)
 		return utils.Response.InternalError("创建离职审批记录失败"), err
 	}
 
-	// 2. 发送通知给HR和部门负责人（通过消息队列）
+	// 3. 发送通知给审批人
 	taskNodes := []string{} // TODO: 实现获取任务节点逻辑
-	recipientEmail := ""
 
-	// 优先发给部门负责人
-	if employee.DepartmentId.Valid && employee.DepartmentId.String != "" {
-		department, err := l.svcCtx.DepartmentModel.FindOne(l.ctx, employee.DepartmentId.String)
-		if err == nil && department.ManagerId.Valid && department.ManagerId.String != "" {
-			manager, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, department.ManagerId.String)
-			if err == nil && manager.Email.Valid && manager.Email.String != "" {
-				recipientEmail = manager.Email.String
-			}
-		}
-	}
-
-	if recipientEmail == "" && employee.Email.Valid && employee.Email.String != "" {
-		recipientEmail = employee.Email.String
-	}
-
-	if recipientEmail != "" && l.svcCtx.EmailService != nil {
-		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, recipientEmail, employee.RealName, taskNodes); err != nil {
+	// 获取审批人邮箱
+	approver, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverResult.ApproverID)
+	if err == nil && approver.Email.Valid && approver.Email.String != "" && l.svcCtx.EmailService != nil {
+		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, approver.Email.String, employee.RealName, taskNodes); err != nil {
 			logx.Errorf("发送离职邮件失败: %v", err)
 		}
 	}
@@ -218,6 +218,9 @@ func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employe
 		"employeeName": employee.RealName,
 		"leaveDate":    leaveDate.Format("2006-01-02"),
 		"status":       "pending_approval",
+		"approverId":   approverResult.ApproverID,
+		"approverName": approverResult.ApproverName,
+		"approverType": approverResult.ApproverType,
 	}), nil
 }
 

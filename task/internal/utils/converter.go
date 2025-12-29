@@ -29,6 +29,7 @@ func (c *converter) ToEmployeeInfo(employee *user.Employee) types.EmployeeInfo {
 		CompanyID:    employee.CompanyId,
 		DepartmentID: getStringValue(employee.DepartmentId),
 		PositionID:   getStringValue(employee.PositionId),
+		SupervisorID: getStringValue(employee.SupervisorId),
 		EmployeeID:   employee.EmployeeId,
 		RealName:     employee.RealName,
 		WorkEmail:    getStringValue(employee.Email), // 使用Email字段

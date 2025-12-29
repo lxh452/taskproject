@@ -385,6 +385,7 @@ type EmployeeInfo struct {
 	CompanyID    string `json:"companyId"`
 	DepartmentID string `json:"departmentId"`
 	PositionID   string `json:"positionId"`
+	SupervisorID string `json:"supervisorId"`
 	EmployeeID   string `json:"employeeId"`
 	RealName     string `json:"realName"`
 	WorkEmail    string `json:"workEmail"`
@@ -402,6 +403,11 @@ type EmployeeLeaveRequest struct {
 	EmployeeID  string `json:"employeeId"`
 	LeaveReason string `json:"leaveReason"`
 	LeaveDate   string `json:"leaveDate,optional"`
+}
+
+type UpdateEmployeeSupervisorRequest struct {
+	EmployeeID   string `json:"employeeId"`
+	SupervisorID string `json:"supervisorId"`
 }
 
 type EmployeeListRequest struct {

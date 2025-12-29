@@ -45,6 +45,7 @@ type (
 		CompanyId    string         `db:"company_id"`    // 公司id
 		DepartmentId sql.NullString `db:"department_id"` // 部门id
 		PositionId   sql.NullString `db:"position_id"`   // 职位id
+		SupervisorId sql.NullString `db:"supervisor_id"` // 直属上级员工id
 		EmployeeId   string         `db:"employee_id"`   // 工号
 		RealName     string         `db:"real_name"`     // 真实姓名
 		Email        sql.NullString `db:"email"`         // 工作邮箱
@@ -130,14 +131,14 @@ func (m *defaultEmployeeModel) FindOneByUserId(ctx context.Context, userId strin
 }
 
 func (m *defaultEmployeeModel) Insert(ctx context.Context, data *Employee) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, employeeRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.UserId, data.CompanyId, data.DepartmentId, data.PositionId, data.EmployeeId, data.RealName, data.Email, data.Phone, data.Skills, data.RoleTags, data.HireDate, data.LeaveDate, data.Status, data.DeleteTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, employeeRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.UserId, data.CompanyId, data.DepartmentId, data.PositionId, data.SupervisorId, data.EmployeeId, data.RealName, data.Email, data.Phone, data.Skills, data.RoleTags, data.HireDate, data.LeaveDate, data.Status, data.DeleteTime)
 	return ret, err
 }
 
 func (m *defaultEmployeeModel) Update(ctx context.Context, newData *Employee) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, employeeRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.UserId, newData.CompanyId, newData.DepartmentId, newData.PositionId, newData.EmployeeId, newData.RealName, newData.Email, newData.Phone, newData.Skills, newData.RoleTags, newData.HireDate, newData.LeaveDate, newData.Status, newData.DeleteTime, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.UserId, newData.CompanyId, newData.DepartmentId, newData.PositionId, newData.SupervisorId, newData.EmployeeId, newData.RealName, newData.Email, newData.Phone, newData.Skills, newData.RoleTags, newData.HireDate, newData.LeaveDate, newData.Status, newData.DeleteTime, newData.Id)
 	return err
 }
 

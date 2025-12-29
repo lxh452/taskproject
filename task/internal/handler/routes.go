@@ -258,6 +258,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: employee.EmployeeLeaveHandler(serverCtx),
 			},
 			{
+				// 更新员工直属上级
+				Method:  http.MethodPut,
+				Path:    "/supervisor",
+				Handler: employee.UpdateEmployeeSupervisorHandler(serverCtx),
+			},
+			{
 				// 确认离职审批
 				Method:  http.MethodPost,
 				Path:    "/leave/approve",

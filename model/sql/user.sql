@@ -35,6 +35,7 @@ CREATE TABLE `employee` (
     `company_id` VARCHAR(32) NOT NULL COMMENT '公司id',
     `department_id` VARCHAR(32) COMMENT '部门id',
     `position_id` VARCHAR(32) COMMENT '职位id',
+    `supervisor_id` VARCHAR(32) COMMENT '直属上级员工id',
     `employee_id` VARCHAR(20) NOT NULL COMMENT '工号',
     `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
     `email` VARCHAR(100) COMMENT '工作邮箱',
@@ -55,7 +56,14 @@ CREATE TABLE `employee` (
     KEY `idx_employee_company` (`company_id`),
     KEY `idx_employee_department` (`department_id`),
     KEY `idx_employee_position` (`position_id`),
+    KEY `idx_employee_supervisor` (`supervisor_id`),
     KEY `idx_employee_status` (`status`),
     KEY `idx_employee_hire_date` (`hire_date`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表（业务信息）';
+
+-- ============================================
+-- 如果表已存在，执行以下迁移语句添加 supervisor_id 字段：
+-- ============================================
+ALTER TABLE `employee` ADD COLUMN `supervisor_id` VARCHAR(32) NULL COMMENT '直属上级员工id' AFTER `position_id`;
+CREATE INDEX `idx_employee_supervisor` ON `employee` (`supervisor_id`);
