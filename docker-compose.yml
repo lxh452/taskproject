@@ -21,7 +21,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-task_password}
       TZ: Asia/Shanghai
     ports:
-      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./model/sql:/docker-entrypoint-initdb.d:ro
