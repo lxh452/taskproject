@@ -1,0 +1,69 @@
+-- 用户表（登录认证）
+CREATE TABLE `user` (
+    `id` VARCHAR(32) NOT NULL COMMENT '用户id',
+    `username` VARCHAR(50) NOT NULL COMMENT '用户名',
+    `password_hash` VARCHAR(255) NOT NULL COMMENT '密码哈希',
+    `email` VARCHAR(100) COMMENT '邮箱',
+    `phone` VARCHAR(20) COMMENT '手机号',
+    `avatar` VARCHAR(200) COMMENT '头像URL',
+    `real_name` VARCHAR(50) COMMENT '真实姓名',
+    `gender` TINYINT COMMENT '性别 0-未知 1-男 2-女',
+    `birthday` DATE COMMENT '生日',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-正常 2-锁定',
+    `last_login_time` TIMESTAMP NULL COMMENT '最后登录时间',
+    `last_login_ip` VARCHAR(45) COMMENT '最后登录IP',
+    `login_failed_count` INT NOT NULL DEFAULT 0 COMMENT '登录失败次数',
+    `locked_until` TIMESTAMP NULL COMMENT '锁定到期时间',
+    `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `delete_time` TIMESTAMP NULL COMMENT '删除时间',
+    `has_joined_company`  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已加入公司 0-否 1-是',
+    
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_username` (`username`),
+    UNIQUE KEY `uk_user_email` (`email`),
+    UNIQUE KEY `uk_user_phone` (`phone`),
+    KEY `idx_user_status` (`status`),
+    KEY `idx_last_login_time` (`last_login_time`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表（登录认证）';
+
+-- 员工表（业务信息）
+CREATE TABLE `employee` (
+    `id` VARCHAR(32) NOT NULL COMMENT '员工id',
+    `user_id` VARCHAR(32) NOT NULL COMMENT '关联用户id',
+    `company_id` VARCHAR(32) NOT NULL COMMENT '公司id',
+    `department_id` VARCHAR(32) COMMENT '部门id',
+    `position_id` VARCHAR(32) COMMENT '职位id',
+    `supervisor_id` VARCHAR(32) COMMENT '直属上级员工id',
+    `employee_id` VARCHAR(20) NOT NULL COMMENT '工号',
+    `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+    `email` VARCHAR(100) COMMENT '工作邮箱',
+    `phone` VARCHAR(20) COMMENT '工作电话',
+    `skills` TEXT COMMENT '技能标签',
+    `role_tags` TEXT COMMENT '角色标签',
+    `hire_date` DATE COMMENT '入职日期',
+    `leave_date` DATE COMMENT '离职日期',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 0-离职 1-在职 2-请假',
+    `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `delete_time` TIMESTAMP NULL COMMENT '删除时间',
+    
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_employee_user` (`user_id`),
+    UNIQUE KEY `uk_employee_id` (`employee_id`),
+    UNIQUE KEY `uk_employee_work_email` (`email`),
+    KEY `idx_employee_company` (`company_id`),
+    KEY `idx_employee_department` (`department_id`),
+    KEY `idx_employee_position` (`position_id`),
+    KEY `idx_employee_supervisor` (`supervisor_id`),
+    KEY `idx_employee_status` (`status`),
+    KEY `idx_employee_hire_date` (`hire_date`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表（业务信息）';
+
+-- ============================================
+-- 如果表已存在，执行以下迁移语句添加 supervisor_id 字段：
+-- ============================================
+ALTER TABLE `employee` ADD COLUMN `supervisor_id` VARCHAR(32) NULL COMMENT '直属上级员工id' AFTER `position_id`;
+CREATE INDEX `idx_employee_supervisor` ON `employee` (`supervisor_id`);

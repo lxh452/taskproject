@@ -1,0 +1,268 @@
+#version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: task_project_mysql
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Lxh17306642597}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-task_project}
+      MYSQL_USER: ${MYSQL_USER:-task_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-task_password}
+      TZ: Asia/Shanghai
+    ports:
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./model/sql:/docker-entrypoint-initdb.d:ro
+      - ./logs/mysql:/var/log/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --wait-timeout=28800
+      - --interactive-timeout=28800
+      - --max-connections=200
+      - --max-allowed-packet=64M
+      - --innodb-buffer-pool-size=512M
+      - --innodb-log-file-size=128M
+      - --innodb-flush-log-at-trx-commit=2
+      - --innodb-flush-method=O_DIRECT
+      - --skip-log-bin
+      - --slow-query-log=1
+      - --slow-query-log-file=/var/log/mysql/slow.log
+      - --long-query-time=2
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    networks:
+      - task_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Lxh17306642597}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: task_project_redis
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --bind
+      - 0.0.0.0
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - task_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # MongoDB 数据库
+  mongodb:
+    image: mongo:6.0
+    container_name: task_project_mongodb
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-task_project}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./logs/mongodb:/var/log/mongodb
+    command: mongod --auth --logpath /var/log/mongodb/mongod.log --logappend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - task_network
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_USERNAME:-admin}", "-p", "${MONGO_PASSWORD:-admin123}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: task_project_rabbitmq
+    restart: always
+    hostname: task-rabbitmq
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: /
+      TZ: Asia/Shanghai
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./logs/rabbitmq:/var/log/rabbitmq
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - task_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # 后端API服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - GO_VERSION=1.21
+    image: task_project_backend:latest
+    container_name: task_project_backend
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    environment:
+      MYSQL_DATASOURCE: "root:${MYSQL_ROOT_PASSWORD:-Lxh17306642597}@tcp(task_project_mysql:3306)/${MYSQL_DATABASE:-task_project}?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
+      REDIS_HOST: "task_project_redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      MONGO_HOST: "task_project_mongodb"
+      MONGO_PORT: "27017"
+      MONGO_DATABASE: "${MONGO_DATABASE:-task_project}"
+      MONGO_USERNAME: "${MONGO_USERNAME:-admin}"
+      MONGO_PASSWORD: "${MONGO_PASSWORD:-admin123}"
+      MONGO_AUTHSOURCE: "admin"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@task_project_rabbitmq:5672/"
+      # COS 文件存储配置
+      TENCENT_CLOUD_SECRET_ID: "${TENCENT_CLOUD_SECRET_ID}"
+      TENCENT_CLOUD_SECRET_KEY: "${TENCENT_CLOUD_SECRET_KEY}"
+      TENCENT_CLOUD_COS_BUCKET: "${TENCENT_CLOUD_COS_BUCKET:-lxh452-task-1385490051}"
+      TENCENT_CLOUD_COS_REGION: "${TENCENT_CLOUD_COS_REGION:-ap-guangzhou}"
+      TZ: Asia/Shanghai
+      GIN_MODE: release
+    ports:
+      - "${BACKEND_PORT:-8888}:8888"
+    volumes:
+      - ./logs/backend:/app/logs
+      - backend_tmp:/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "5"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - task_network
+    stop_grace_period: 30s
+
+volumes:
+  mysql_data:
+    name: task_project_mysql_data
+    external: false
+  redis_data:
+    name: task_project_redis_data
+    external: false
+  mongodb_data:
+    name: task_project_mongodb_data
+    external: false
+  mongodb_config:
+    name: task_project_mongodb_config
+    external: false
+  rabbitmq_data:
+    name: task_project_rabbitmq_data
+    external: false
+  backend_tmp:
+    name: task_project_backend_tmp
+    external: false
+
+networks:
+  task_network:
+    driver: bridge
+    name: task_project_network
