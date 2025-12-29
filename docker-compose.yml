@@ -50,7 +50,7 @@ services:
     networks:
       - task_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-123456}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Lxh17306642597}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -200,7 +200,7 @@ services:
           cpus: '1'
           memory: 1G
     environment:
-      MYSQL_DATASOURCE: "root:${MYSQL_ROOT_PASSWORD:-123456}@tcp(task_project_mysql:3306)/${MYSQL_DATABASE:-task_project}?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
+      MYSQL_DATASOURCE: "root:${MYSQL_ROOT_PASSWORD:-Lxh17306642597}@tcp(task_project_mysql:3306)/${MYSQL_DATABASE:-task_project}?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
       REDIS_HOST: "task_project_redis"
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ""
