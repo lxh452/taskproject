@@ -15,13 +15,13 @@ services:
           cpus: '0.5'
           memory: 512M
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Lxh17306642597}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-task_project}
       MYSQL_USER: ${MYSQL_USER:-task_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-task_password}
       TZ: Asia/Shanghai
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./model/sql:/docker-entrypoint-initdb.d:ro
@@ -35,6 +35,10 @@ services:
       - --max-connections=200
       - --max-allowed-packet=64M
       - --innodb-buffer-pool-size=512M
+      - --innodb-log-file-size=128M
+      - --innodb-flush-log-at-trx-commit=2
+      - --innodb-flush-method=O_DIRECT
+      - --skip-log-bin
       - --slow-query-log=1
       - --slow-query-log-file=/var/log/mysql/slow.log
       - --long-query-time=2
@@ -118,7 +122,7 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-task_project}
       TZ: Asia/Shanghai
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
@@ -240,23 +244,23 @@ services:
 
 volumes:
   mysql_data:
-    driver: local
     name: task_project_mysql_data
+    external: false
   redis_data:
-    driver: local
     name: task_project_redis_data
+    external: false
   mongodb_data:
-    driver: local
     name: task_project_mongodb_data
+    external: false
   mongodb_config:
-    driver: local
     name: task_project_mongodb_config
+    external: false
   rabbitmq_data:
-    driver: local
     name: task_project_rabbitmq_data
+    external: false
   backend_tmp:
-    driver: local
     name: task_project_backend_tmp
+    external: false
 
 networks:
   task_network:
