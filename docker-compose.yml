@@ -18,7 +18,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Lxh17306642597}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-task_project}
       MYSQL_USER: ${MYSQL_USER:-task_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-task_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-Lxh17306642597}
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
