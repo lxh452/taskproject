@@ -743,7 +743,8 @@ type TaskCommentInfo struct {
 
 type TaskDetailInfo struct {
 	TaskInfo
-	Logs []TaskLogInfo `json:"logs,optional"`
+	Logs         []TaskLogInfo `json:"logs,optional"`
+	IsFullAccess bool          `json:"isFullAccess"` // 是否有完全访问权限（任务创建者/负责人可编辑，节点执行人只能查看自己的节点）
 }
 
 type TaskDetailRequest struct {

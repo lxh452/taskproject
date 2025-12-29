@@ -659,7 +659,8 @@ type (
 	// 任务详情信息
 	TaskDetailInfo {
 		TaskInfo
-		Logs []TaskLogInfo `json:"logs,optional"`
+		Logs         []TaskLogInfo `json:"logs,optional"`
+		IsFullAccess bool          `json:"isFullAccess"` // 是否有完全访问权限
 	}
 	// 任务列表响应
 	TaskListResponse {

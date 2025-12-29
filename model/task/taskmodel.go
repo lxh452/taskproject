@@ -99,25 +99,48 @@ func (m *customTaskModel) FindByDepartment(ctx context.Context, departmentID str
 	return tasks, total, err
 }
 
-// FindByInvolved 根据员工是否参与（创建者/负责人/节点执行人）查找任务
+// FindByInvolved 根据员工是否参与（创建者/负责人/节点执行人/节点负责人）查找任务
+// 包括：任务创建者、任务负责人、任务节点执行人、任务节点负责人
 func (m *customTaskModel) FindByInvolved(ctx context.Context, employeeID string, page, pageSize int) ([]*Task, int64, error) {
 	var tasks []*Task
 	var total int64
 
-	// 统计总数
-	countQuery := `SELECT COUNT(*) FROM task 
-        WHERE (task_creator = ? OR FIND_IN_SET(?, responsible_employee_ids) OR FIND_IN_SET(?, node_employee_ids))
-        AND delete_time IS NULL`
-	if err := m.conn.QueryRowCtx(ctx, &total, countQuery, employeeID, employeeID, employeeID); err != nil {
+	// 统计总数 - 通过子查询从 task_node 表查找员工参与的任务
+	// 条件：1. 任务创建者 2. 任务负责人 3. 节点执行人(executor_id支持逗号分隔) 4. 节点负责人
+	countQuery := `SELECT COUNT(DISTINCT t.task_id) FROM task t
+        WHERE (
+            t.task_creator = ? 
+            OR t.leader_id = ?
+            OR FIND_IN_SET(?, t.responsible_employee_ids)
+            OR EXISTS (
+                SELECT 1 FROM task_node tn 
+                WHERE tn.task_id = t.task_id 
+                AND tn.delete_time IS NULL
+                AND (FIND_IN_SET(?, tn.executor_id) OR tn.leader_id = ?)
+            )
+        )
+        AND t.delete_time IS NULL`
+	if err := m.conn.QueryRowCtx(ctx, &total, countQuery, employeeID, employeeID, employeeID, employeeID, employeeID); err != nil {
 		return nil, 0, err
 	}
 
-	// 分页
+	// 分页查询
 	offset := (page - 1) * pageSize
-	query := `SELECT * FROM task 
-        WHERE (task_creator = ? OR FIND_IN_SET(?, responsible_employee_ids) OR FIND_IN_SET(?, node_employee_ids))
-        AND delete_time IS NULL ORDER BY create_time DESC LIMIT ? OFFSET ?`
-	if err := m.conn.QueryRowsCtx(ctx, &tasks, query, employeeID, employeeID, employeeID, pageSize, offset); err != nil {
+	query := `SELECT DISTINCT t.* FROM task t
+        WHERE (
+            t.task_creator = ? 
+            OR t.leader_id = ?
+            OR FIND_IN_SET(?, t.responsible_employee_ids)
+            OR EXISTS (
+                SELECT 1 FROM task_node tn 
+                WHERE tn.task_id = t.task_id 
+                AND tn.delete_time IS NULL
+                AND (FIND_IN_SET(?, tn.executor_id) OR tn.leader_id = ?)
+            )
+        )
+        AND t.delete_time IS NULL 
+        ORDER BY t.create_time DESC LIMIT ? OFFSET ?`
+	if err := m.conn.QueryRowsCtx(ctx, &tasks, query, employeeID, employeeID, employeeID, employeeID, employeeID, pageSize, offset); err != nil {
 		return nil, 0, err
 	}
 	return tasks, total, nil
