@@ -30,7 +30,7 @@ FileStorage:
 
 # 数据库配置（优化连接参数，防止连接泄漏）
 MySQL:
-  DataSource: "root:123456@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
+  DataSource: "root:Lxh17306642597@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
 
 # Redis配置
 Redis:
