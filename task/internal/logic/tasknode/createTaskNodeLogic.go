@@ -68,6 +68,9 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 			flag = true
 		}
 	}
+	if empID == currentTask.TaskCreator {
+		flag = true
+	}
 
 	//遍历后发现都是空的，及该登录用户不在该存储中，非法用户
 	if !flag {
