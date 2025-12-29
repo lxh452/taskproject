@@ -158,6 +158,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 配置 MySQL 连接池（重要！防止连接泄漏和耗尽）
 	// 使用 RawDB() 方法获取底层的 *sql.DB
 	db, err := conn.RawDB()
+	fmt.Println("mysql：", c.MySQL.DataSource)
 	if err != nil {
 		logx.Errorf("[ServiceContext] 获取底层数据库连接失败: %v", err)
 	} else {
