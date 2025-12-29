@@ -1,0 +1,11 @@
+
+# 忽略所有上传的附件和临时文件
+task/uploads/
+task/upload/
+uploads/
+upload/
+
+# 也忽略日志等运行时文件
+logs/
+*.log
+
