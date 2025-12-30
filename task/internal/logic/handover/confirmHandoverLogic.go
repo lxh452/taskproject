@@ -44,19 +44,18 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 		return utils.Response.ValidationError("交接ID不能为空"), nil
 	}
 
-	// 2. 获取当前用户ID并查找员工信息
-	currentEmpID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
+	// 2. 获取当前员工ID并查找员工信息
+	currentEmployeeID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
 
-	// 获取当前员工信息
-	currentEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, currentEmpID)
+	// 获取当前员工信息（使用员工ID直接查询）
+	currentEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, currentEmployeeID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取当前员工信息失败: %v", err)
 		return utils.Response.ValidationError("用户未绑定员工信息"), nil
 	}
-	currentEmployeeID := currentEmployee.Id
 	approverName := currentEmployee.RealName
 
 	// 3. 获取交接记录
