@@ -370,6 +370,11 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					l.Logger.WithContext(l.ctx).Infof("用户 %s 的 has_joined_company 已更新为 0", fromEmployee.UserId)
 				}
 			}
+			// 9.6删除该员工信息
+			executorErr = l.svcCtx.EmployeeModel.SoftDelete(l.ctx, handover.FromEmployeeId)
+			if executorErr != nil {
+				l.Logger.WithContext(l.ctx).Errorf("删除员工档案  失败: %v", executorErr)
+			}
 		}
 	}
 
