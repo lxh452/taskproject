@@ -126,8 +126,7 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
-      - ./logs/mongodb:/var/log/mongodb
-    command: mongod --auth --logpath /var/log/mongodb/mongod.log --logappend
+    command: mongod --auth
     logging:
       driver: "json-file"
       options:
