@@ -360,6 +360,16 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 			} else {
 				l.Logger.WithContext(l.ctx).Infof("员工 %s 状态已更新为离职", handover.FromEmployeeId)
 			}
+
+			// 9.5 更新用户的 has_joined_company 为 0
+			fromEmployee, fromEmpErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.FromEmployeeId)
+			if fromEmpErr == nil && fromEmployee.UserId != "" {
+				if userErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, fromEmployee.UserId, false); userErr != nil {
+					l.Logger.WithContext(l.ctx).Errorf("更新用户 has_joined_company 失败: %v", userErr)
+				} else {
+					l.Logger.WithContext(l.ctx).Infof("用户 %s 的 has_joined_company 已更新为 0", fromEmployee.UserId)
+				}
+			}
 		}
 	}
 
