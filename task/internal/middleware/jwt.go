@@ -67,15 +67,19 @@ func (j *JWTMiddleware) ValidateTokenWithRedis(tokenString string, userID string
 	tokenKey := fmt.Sprintf("%s%s", TokenKeyPrefix, userID)
 	storedToken, err := j.redisClient.Get(tokenKey)
 	if err != nil {
-		logx.Errorf("从Redis获取Token失败: %v", err)
-		return errors.New("token validation failed")
+		// Redis 获取失败时，只记录日志，不阻止请求（JWT本身已验证通过）
+		logx.Infof("从Redis获取Token失败（可能是Redis重启）: %v, 跳过Redis校验", err)
+		return nil
 	}
 
 	if storedToken == "" {
-		return errors.New("token not found in redis, user may have logged out")
+		// Token不在Redis中，可能是Redis重启导致数据丢失，允许通过（JWT本身已验证）
+		logx.Infof("Token不在Redis中（可能是Redis重启），跳过Redis校验, userId=%s", userID)
+		return nil
 	}
 
 	if storedToken != tokenString {
+		// 只有当Redis中有token且不匹配时才拒绝（说明用户在其他设备登录了）
 		return errors.New("token mismatch, may have logged in from another device")
 	}
 
