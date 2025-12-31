@@ -28,7 +28,7 @@ func NewDeleteTaskCommentLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *DeleteTaskCommentLogic) DeleteTaskComment(req *types.DeleteTaskCommentRequest) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	// 使用 TaskCommentLogic 来处理删除评论
+	commentLogic := NewTaskCommentLogic(l.ctx, l.svcCtx)
+	return commentLogic.DeleteComment(req)
 }

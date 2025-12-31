@@ -28,7 +28,7 @@ func NewGetTaskCommentsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 }
 
 func (l *GetTaskCommentsLogic) GetTaskComments(req *types.GetTaskCommentsRequest) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	// 使用 TaskCommentLogic 来处理评论列表查询
+	commentLogic := NewTaskCommentLogic(l.ctx, l.svcCtx)
+	return commentLogic.GetComments(req)
 }

@@ -106,13 +106,21 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 		return nil, err
 	}
 
-	// 11. 如果审批通过，更新节点状态为已完成（状态2）
+	// 11. 如果审批通过，更新节点状态为已完成（状态2）并设置进度为100%
 	if req.Approved == 1 {
+		// 更新节点状态
 		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, taskNodeId, 2)
 		if err != nil {
 			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
 			return nil, err
 		}
+
+		// 更新节点进度为100%
+		err = l.svcCtx.TaskNodeModel.UpdateProgress(l.ctx, taskNodeId, 100)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: %v", err)
+		}
+
 		current, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
 		if err != nil {
 			return nil, err
@@ -135,6 +143,7 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 		updatedNode := *taskNode
 		updatedNode.NodeFinishTime = sql.NullTime{Time: time.Now(), Valid: true}
 		updatedNode.UpdateTime = time.Now()
+		updatedNode.Progress = 100 // 确保进度为100%
 		err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedNode)
 		if err != nil {
 			l.Logger.WithContext(l.ctx).Errorf("更新任务节点完成时间失败: %v", err)

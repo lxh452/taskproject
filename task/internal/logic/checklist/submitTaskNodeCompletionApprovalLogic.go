@@ -85,35 +85,50 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		return nil, errors.New("该节点已有待审批的记录，请勿重复提交")
 	}
 
-	// 8. 获取任务信息，找到项目负责人（任务负责人）
-	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+	// 8. 使用通用的上级审核逻辑查找审批人
+	approverFinder := utils.NewApproverFinder(
+		l.svcCtx.EmployeeModel,
+		l.svcCtx.DepartmentModel,
+		l.svcCtx.CompanyModel,
+	)
+
+	approverResult, err := approverFinder.FindApprover(l.ctx, employeeId)
 	if err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return nil, errors.New("任务不存在")
-		}
-		return nil, err
+		l.Logger.WithContext(l.ctx).Errorf("查找审批人失败: %v", err)
 	}
 
-	// 获取项目负责人（任务负责人）
 	approverId := ""
-	if taskInfo.LeaderId.Valid {
-		approverId = taskInfo.LeaderId.String
+	approverName := ""
+
+	if approverResult != nil {
+		approverId = approverResult.ApproverID
+		approverName = approverResult.ApproverName
 	} else {
-		// 如果没有任务负责人，使用任务创建者
-		approverId = taskInfo.TaskCreator
+		// 如果找不到上级，回退到任务负责人
+		taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+		if err != nil {
+			if errors.Is(err, sqlx.ErrNotFound) {
+				return nil, errors.New("任务不存在")
+			}
+			return nil, err
+		}
+
+		if taskInfo.LeaderId.Valid && taskInfo.LeaderId.String != "" {
+			approverId = taskInfo.LeaderId.String
+		} else {
+			approverId = taskInfo.TaskCreator
+		}
+
+		if approverId != "" {
+			employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverId)
+			if err == nil {
+				approverName = employee.RealName
+			}
+		}
 	}
 
 	if approverId == "" {
-		return nil, errors.New("无法找到项目负责人，无法提交审批")
-	}
-
-	// 获取审批人姓名
-	approverName := ""
-	if approverId != "" {
-		employee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverId)
-		if err == nil {
-			approverName = employee.RealName
-		}
+		return nil, errors.New("无法找到审批人，请先设置直属上级或部门经理")
 	}
 
 	// 9. 创建审批记录（使用HandoverApprovalModel）
@@ -144,7 +159,7 @@ func (l *SubmitTaskNodeCompletionApprovalLogic) SubmitTaskNodeCompletionApproval
 		TaskId:     taskNode.TaskId,
 		TaskNodeId: utils.Common.ToSqlNullString(req.NodeID),
 		LogType:    2, // 更新类型
-		LogContent: fmt.Sprintf("任务节点 %s 已提交完成审批，等待项目负责人审批", taskNode.NodeName),
+		LogContent: fmt.Sprintf("任务节点 %s 已提交完成审批，等待%s审批", taskNode.NodeName, approverName),
 		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}

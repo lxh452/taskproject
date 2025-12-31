@@ -3,6 +3,7 @@ package handover
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"task_Project/model/task"
 	"task_Project/task/internal/svc"
@@ -135,7 +136,106 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 		handoverNote = handover.HandoverNote.String
 	}
 
-	// 9. 转换为响应格式
+	// 9. 获取发起人负责或执行的任务和任务节点（用于离职交接展示）
+	var involvedTasks []map[string]interface{}
+	var involvedNodes []map[string]interface{}
+
+	// 获取发起人参与的所有任务（创建者/负责人/节点执行人/节点负责人）
+	if tasks, _, err := l.svcCtx.TaskModel.FindByInvolved(l.ctx, handover.FromEmployeeId, 1, 100); err == nil {
+		for _, t := range tasks {
+			// 只显示进行中的任务
+			if t.TaskStatus == 1 || (t.TaskStatus == 0 && !t.TaskStartTime.IsZero()) {
+				// 判断角色
+				role := ""
+				if t.TaskCreator == handover.FromEmployeeId {
+					role = "创建者"
+				}
+				if t.ResponsibleEmployeeIds.Valid && t.ResponsibleEmployeeIds.String != "" {
+					ids := strings.Split(t.ResponsibleEmployeeIds.String, ",")
+					for _, id := range ids {
+						if strings.TrimSpace(id) == handover.FromEmployeeId {
+							if role != "" {
+								role += "/负责人"
+							} else {
+								role = "负责人"
+							}
+							break
+						}
+					}
+				}
+				if role == "" {
+					role = "参与者"
+				}
+
+				involvedTasks = append(involvedTasks, map[string]interface{}{
+					"taskId":    t.TaskId,
+					"taskTitle": t.TaskTitle,
+					"status":    t.TaskStatus,
+					"deadline":  t.TaskDeadline.Format("2006-01-02"),
+					"role":      role,
+				})
+			}
+		}
+	}
+
+	// 获取发起人作为执行人的任务节点
+	if nodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, handover.FromEmployeeId, 1, 100); err == nil {
+		for _, n := range nodes {
+			// 只显示进行中的节点
+			if n.NodeStatus == 1 || (n.NodeStatus == 0 && !n.NodeStartTime.IsZero()) {
+				// 获取任务标题
+				nodeTaskTitle := ""
+				if t, err := l.svcCtx.TaskModel.FindOne(l.ctx, n.TaskId); err == nil {
+					nodeTaskTitle = t.TaskTitle
+				}
+				involvedNodes = append(involvedNodes, map[string]interface{}{
+					"nodeId":    n.TaskNodeId,
+					"nodeName":  n.NodeName,
+					"taskId":    n.TaskId,
+					"taskTitle": nodeTaskTitle,
+					"status":    n.NodeStatus,
+					"progress":  n.Progress,
+					"deadline":  n.NodeDeadline.Format("2006-01-02"),
+					"role":      "执行人",
+				})
+			}
+		}
+	}
+
+	// 获取发起人作为负责人的任务节点
+	if nodes, _, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, handover.FromEmployeeId, 1, 100); err == nil {
+		for _, n := range nodes {
+			// 只显示进行中的节点，避免重复
+			if n.NodeStatus == 1 || (n.NodeStatus == 0 && !n.NodeStartTime.IsZero()) {
+				exists := false
+				for _, existing := range involvedNodes {
+					if existing["nodeId"] == n.TaskNodeId {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					// 获取任务标题
+					nodeTaskTitle := ""
+					if t, err := l.svcCtx.TaskModel.FindOne(l.ctx, n.TaskId); err == nil {
+						nodeTaskTitle = t.TaskTitle
+					}
+					involvedNodes = append(involvedNodes, map[string]interface{}{
+						"nodeId":    n.TaskNodeId,
+						"nodeName":  n.NodeName,
+						"taskId":    n.TaskId,
+						"taskTitle": nodeTaskTitle,
+						"status":    n.NodeStatus,
+						"progress":  n.Progress,
+						"deadline":  n.NodeDeadline.Format("2006-01-02"),
+						"role":      "负责人",
+					})
+				}
+			}
+		}
+	}
+
+	// 10. 转换为响应格式
 	converter := utils.NewConverter()
 	handoverDetail := map[string]interface{}{
 		"handoverId":             handover.HandoverId,
@@ -154,6 +254,8 @@ func (l *GetHandoverLogic) GetHandover(req *types.GetHandoverRequest) (resp *typ
 		"handoverNote":           handoverNote,
 		"createTime":             handover.CreateTime.Format("2006-01-02 15:04:05"),
 		"updateTime":             handover.UpdateTime.Format("2006-01-02 15:04:05"),
+		"involvedTasks":          involvedTasks,
+		"involvedNodes":          involvedNodes,
 	}
 
 	// 如果有任务信息，添加到响应中

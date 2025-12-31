@@ -28,7 +28,7 @@ func NewLikeTaskCommentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *L
 }
 
 func (l *LikeTaskCommentLogic) LikeTaskComment(req *types.LikeCommentRequest) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	// 使用 TaskCommentLogic 来处理点赞
+	commentLogic := NewTaskCommentLogic(l.ctx, l.svcCtx)
+	return commentLogic.LikeComment(req)
 }
