@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -65,15 +66,23 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 
 	// 6. 构建更新数据
 	updateData := make(map[string]interface{})
+	var updateNotes []string
 
 	if req.TaskTitle != "" {
 		updateData["task_title"] = req.TaskTitle
+		updateNotes = append(updateNotes, "标题")
 	}
 	if req.TaskDescription != "" {
 		updateData["task_description"] = req.TaskDescription
+		updateNotes = append(updateNotes, "描述")
 	}
 	if req.Status > 0 {
 		updateData["task_status"] = req.Status
+		updateNotes = append(updateNotes, "状态")
+	}
+	if req.Priority > 0 {
+		updateData["task_priority"] = req.Priority
+		updateNotes = append(updateNotes, "优先级")
 	}
 	if req.Deadline != "" {
 		// 支持多种日期格式
@@ -82,6 +91,15 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 			return utils.Response.BusinessError("task_deadline_format"), nil
 		}
 		updateData["task_deadline"] = deadline
+		updateNotes = append(updateNotes, "截止时间")
+	}
+	if req.LeaderId != "" {
+		updateData["leader_id"] = req.LeaderId
+		updateNotes = append(updateNotes, "负责人")
+	}
+	if req.ResponsibleEmployeeIds != "" {
+		updateData["responsible_employee_ids"] = req.ResponsibleEmployeeIds
+		updateNotes = append(updateNotes, "执行人")
 	}
 
 	updateData["update_time"] = time.Now()
@@ -97,12 +115,21 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	if req.Status > 0 {
 		updatedTask.TaskStatus = int64(req.Status)
 	}
+	if req.Priority > 0 {
+		updatedTask.TaskPriority = int64(req.Priority)
+	}
 	if req.Deadline != "" {
 		deadline, parseErr := parseDeadline(req.Deadline)
 		if parseErr != nil {
 			return utils.Response.BusinessError("task_deadline_format"), nil
 		}
 		updatedTask.TaskDeadline = deadline
+	}
+	if req.LeaderId != "" {
+		updatedTask.LeaderId = sql.NullString{String: req.LeaderId, Valid: true}
+	}
+	if req.ResponsibleEmployeeIds != "" {
+		updatedTask.ResponsibleEmployeeIds = sql.NullString{String: req.ResponsibleEmployeeIds, Valid: true}
 	}
 	updatedTask.UpdateTime = time.Now()
 
@@ -113,11 +140,19 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 
 	// 8. 创建任务日志
+	logContent := "任务信息已更新"
+	if len(updateNotes) > 0 {
+		logContent = fmt.Sprintf("任务信息已更新：%v", updateNotes)
+	}
+	if req.UpdateNote != "" {
+		logContent = fmt.Sprintf("%s - %s", logContent, req.UpdateNote)
+	}
+
 	taskLog := &task.TaskLog{
 		LogId:      utils.Common.GenerateID(),
 		TaskId:     req.TaskID,
 		LogType:    2, // 更新类型
-		LogContent: fmt.Sprintf("任务信息已更新：%s", req.UpdateNote),
+		LogContent: logContent,
 		EmployeeId: employeeId,
 		CreateTime: time.Now(),
 	}

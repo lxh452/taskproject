@@ -142,22 +142,24 @@ func (c *converter) ToPositionInfoList(positions []*company.Position) []types.Po
 // ToTaskInfo 将Task模型转换为TaskInfo类型
 func (c *converter) ToTaskInfo(task *task.Task) types.TaskInfo {
 	return types.TaskInfo{
-		ID:              task.TaskId,
-		TaskTitle:       task.TaskTitle,
-		TaskDescription: task.TaskDetail,
-		TaskType:        c.getTaskTypeString(task.TaskType),
-		Priority:        int(task.TaskPriority),
-		Status:          int(task.TaskStatus),
-		CompanyID:       task.CompanyId,
-		DepartmentID:    getStringValue(task.DepartmentIds),
-		CreatorID:       task.TaskCreator,
-		StartTime:       formatTime(&task.TaskStartTime),
-		Deadline:        formatTime(&task.TaskDeadline),
-		EstimatedHours:  0, // Task模型中没有这个字段，需要从TaskNode计算
-		ActualHours:     0, // Task模型中没有这个字段，需要从TaskNode计算
-		Progress:        0, // Task模型中没有这个字段，需要从TaskNode计算
-		CreateTime:      formatTime(&task.CreateTime),
-		UpdateTime:      formatTime(&task.UpdateTime),
+		ID:                     task.TaskId,
+		TaskTitle:              task.TaskTitle,
+		TaskDescription:        task.TaskDetail,
+		TaskType:               c.getTaskTypeString(task.TaskType),
+		Priority:               int(task.TaskPriority),
+		Status:                 int(task.TaskStatus),
+		CompanyID:              task.CompanyId,
+		DepartmentID:           getStringValue(task.DepartmentIds),
+		CreatorID:              task.TaskCreator,
+		LeaderId:               getStringValue(task.LeaderId),
+		ResponsibleEmployeeIds: getStringValue(task.ResponsibleEmployeeIds),
+		StartTime:              formatTime(&task.TaskStartTime),
+		Deadline:               formatTime(&task.TaskDeadline),
+		EstimatedHours:         0,                      // Task模型中没有这个字段，需要从TaskNode计算
+		ActualHours:            0,                      // Task模型中没有这个字段，需要从TaskNode计算
+		Progress:               int(task.TaskProgress), // 从数据库读取任务整体进度
+		CreateTime:             formatTime(&task.CreateTime),
+		UpdateTime:             formatTime(&task.UpdateTime),
 	}
 }
 

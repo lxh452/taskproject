@@ -758,23 +758,25 @@ type TaskDetailRequest struct {
 }
 
 type TaskInfo struct {
-	ID              string         `json:"id"`
-	TaskTitle       string         `json:"taskTitle"`
-	TaskDescription string         `json:"taskDescription"`
-	TaskType        string         `json:"taskType"`
-	Priority        int            `json:"priority"`
-	Status          int            `json:"status"`
-	CompanyID       string         `json:"companyId"`
-	DepartmentID    string         `json:"departmentId"`
-	CreatorID       string         `json:"creatorId"`
-	StartTime       string         `json:"startTime"`
-	Deadline        string         `json:"deadline"`
-	EstimatedHours  int            `json:"estimatedHours"`
-	ActualHours     int            `json:"actualHours"`
-	Progress        int            `json:"progress"`
-	CreateTime      string         `json:"createTime"`
-	UpdateTime      string         `json:"updateTime"`
-	Nodes           []TaskNodeInfo `json:"nodes,optional"`
+	ID                     string         `json:"id"`
+	TaskTitle              string         `json:"taskTitle"`
+	TaskDescription        string         `json:"taskDescription"`
+	TaskType               string         `json:"taskType"`
+	Priority               int            `json:"priority"`
+	Status                 int            `json:"status"`
+	CompanyID              string         `json:"companyId"`
+	DepartmentID           string         `json:"departmentId"`
+	CreatorID              string         `json:"creatorId"`
+	LeaderId               string         `json:"leaderId"`
+	ResponsibleEmployeeIds string         `json:"responsibleEmployeeIds"`
+	StartTime              string         `json:"startTime"`
+	Deadline               string         `json:"deadline"`
+	EstimatedHours         int            `json:"estimatedHours"`
+	ActualHours            int            `json:"actualHours"`
+	Progress               int            `json:"progress"`
+	CreateTime             string         `json:"createTime"`
+	UpdateTime             string         `json:"updateTime"`
+	Nodes                  []TaskNodeInfo `json:"nodes,optional"`
 }
 
 type TaskListRequest struct {
@@ -935,12 +937,16 @@ type UpdateTaskProgressRequest struct {
 }
 
 type UpdateTaskRequest struct {
-	TaskID          string `json:"taskId"`
-	TaskTitle       string `json:"taskTitle,optional"`
-	TaskDescription string `json:"taskDescription,optional"`
-	Deadline        string `json:"deadline,optional"`
-	Status          int    `json:"status,optional"`
-	UpdateNote      string `json:"updateNote,optional"`
+	TaskID                 string `json:"taskId"`
+	TaskTitle              string `json:"taskTitle,optional"`
+	TaskDescription        string `json:"taskDescription,optional"`
+	Deadline               string `json:"deadline,optional"`
+	Status                 int    `json:"status,optional"`
+	Priority               int    `json:"priority,optional"`
+	EstimatedHours         int    `json:"estimatedHours,optional"`
+	LeaderId               string `json:"leaderId,optional"`
+	ResponsibleEmployeeIds string `json:"responsibleEmployeeIds,optional"`
+	UpdateNote             string `json:"updateNote,optional"`
 }
 
 type UploadAvatarRequest struct {

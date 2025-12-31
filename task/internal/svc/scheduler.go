@@ -46,9 +46,7 @@ func (s *SchedulerService) Stop() {
 
 // StartScheduler 启动定时任务
 func (s *SchedulerService) StartScheduler() {
-	if time.Now().Hour() > 18 {
-		return
-	}
+
 	// 启动任务截止提醒定时任务
 	go s.startDeadlineReminder()
 
@@ -68,6 +66,9 @@ func (s *SchedulerService) StartScheduler() {
 // 任务截止提醒定时任务
 func (s *SchedulerService) startDeadlineReminder() {
 	ticker := time.NewTicker(1 * time.Hour) // 每小时检查一次
+	if time.Now().Hour() > 17 {
+		ticker.Stop()
+	}
 	defer ticker.Stop()
 
 	for {
@@ -133,7 +134,6 @@ func (s *SchedulerService) checkTaskDeadlines() {
 func (s *SchedulerService) startDailyReportReminder() {
 	// 每天下午5点30分提醒
 	ticker := time.NewTicker(20 * time.Minute)
-
 	defer ticker.Stop()
 
 	for {
