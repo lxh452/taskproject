@@ -23,7 +23,7 @@ type GetCompanyListLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// todo 这里应该是获取用户登录时候加入的公司列表 而不是所有公司的列表用户用户切换公司  根据l.ctx获取用户id还有他加入的公司
+// 获取用户登录时候加入的公司列表
 func NewGetCompanyListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetCompanyListLogic {
 	return &GetCompanyListLogic{
 		Logger: logx.WithContext(ctx),

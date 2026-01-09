@@ -68,9 +68,10 @@ func main() {
 				return
 			}
 			path := r.URL.Path
-			// 白名单：登录、注册、登出、静态文件
+			// 白名单：登录、注册、登出、静态文件、管理员登录
 			if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" ||
-				path == "/api/v1/auth/send-code" || path == "/api/v1/auth/reset-password" {
+				path == "/api/v1/auth/send-code" || path == "/api/v1/auth/reset-password" ||
+				path == "/api/v1/admin/login" {
 				next(w, r)
 				return
 			}

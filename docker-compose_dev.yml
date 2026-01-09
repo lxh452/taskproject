@@ -1,0 +1,174 @@
+# 开发环境 Docker Compose
+# 后端服务直接挂载本地代码，使用 go run 运行，无需构建镜像
+# 使用方式: docker-compose -f docker-compose_dev.yml up -d
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: task_project_mysql_dev
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Lxh17306642597}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-task_project}
+      MYSQL_USER: ${MYSQL_USER:-task_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-task_password}
+      TZ: Asia/Shanghai
+    ports:
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+      - ./model/sql:/docker-entrypoint-initdb.d:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max-connections=200
+      - --max-allowed-packet=64M
+    networks:
+      - task_network_dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Lxh17306642597}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: task_project_redis_dev
+    restart: always
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data_dev:/data
+    command: redis-server --appendonly yes --bind 0.0.0.0
+    networks:
+      - task_network_dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MongoDB 数据库
+  mongodb:
+    image: mongo:6.0
+    container_name: task_project_mongodb_dev
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-task_project}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data_dev:/data/db
+    command: mongod --auth
+    networks:
+      - task_network_dev
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_USERNAME:-admin}", "-p", "${MONGO_PASSWORD:-admin123}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: task_project_rabbitmq_dev
+    restart: always
+    hostname: task-rabbitmq-dev
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      TZ: Asia/Shanghai
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+    networks:
+      - task_network_dev
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端API服务 - 开发模式，挂载本地代码
+  backend:
+    image: golang:1.23-alpine
+    container_name: task_project_backend_dev
+    restart: always
+    working_dir: /app
+    # 使用 host 网络模式，解决 SMTP 连接问题
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 114.114.114.114
+    environment:
+      MYSQL_DATASOURCE: "root:${MYSQL_ROOT_PASSWORD:-Lxh17306642597}@tcp(task_project_mysql_dev:3306)/${MYSQL_DATABASE:-task_project}?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
+      REDIS_HOST: "task_project_redis_dev"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      MONGO_HOST: "task_project_mongodb_dev"
+      MONGO_PORT: "27017"
+      MONGO_DATABASE: "${MONGO_DATABASE:-task_project}"
+      MONGO_USERNAME: "${MONGO_USERNAME:-admin}"
+      MONGO_PASSWORD: "${MONGO_PASSWORD:-admin123}"
+      MONGO_AUTHSOURCE: "admin"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@task_project_rabbitmq_dev:5672/"
+      TENCENT_CLOUD_SECRET_ID: "${TENCENT_CLOUD_SECRET_ID}"
+      TENCENT_CLOUD_SECRET_KEY: "${TENCENT_CLOUD_SECRET_KEY}"
+      TENCENT_CLOUD_COS_BUCKET: "${TENCENT_CLOUD_COS_BUCKET:-lxh452-task-1385490051}"
+      TENCENT_CLOUD_COS_REGION: "${TENCENT_CLOUD_COS_REGION:-ap-guangzhou}"
+      TZ: Asia/Shanghai
+      GO111MODULE: "on"
+      GOPROXY: "https://goproxy.cn,direct"
+    ports:
+      - "${BACKEND_PORT:-8887}:8888"
+    volumes:
+      # 挂载整个后端代码目录
+      - .:/app
+      # Go 模块缓存，避免每次重新下载
+      - go_mod_cache_dev:/go/pkg/mod
+    command: >
+      sh -c "
+        apk add --no-cache git ca-certificates tzdata &&
+        cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &&
+        go mod download &&
+        go run ./task/taskprojectapi.go -f task/etc/taskprojectapi.yaml
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - task_network_dev
+
+volumes:
+  mysql_data_dev:
+    name: task_project_mysql_data_dev
+  redis_data_dev:
+    name: task_project_redis_data_dev
+  mongodb_data_dev:
+    name: task_project_mongodb_data_dev
+  rabbitmq_data_dev:
+    name: task_project_rabbitmq_data_dev
+  go_mod_cache_dev:
+    name: task_project_go_mod_cache_dev
+
+networks:
+  task_network_dev:
+    driver: bridge
+    name: task_project_network_dev

@@ -36,6 +36,8 @@ type (
 		BatchUpdateStatus(ctx context.Context, ids []string, status int) error
 		GetUserCount(ctx context.Context) (int64, error)
 		GetUserCountByStatus(ctx context.Context, status int) (int64, error)
+		GetUserCountByDateRange(ctx context.Context, startTime, endTime string) (int64, error)
+		RestoreUser(ctx context.Context, id string) error
 	}
 
 	customUserModel struct {
@@ -235,6 +237,21 @@ func (m *customUserModel) GetUserCountByStatus(ctx context.Context, status int) 
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, query, status)
 	return count, err
+}
+
+// GetUserCountByDateRange 根据日期范围获取用户注册数量
+func (m *customUserModel) GetUserCountByDateRange(ctx context.Context, startTime, endTime string) (int64, error) {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE `create_time` >= ? AND `create_time` <= ? AND `delete_time` IS NULL", m.table)
+	var count int64
+	err := m.conn.QueryRowCtx(ctx, &count, query, startTime, endTime)
+	return count, err
+}
+
+// RestoreUser 恢复已删除的用户（清除delete_time）
+func (m *customUserModel) RestoreUser(ctx context.Context, id string) error {
+	query := fmt.Sprintf("UPDATE %s SET `delete_time` = NULL, `update_time` = NOW() WHERE `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, id)
+	return err
 }
 
 // UpdateHasJoinedCompany 更新用户是否已加入公司

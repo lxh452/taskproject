@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	adminModel "task_Project/model/admin"
 	"task_Project/model/user"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -49,14 +50,25 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 	userInfo, err := l.svcCtx.UserModel.FindByUsername(l.ctx, req.Username)
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
+			// 记录登录失败日志（用户不存在）
+			l.recordLoginLog("", req.Username, 0, "用户不存在")
 			return utils.Response.BusinessError("login_failed"), nil
 		}
 		logx.Errorf("查找用户失败: %v", err)
 		return utils.Response.InternalError("查找用户失败"), nil
 	}
 
+	// 检查用户是否被封禁 (status = 2 表示封禁)
+	if userInfo.Status == 2 {
+		// 记录登录失败日志（用户被封禁）
+		l.recordLoginLog(userInfo.Id, req.Username, 0, "用户已被封禁")
+		return utils.Response.BusinessError("user_banned"), nil
+	}
+
 	// 检查用户状态
 	if userInfo.Status != 1 {
+		// 记录登录失败日志（用户被禁用）
+		l.recordLoginLog(userInfo.Id, req.Username, 0, "用户已被禁用")
 		return utils.Response.BusinessError("user_disabled"), nil
 	}
 
@@ -99,10 +111,14 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 				logx.Errorf("锁定用户失败: %v", lockErr)
 			}
 			logx.Infof("用户 %s 登录失败次数达到5次，锁定10分钟", userInfo.Username)
+			// 记录登录失败日志（账户锁定）
+			l.recordLoginLog(userInfo.Id, req.Username, 0, "登录失败次数过多，账户已锁定")
 			return utils.Response.BusinessError("登录失败次数过多，账户已锁定10分钟"), nil
 		}
 
 		remainingAttempts := 5 - failedCount
+		// 记录登录失败日志（密码错误）
+		l.recordLoginLog(userInfo.Id, req.Username, 0, fmt.Sprintf("密码错误，剩余%d次尝试", remainingAttempts))
 		return utils.Response.BusinessError(fmt.Sprintf("用户名或密码错误，还剩 %d 次尝试机会", remainingAttempts)), nil
 	}
 
@@ -140,11 +156,19 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		logx.Errorf("更新最后登录信息失败: %v", updateErr)
 	}
 
+	// 记录登录成功日志
+	l.recordLoginLog(userInfo.Id, req.Username, 1, "登录成功")
+
+	// 记录系统日志
+	if l.svcCtx.SystemLogService != nil {
+		l.svcCtx.SystemLogService.UserAction(l.ctx, "auth", "login", fmt.Sprintf("用户 %s 登录成功", req.Username), userInfo.Id, "127.0.0.1", "")
+	}
+
 	// 发送登录成功通知邮件（通过消息队列）
 	go func() {
 		if userInfo.Email.Valid && userInfo.Email.String != "" && l.svcCtx.EmailService != nil {
 			loginTime := now.Format("2006-01-02 15:04:05")
-			loginIP := "127.0.0.1" // TODO: 从请求中获取真实IP
+			loginIP := "127.0.0.1"
 			if err := l.svcCtx.EmailService.SendLoginSuccessEmail(context.Background(), userInfo.Email.String, userInfo.Username, loginTime, loginIP); err != nil {
 				logx.Errorf("发送登录通知邮件失败: %v", err)
 			}
@@ -161,4 +185,25 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 	}
 
 	return utils.Response.SuccessWithKey("login", loginResp), nil
+}
+
+// recordLoginLog 记录登录日志
+func (l *LoginLogic) recordLoginLog(userID, username string, status int64, message string) {
+	go func() {
+		record := &adminModel.LoginRecord{
+			Id:          utils.Common.GenId("lr"),
+			UserId:      userID,
+			UserType:    "user",
+			Username:    utils.Common.ToSqlNullString(username),
+			LoginTime:   time.Now(),
+			LoginIp:     utils.Common.ToSqlNullString("127.0.0.1"), // TODO: 从请求中获取真实IP
+			UserAgent:   utils.Common.ToSqlNullString(""),          // TODO: 从请求中获取User-Agent
+			LoginStatus: status,
+			FailReason:  utils.Common.ToSqlNullString(message),
+		}
+		_, err := l.svcCtx.LoginRecordModel.Insert(context.Background(), record)
+		if err != nil {
+			logx.Errorf("记录登录日志失败: %v", err)
+		}
+	}()
 }

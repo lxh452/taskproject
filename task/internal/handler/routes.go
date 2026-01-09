@@ -6,6 +6,7 @@ package handler
 import (
 	"net/http"
 
+	admin "task_Project/task/internal/handler/admin"
 	ai "task_Project/task/internal/handler/ai"
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
@@ -685,5 +686,98 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/api/v1/dashboard"),
+	)
+
+	// 管理员公开路由（无需认证）
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 管理员登录
+				Method:  http.MethodPost,
+				Path:    "/login",
+				Handler: admin.AdminLoginHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/admin"),
+	)
+
+	// 管理员认证路由（需要管理员认证）
+	adminAuthMiddleware := serverCtx.AdminAuthMiddleware.Handle
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 管理员登出
+				Method:  http.MethodPost,
+				Path:    "/logout",
+				Handler: adminAuthMiddleware(admin.AdminLogoutHandler(serverCtx)),
+			},
+			{
+				// 平台统计概览
+				Method:  http.MethodGet,
+				Path:    "/stats",
+				Handler: adminAuthMiddleware(admin.GetPlatformStatsHandler(serverCtx)),
+			},
+			{
+				// 公司列表
+				Method:  http.MethodPost,
+				Path:    "/company/list",
+				Handler: adminAuthMiddleware(admin.CompanyListHandler(serverCtx)),
+			},
+			{
+				// 禁用公司
+				Method:  http.MethodPost,
+				Path:    "/company/disable",
+				Handler: adminAuthMiddleware(admin.DisableCompanyHandler(serverCtx)),
+			},
+			{
+				// 启用公司
+				Method:  http.MethodPost,
+				Path:    "/company/enable",
+				Handler: adminAuthMiddleware(admin.EnableCompanyHandler(serverCtx)),
+			},
+			{
+				// 用户列表
+				Method:  http.MethodPost,
+				Path:    "/user/list",
+				Handler: adminAuthMiddleware(admin.UserListHandler(serverCtx)),
+			},
+			{
+				// 封禁用户
+				Method:  http.MethodPost,
+				Path:    "/user/ban",
+				Handler: adminAuthMiddleware(admin.BanUserHandler(serverCtx)),
+			},
+			{
+				// 解封用户
+				Method:  http.MethodPost,
+				Path:    "/user/unban",
+				Handler: adminAuthMiddleware(admin.UnbanUserHandler(serverCtx)),
+			},
+			{
+				// 恢复已删除用户
+				Method:  http.MethodPost,
+				Path:    "/user/restore",
+				Handler: adminAuthMiddleware(admin.RestoreUserHandler(serverCtx)),
+			},
+			{
+				// 登录记录列表
+				Method:  http.MethodPost,
+				Path:    "/login-records",
+				Handler: adminAuthMiddleware(admin.LoginRecordListHandler(serverCtx)),
+			},
+			{
+				// 服务器性能指标
+				Method:  http.MethodGet,
+				Path:    "/metrics",
+				Handler: adminAuthMiddleware(admin.MetricsHandler(serverCtx)),
+			},
+			{
+				// 系统日志列表
+				Method:  http.MethodPost,
+				Path:    "/logs",
+				Handler: adminAuthMiddleware(admin.LogListHandler(serverCtx)),
+			},
+		},
+		rest.WithPrefix("/api/v1/admin"),
 	)
 }

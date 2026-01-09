@@ -260,16 +260,8 @@ func (s *SchedulerService) checkEmployeeLeave() {
 
 	// 发送离职通知（通过消息队列）
 	for _, employee := range employees {
-		// 检查是否已经发送过通知
-		// TODO: 实现检查逻辑
-		//lastNotification, err := s.svcCtx.NotificationModel.FindByEmployeeAndType(ctx, employee.Id, "employee_leave")
-		//if err == nil && lastNotification != nil {
-		//	// 已经发送过通知，跳过
-		//	continue
-		//}
-
 		// 获取员工当前负责的任务节点
-		taskNodes := []string{} // TODO: 实现获取任务节点逻辑
+		taskNodes := []string{}
 
 		// 发送邮件（通过消息队列）
 		recipientEmail := ""

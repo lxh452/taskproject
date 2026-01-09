@@ -229,6 +229,15 @@ func (r *ResponseHelper) SuccessWithKey(key string, data interface{}) *types.Bas
 	}
 }
 
+// SuccessWithData 带数据的成功响应
+func (r *ResponseHelper) SuccessWithData(data interface{}) *types.BaseResponse {
+	return &types.BaseResponse{
+		Code: SUCCESS,
+		Msg:  "操作成功",
+		Data: data,
+	}
+}
+
 // Error 错误响应
 func (r *ResponseHelper) Error(code int, message string) *types.BaseResponse {
 	if message == "" {

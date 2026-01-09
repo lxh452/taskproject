@@ -40,6 +40,7 @@ type (
 		GetTaskCountByCompany(ctx context.Context, companyID string) (int64, error)
 		GetTaskCountByDepartment(ctx context.Context, departmentID string) (int64, error)
 		GetTaskCountByCreator(ctx context.Context, creatorID string) (int64, error)
+		GetTaskCountByDateRange(ctx context.Context, startTime, endTime string) (int64, error)
 		// UpdateNodeCount 更新任务的节点统计数
 		UpdateNodeCount(ctx context.Context, taskId string, totalCount, completedCount int64) error
 	}
@@ -328,6 +329,14 @@ func (m *customTaskModel) GetTaskCountByCreator(ctx context.Context, creatorID s
 	var count int64
 	query := `SELECT COUNT(*) FROM task WHERE creator_id = ? AND delete_time IS NULL`
 	err := m.conn.QueryRowCtx(ctx, &count, query, creatorID)
+	return count, err
+}
+
+// GetTaskCountByDateRange 根据日期范围获取任务数量
+func (m *customTaskModel) GetTaskCountByDateRange(ctx context.Context, startTime, endTime string) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM task WHERE create_time >= ? AND create_time <= ? AND delete_time IS NULL`
+	err := m.conn.QueryRowCtx(ctx, &count, query, startTime, endTime)
 	return count, err
 }
 

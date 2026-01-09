@@ -39,10 +39,19 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// StatusChecker 用户状态检查接口
+type StatusChecker interface {
+	// CheckUserStatus 检查用户状态，返回错误信息（如果有）
+	CheckUserStatus(ctx context.Context, userID string) error
+	// CheckCompanyStatus 检查公司状态，返回错误信息（如果有）
+	CheckCompanyStatus(ctx context.Context, companyID string) error
+}
+
 // JWTMiddleware JWT中间件
 type JWTMiddleware struct {
-	config      JWTConfig
-	redisClient *redis.Redis
+	config        JWTConfig
+	redisClient   *redis.Redis
+	statusChecker StatusChecker
 }
 
 // NewJWTMiddleware 创建JWT中间件
@@ -50,6 +59,11 @@ func NewJWTMiddleware(config JWTConfig) *JWTMiddleware {
 	return &JWTMiddleware{
 		config: config,
 	}
+}
+
+// SetStatusChecker 设置状态检查器（用于实时检查用户/公司状态）
+func (j *JWTMiddleware) SetStatusChecker(checker StatusChecker) {
+	j.statusChecker = checker
 }
 
 // SetRedisClient 设置Redis客户端（用于Token校验）
@@ -202,6 +216,24 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			logx.Errorf("Redis Token验证失败: %v, userId=%s", err, claims.UserID)
 			http.Error(w, "Token invalid or expired, please login again", http.StatusUnauthorized)
 			return
+		}
+
+		// 实时检查用户状态（封禁检查）- 仅对普通用户进行检查，管理员跳过
+		if j.statusChecker != nil && claims.Role != "admin" {
+			if err := j.statusChecker.CheckUserStatus(r.Context(), claims.UserID); err != nil {
+				logx.Errorf("用户状态检查失败: %v, userId=%s", err, claims.UserID)
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return
+			}
+
+			// 如果用户已加入公司，检查公司状态
+			if claims.CompanyID != "" {
+				if err := j.statusChecker.CheckCompanyStatus(r.Context(), claims.CompanyID); err != nil {
+					logx.Errorf("公司状态检查失败: %v, companyId=%s", err, claims.CompanyID)
+					http.Error(w, err.Error(), http.StatusForbidden)
+					return
+				}
+			}
 		}
 
 		// 将用户信息添加到请求上下文

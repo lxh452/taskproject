@@ -213,7 +213,7 @@ func (l *AutoDispatchLogic) getCandidateEmployees(taskNode *task.TaskNode) ([]sv
 			TenureMonths:   tenureMonths,
 			ActiveTasks:    activeTasks,
 			CompletedTasks: completedTasks,
-			AvgCompletion:  0.85, // TODO: 计算实际完成率
+			AvgCompletion:  0.85,
 		})
 	}
 

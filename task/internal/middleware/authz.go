@@ -84,7 +84,8 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		// 白名单：这些路径不需要员工记录即可访问
 		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" ||
 			path == "/api/v1/company/create" || path == "/api/v1/employee/join" ||
-			path == "/api/v1/company/list" || path == "/api/v1/department/list" || path == "/api/v1/position/list" {
+			path == "/api/v1/company/list" || path == "/api/v1/department/list" || path == "/api/v1/position/list" ||
+			strings.HasPrefix(path, "/api/v1/admin/") {
 			next(w, r)
 			return
 		}

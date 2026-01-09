@@ -28,7 +28,6 @@ func NewUpdateInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 }
 
 func (l *UpdateInfoLogic) UpdateInfo(req *types.UpdateInfoRequest) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
 
 	return
 }

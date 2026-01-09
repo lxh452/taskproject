@@ -14,6 +14,7 @@ import (
 
 // EmailConfig 邮件配置
 type EmailConfig struct {
+	Enabled  bool   `json:"enabled"`  // 是否启用邮件发送
 	Host     string `json:"host"`     // SMTP服务器地址
 	Port     int    `json:"port"`     // SMTP端口
 	Username string `json:"username"` // 发送者邮箱
@@ -44,6 +45,12 @@ func NewEmailMiddleware(config EmailConfig) *EmailMiddleware {
 
 // SendEmail 发送邮件
 func (e *EmailMiddleware) SendEmail(ctx context.Context, msg EmailMessage) error {
+	// 检查邮件功能是否启用
+	if !e.config.Enabled {
+		logx.Infof("[EmailMiddleware] Email sending is disabled, skipping: subject=%s, to=%v", msg.Subject, msg.To)
+		return nil
+	}
+
 	if len(msg.To) == 0 || msg.To[0] == "" {
 		return fmt.Errorf("recipient email is empty")
 	}

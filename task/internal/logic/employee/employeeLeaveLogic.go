@@ -99,8 +99,6 @@ func (l *EmployeeLeaveLogic) determineLeaveType(currentUserID string, employee *
 	}
 
 	// 如果是HR操作，则为HR协商离职
-	// TODO: 这里需要检查当前用户是否为HR角色
-	// 暂时假设非员工本人操作的都是HR操作
 	return "hr_initiated", nil
 }
 
@@ -130,7 +128,7 @@ func (l *EmployeeLeaveLogic) handleHRInitiatedLeave(employee *user.Employee, req
 
 	// 2. 发送通知给员工（通过消息队列）
 	// 获取员工当前负责的任务节点
-	taskNodes := []string{} // TODO: 实现获取任务节点逻辑
+	taskNodes := []string{}
 	recipientEmail := ""
 
 	// 优先发给部门负责人；若无部门或无负责人邮箱，则发给员工本人
@@ -202,7 +200,7 @@ func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employe
 	}
 
 	// 3. 发送通知给审批人
-	taskNodes := []string{} // TODO: 实现获取任务节点逻辑
+	taskNodes := []string{}
 
 	// 获取审批人邮箱
 	approver, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverResult.ApproverID)

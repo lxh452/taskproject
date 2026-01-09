@@ -63,6 +63,7 @@ type Config struct {
 
 	// 邮件配置
 	Email struct {
+		Enabled  bool   `json:"enabled"` // 是否启用邮件发送
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
 		Username string `json:"username"`

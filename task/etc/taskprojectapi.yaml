@@ -2,33 +2,26 @@ Name: taskprojectapi
 Host: 0.0.0.0
 Port: 8888
 Mode: dev
-Timeout: 30000  # 请求超时时间（毫秒），设置为30秒以支持AI接口
+Timeout: 30000
 
 # 系统配置（用于拼接前端链接，例如邮件中的跳转地址）
 System:
-  # 这里建议填前端访问地址，后续你买域名后改成 https://your-domain.com 即可
   BaseURL: "http://localhost:5173"
 
 # 文件存储配置
 FileStorage:
-  # 存储类型: local(本地存储) 或 cos(腾讯云COS)
-  # 也可以通过环境变量 FILE_STORAGE_TYPE 设置
   StorageType: "cos"
-  # 本地存储根目录（当StorageType为local时使用）
   StorageRoot: "./upload"
-  # 文件访问URL前缀（COS域名或本地静态服务地址）
-  # 也可以通过环境变量 TENCENT_CLOUD_COS_URL_PREFIX 设置
   URLPrefix: "https://lxh452-task-1385490051.cos.ap-guangzhou.myqcloud.com"
-  # 腾讯云COS配置（当StorageType为cos时使用）
-  # 注意：SecretId和SecretKey建议通过环境变量设置，更安全
+  # 腾讯云COS配置
   # 环境变量：TENCENT_CLOUD_SECRET_ID 和 TENCENT_CLOUD_SECRET_KEY
   COS:
-    SecretId: ""  # 请替换为您的SecretId
-    SecretKey: “"  # 请替换为您的SecretKey
-    Bucket: "lxh452-task-1385490051"  # 存储桶名称
-    Region: "ap-guangzhou"  # 地域
+    SecretId: ""
+    SecretKey: ""
+    Bucket: "lxh452-task-1385490051"
+    Region: "ap-guangzhou"
 
-# 数据库配置（优化连接参数，防止连接泄漏）
+# 数据库配置
 MySQL:
   DataSource: "root:Lxh17306642597@tcp(localhost:3306)/task_project?charset=utf8mb4&parseTime=true&loc=Local&timeout=120s&readTimeout=120s&writeTimeout=120s&maxAllowedPacket=67108864&collation=utf8mb4_unicode_ci"
 
@@ -49,8 +42,9 @@ JWT:
 
 # 邮件配置
 Email:
+  Enabled: false  # 是否启用邮件发送（VPN可能会干扰SMTP连接，如遇问题可设为false）
   Host: "smtp.qq.com"
-  Port: 587  # 改为 587 端口（STARTTLS），比 465 更稳定
+  Port: 587
   Username: "1844554263@qq.com"
   Password: "zzykyhnrubibdhif"
   From: "企业任务系统"
@@ -58,11 +52,11 @@ Email:
 
 # 短信配置
 SMS:
-  Provider: "aliyun"  # aliyun, tencent
-  AccessKey: "your-access-key"
-  SecretKey: "your-secret-key"
+  Provider: "aliyun"
+  AccessKey: ""
+  SecretKey: ""
   SignName: "企业任务系统"
-  TemplateID: "SMS_123456789"
+  TemplateID: ""
   Endpoint: "https://dysmsapi.aliyuncs.com"
   Region: "cn-hangzhou"
 
@@ -72,7 +66,7 @@ RabbitMQ:
   Exchange: "task.exchange"
   Queue: "task.queue"
 
-  #加入mongodb
+# MongoDB配置
 Mongo:
   Host: localhost
   Port: 27017
@@ -88,8 +82,8 @@ Mongo:
   MaxConnIdleTime: 10m
 
 # GLM AI配置（智谱AI - 用于智能任务派发）
-# 注意：APIKey建议通过环境变量 GLM_API_KEY 设置，更安全
+# 环境变量：GLM_API_KEY
 GLM:
-  APIKey: "2ee2db41950944f0a8b93f14aca74449.ZMOrwBNH2pTshcxB"  # 请替换为您的智谱AI API Key
+  APIKey: ""
   BaseURL: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
   Model: "glm-4.7"

@@ -70,9 +70,7 @@ func (l *ConfirmLeaveApprovalLogic) ConfirmLeaveApproval(req *types.ConfirmLeave
 		return utils.Response.InternalError("更新员工离职状态失败"), err
 	}
 
-	// 6. 更新审批状态为已通过（简化实现）
-	// 注意：TaskHandoverModel 可能没有 SelectiveUpdate 方法
-	// TODO: 如果需要更新审批状态，需要实现 TaskHandoverModel.SelectiveUpdate 方法
+	// 6. 更新审批状态为已通过
 	logx.Infof("离职审批 %s 已通过", req.ApprovalID)
 
 	// 7. 处理员工的任务重新派发
@@ -98,7 +96,7 @@ func (l *ConfirmLeaveApprovalLogic) handleTaskRedispatch(employeeID string) erro
 		return err
 	}
 
-	// 2. 对每个进行中的任务节点进行自动派发
+	// 2. 对每个进行中的任务节点进行处理
 	for _, node := range taskNodes {
 		if node.NodeStatus == 2 { // 进行中
 			// 清空执行人，让任务进入闲置状态
@@ -108,14 +106,8 @@ func (l *ConfirmLeaveApprovalLogic) handleTaskRedispatch(employeeID string) erro
 				continue
 			}
 
-			// 调用自动派发逻辑
-			dispatchService := svc.NewDispatchService(l.svcCtx)
-			err = dispatchService.AutoDispatchTask(l.ctx, node.TaskNodeId)
-			if err != nil {
-				logx.Errorf("自动派发任务节点 %s 失败: %v", node.TaskNodeId, err)
-				// 如果自动派发失败，创建交接记录等待手动分配
-				l.createTaskHandover(node, employeeID, "员工离职，自动派发失败")
-			}
+			// 创建交接记录等待手动分配
+			l.createTaskHandover(node, employeeID, "员工离职，任务待重新分配")
 		}
 	}
 

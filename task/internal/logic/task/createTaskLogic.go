@@ -64,8 +64,6 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 	}
 
 	// 4. 验证用户（如果有负责人和节点负责人）
-	// 这里需要根据实际需求来确定是否需要验证
-	// todo 假设：公司管理员可以创建任务，不需要在负责人列表中
 
 	// 5. 创建任务ID
 	taskID := utils.Common.GenerateIDWithPrefix("task")

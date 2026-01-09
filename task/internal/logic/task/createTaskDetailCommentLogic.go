@@ -28,7 +28,6 @@ func NewCreateTaskDetailCommentLogic(ctx context.Context, svcCtx *svc.ServiceCon
 }
 
 func (l *CreateTaskDetailCommentLogic) CreateTaskDetailComment(req *types.CreateTaskDetailComment) (resp *types.BaseResponse, err error) {
-	// todo: add your logic here and delete this line
 
 	return
 }

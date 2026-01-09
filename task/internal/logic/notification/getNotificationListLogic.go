@@ -54,7 +54,6 @@ func (l *GetNotificationListLogic) GetNotificationList(req *types.NotificationLi
 
 	// 5. 验证权限：如果查询的不是当前员工的通知，需要管理员权限
 	if employeeID != employee.Id {
-		// TODO: 可以在这里添加管理员权限验证
 		// 暂时不允许查询其他员工的通知
 		return utils.Response.BusinessError("notification_view_denied"), nil
 	}

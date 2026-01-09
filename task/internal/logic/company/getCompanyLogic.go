@@ -18,7 +18,7 @@ type GetCompanyLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// todo 获取用户登录的公司信息
+// 获取用户登录的公司信息
 func NewGetCompanyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetCompanyLogic {
 	return &GetCompanyLogic{
 		Logger: logx.WithContext(ctx),

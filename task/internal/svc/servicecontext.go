@@ -6,6 +6,7 @@ package svc
 import (
 	"context"
 	"fmt"
+	adminModel "task_Project/model/admin"
 	"task_Project/model/company"
 	"task_Project/model/role"
 	"task_Project/model/task"
@@ -25,9 +26,10 @@ type ServiceContext struct {
 	Config config.Config
 
 	// 中间件
-	JWTMiddleware   *middleware.JWTMiddleware
-	EmailMiddleware *middleware.EmailMiddleware
-	SMSMiddleware   *middleware.SMSMiddleware
+	JWTMiddleware       *middleware.JWTMiddleware
+	AdminAuthMiddleware *middleware.AdminAuthMiddleware
+	EmailMiddleware     *middleware.EmailMiddleware
+	SMSMiddleware       *middleware.SMSMiddleware
 
 	// Redis 客户端（用于Token存储和验证）
 	RedisClient *redis.Redis
@@ -39,6 +41,14 @@ type ServiceContext struct {
 	// 用户相关模型
 	UserModel     user.UserModel
 	EmployeeModel user.EmployeeModel
+
+	// 管理员相关模型
+	AdminModel       adminModel.AdminModel
+	LoginRecordModel adminModel.LoginRecordModel
+	SystemLogModel   adminModel.SystemLogModel
+
+	// 系统日志服务
+	SystemLogService *SystemLogService
 
 	// 公司相关模型
 	CompanyModel    company.CompanyModel
@@ -108,6 +118,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 初始化邮件中间件
 	emailMiddleware := middleware.NewEmailMiddleware(middleware.EmailConfig{
+		Enabled:  c.Email.Enabled,
 		Host:     c.Email.Host,
 		Port:     c.Email.Port,
 		Username: c.Email.Username,
@@ -200,6 +211,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	roleModel := role.NewRoleModel(conn)
 	positionRoleModel := role.NewPositionRoleModel(conn)
 
+	// 管理员相关模型
+	adminModelInstance := adminModel.NewAdminModel(conn)
+	loginRecordModel := adminModel.NewLoginRecordModel(conn)
+	systemLogModel := adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs")
+
 	// 任务相关模型
 	taskModel := task.NewTaskModel(conn)
 	taskNodeModel := task.NewTaskNodeModel(conn)
@@ -272,11 +288,15 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	fileStorageService = cosService
 	logx.Infof("[ServiceContext] COS存储服务初始化成功: bucket=%s, region=%s, urlPrefix=%s", bucket, region, urlPrefix)
 
+	// 初始化管理员认证中间件
+	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(jwtMiddleware, redisClient)
+
 	s := &ServiceContext{
-		Config:          c,
-		JWTMiddleware:   jwtMiddleware,
-		EmailMiddleware: emailMiddleware,
-		SMSMiddleware:   smsMiddleware,
+		Config:              c,
+		JWTMiddleware:       jwtMiddleware,
+		AdminAuthMiddleware: adminAuthMiddleware,
+		EmailMiddleware:     emailMiddleware,
+		SMSMiddleware:       smsMiddleware,
 
 		// Redis 客户端
 		RedisClient: redisClient,
@@ -288,6 +308,14 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		// 用户相关模型
 		UserModel:     userModel,
 		EmployeeModel: employeeModel,
+
+		// 管理员相关模型
+		AdminModel:       adminModelInstance,
+		LoginRecordModel: loginRecordModel,
+		SystemLogModel:   systemLogModel,
+
+		// 系统日志服务
+		SystemLogService: NewSystemLogService(systemLogModel),
 
 		// 公司相关模型
 		CompanyModel:    companyModel,
@@ -336,8 +364,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		// 文件存储服务
 		FileStorageService: fileStorageService,
 
-		// SQL执行服务
-		SQLExecutorService: NewSQLExecutorService(conn, "./../model/sql"),
+		// SQL执行服务 (Docker 中路径为 ./model/sql，本地开发为 ./../model/sql)
+		SQLExecutorService: NewSQLExecutorService(conn, "./model/sql"),
 	}
 
 	// 初始化GLM服务
@@ -362,6 +390,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 设置Redis客户端给JWT中间件（用于Token验证）
 	jwtMiddleware.SetRedisClient(redisClient)
+
+	// 设置状态检查器给JWT中间件（用于实时检查用户/公司状态）
+	statusChecker := NewStatusCheckerService(userModel, companyModel)
+	jwtMiddleware.SetStatusChecker(statusChecker)
 
 	// 启动消息队列消费者（在 ServiceContext 完全初始化后）
 	if mqClient != nil {

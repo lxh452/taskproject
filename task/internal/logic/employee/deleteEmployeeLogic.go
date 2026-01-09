@@ -28,10 +28,9 @@ func NewDeleteEmployeeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *De
 	}
 }
 
-// 这里更换为hr主动提出员工离职 todo
+// 这里更换为hr主动提出员工离职
 func (l *DeleteEmployeeLogic) DeleteEmployee(req *types.DeleteEmployeeRequest) (resp *types.BaseResponse, err error) {
 
-	// todo 既然这里是hr主动删除员工，就是离职的所以这里要发送邮件和短信，同时这个事情不能毫无准备，现在在这一块需要提供定时任务，发送到mq
 	// 参数验证
 	validator := utils.NewValidator()
 	if validator.IsEmpty(req.EmployeeID) {
@@ -45,7 +44,6 @@ func (l *DeleteEmployeeLogic) DeleteEmployee(req *types.DeleteEmployeeRequest) (
 	}
 
 	// 检查员工是否有未完成的任务
-	// todo 这里可能需要重新处理找到的逻辑 目前这一块只是找了任务创建是这个id的情况 可能这人一辈子都是员工
 	taskCount, err := l.svcCtx.TaskModel.GetTaskCountByCreator(l.ctx, req.EmployeeID)
 	if err != nil {
 		logx.Errorf("查询员工任务数量失败: %v", err)

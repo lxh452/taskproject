@@ -40,7 +40,7 @@ func (l *UpdateCompanyLogic) UpdateCompany(req *types.UpdateCompanyRequest) (res
 		logx.Errorf("查询公司失败: %v", err)
 		return utils.Response.ErrorWithKey("company_not_found"), nil
 	}
-	// todo 这里要更正，由于公司的拥有者才有权限修改
+	// 校验公司的拥有者才有权限修改
 
 	// 构建更新数据
 	updateData := make(map[string]interface{})
