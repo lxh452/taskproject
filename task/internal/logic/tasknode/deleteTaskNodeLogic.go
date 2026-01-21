@@ -68,7 +68,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	// }
 
 	// if len(dependentNodes) > 0 {
-	// 	return utils.Response.BusinessError("有其他任务节点依赖此节点，无法删除"), nil
+	// 	return utils.Response.BusinessError("node_has_dependents"), nil
 	// }
 
 	// 7. 软删除任务节点

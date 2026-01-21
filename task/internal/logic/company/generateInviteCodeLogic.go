@@ -35,7 +35,7 @@ func (l *GenerateInviteCodeLogic) GenerateInviteCode(req *types.GenerateInviteCo
 	// 获取当前员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil || employee == nil {
-		return utils.Response.BusinessError("您尚未加入任何公司"), nil
+		return utils.Response.BusinessError("employee_not_in_company"), nil
 	}
 
 	// 获取公司信息
@@ -67,7 +67,7 @@ func (l *GenerateInviteCodeLogic) GenerateInviteCode(req *types.GenerateInviteCo
 	}
 
 	if !isFounder && !isHR && !isManager {
-		return utils.Response.BusinessError("只有公司创始人、人事部门或管理人员可以生成邀请码"), nil
+		return utils.Response.BusinessError("only_admin_can_generate"), nil
 	}
 
 	// 生成邀请码

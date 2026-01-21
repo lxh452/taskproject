@@ -36,7 +36,7 @@ func (l *GetPendingJoinApplicationsLogic) GetPendingJoinApplications(req *types.
 	// 获取当前员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil || employee == nil {
-		return utils.Response.BusinessError("您尚未加入任何公司"), nil
+		return utils.Response.BusinessError("employee_not_in_company"), nil
 	}
 
 	// 检查审批权限
@@ -60,7 +60,7 @@ func (l *GetPendingJoinApplicationsLogic) GetPendingJoinApplications(req *types.
 	}
 
 	if !isFounder && !isHR && !isManager {
-		return utils.Response.BusinessError("只有公司创始人、人事部门或管理人员可以查看"), nil
+		return utils.Response.BusinessError("only_admin_can_view"), nil
 	}
 
 	// 查询待审批的申请

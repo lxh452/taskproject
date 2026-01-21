@@ -51,7 +51,7 @@ func (l *DeleteEmployeeLogic) DeleteEmployee(req *types.DeleteEmployeeRequest) (
 	}
 
 	if taskCount > 0 {
-		return utils.Response.BusinessError("员工还有未完成的任务，无法删除"), nil
+		return utils.Response.BusinessError("employee_has_tasks"), nil
 	}
 
 	// 软删除员工

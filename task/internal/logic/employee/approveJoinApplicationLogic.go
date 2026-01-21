@@ -41,24 +41,24 @@ func (l *ApproveJoinApplicationLogic) ApproveJoinApplication(req *types.ApproveJ
 	// 获取当前员工信息
 	approverEmployee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil || approverEmployee == nil {
-		return utils.Response.BusinessError("您尚未加入任何公司"), nil
+		return utils.Response.BusinessError("employee_not_in_company"), nil
 	}
 
 	// 获取申请信息
 	application, err := l.svcCtx.JoinApplicationModel.FindOne(l.ctx, req.ApplicationID)
 	if err != nil {
 		logx.Errorf("查询申请失败: %v", err)
-		return utils.Response.BusinessError("申请不存在"), nil
+		return utils.Response.BusinessError("application_not_found"), nil
 	}
 
 	// 检查申请状态
 	if application.Status != user.JoinApplicationStatusPending {
-		return utils.Response.BusinessError("该申请已处理"), nil
+		return utils.Response.BusinessError("application_processed"), nil
 	}
 
 	// 检查审批人是否属于该公司
 	if approverEmployee.CompanyId != application.CompanyId {
-		return utils.Response.BusinessError("您无权审批此申请"), nil
+		return utils.Response.BusinessError("no_permission_approve"), nil
 	}
 
 	// 检查审批权限：创始人或人事部门或管理岗
@@ -82,7 +82,7 @@ func (l *ApproveJoinApplicationLogic) ApproveJoinApplication(req *types.ApproveJ
 	}
 
 	if !isFounder && !isHR && !isManager {
-		return utils.Response.BusinessError("只有公司创始人、人事部门或管理人员可以审批"), nil
+		return utils.Response.BusinessError("only_admin_can_approve"), nil
 	}
 
 	// 获取申请人信息

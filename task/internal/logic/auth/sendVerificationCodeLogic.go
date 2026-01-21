@@ -31,7 +31,7 @@ func NewSendVerificationCodeLogic(ctx context.Context, svcCtx *svc.ServiceContex
 func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerificationCodeRequest) (resp *types.BaseResponse, err error) {
 	// 1. 验证邮箱格式
 	if !utils.Common.IsValidEmail(req.Email) {
-		return utils.Response.BusinessError("邮箱格式不正确"), nil
+		return utils.Response.BusinessError("email_format_invalid"), nil
 	}
 
 	// 2. 检查邮箱是否已被注册（如果是注册场景）

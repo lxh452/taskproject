@@ -49,7 +49,7 @@ func (l *DeletePositionLogic) DeletePosition(req *types.DeletePositionRequest) (
 	// }
 
 	// if employeeCount > 0 {
-	// 	return utils.Response.BusinessError("职位还有员工，无法删除"), nil
+	// 	return utils.Response.BusinessError("position_has_employees"), nil
 	// }
 
 	// 软删除职位

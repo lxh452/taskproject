@@ -35,7 +35,7 @@ func (l *RevokeInviteCodeLogic) RevokeInviteCode(req *types.RevokeInviteCodeRequ
 	// 获取当前员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil || employee == nil {
-		return utils.Response.BusinessError("您尚未加入任何公司"), nil
+		return utils.Response.BusinessError("employee_not_in_company"), nil
 	}
 
 	// 获取公司信息
@@ -65,7 +65,7 @@ func (l *RevokeInviteCodeLogic) RevokeInviteCode(req *types.RevokeInviteCodeRequ
 	}
 
 	if !isFounder && !isHR && !isManager {
-		return utils.Response.BusinessError("只有公司创始人、人事部门或管理人员可以撤销邀请码"), nil
+		return utils.Response.BusinessError("only_admin_can_revoke"), nil
 	}
 
 	// 撤销邀请码

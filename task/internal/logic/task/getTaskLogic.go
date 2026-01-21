@@ -79,7 +79,7 @@ func (l *GetTaskLogic) GetTask(req *types.GetTaskRequest) (resp *types.BaseRespo
 
 		if !isNodeParticipant {
 			// 既不是任务负责人，也不是任何节点的参与者，无权查看
-			return utils.Response.BusinessError("无权查看此任务"), nil
+			return utils.Response.BusinessError("task_view_denied"), nil
 		}
 
 		// 只返回用户参与的节点

@@ -113,7 +113,7 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 			logx.Infof("用户 %s 登录失败次数达到5次，锁定10分钟", userInfo.Username)
 			// 记录登录失败日志（账户锁定）
 			l.recordLoginLog(userInfo.Id, req.Username, 0, "登录失败次数过多，账户已锁定")
-			return utils.Response.BusinessError("登录失败次数过多，账户已锁定10分钟"), nil
+			return utils.Response.BusinessError("login_too_many_attempts"), nil
 		}
 
 		remainingAttempts := 5 - failedCount

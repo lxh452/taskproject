@@ -62,7 +62,7 @@ func (l *AdminLoginLogic) AdminLogin(req *types.AdminLoginRequest, r *http.Reque
 		// 记录登录失败
 		l.recordLoginAttempt("", "admin", req.Username, clientIP, userAgent, 0, "管理员账号不存在")
 		if errors.Is(err, adminModel.ErrNotFound) {
-			return utils.Response.BusinessError("用户名或密码错误"), nil
+			return utils.Response.BusinessError("admin_not_found"), nil
 		}
 		logx.Errorf("查找管理员失败: %v", err)
 		return utils.Response.InternalError("查找管理员失败"), nil
@@ -71,14 +71,14 @@ func (l *AdminLoginLogic) AdminLogin(req *types.AdminLoginRequest, r *http.Reque
 	// 检查管理员状态
 	if adminInfo.Status != 1 {
 		l.recordLoginAttempt(adminInfo.Id, "admin", req.Username, clientIP, userAgent, 0, "管理员账号已禁用")
-		return utils.Response.BusinessError("管理员账号已禁用"), nil
+		return utils.Response.BusinessError("admin_disabled"), nil
 	}
 
 	// 验证密码
 	err = bcrypt.CompareHashAndPassword([]byte(adminInfo.PasswordHash), []byte(req.Password))
 	if err != nil {
 		l.recordLoginAttempt(adminInfo.Id, "admin", req.Username, clientIP, userAgent, 0, "密码错误")
-		return utils.Response.BusinessError("用户名或密码错误"), nil
+		return utils.Response.BusinessError("admin_not_found"), nil
 	}
 
 	// 登录成功，生成JWT令牌

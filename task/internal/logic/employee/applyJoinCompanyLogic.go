@@ -38,13 +38,13 @@ func (l *ApplyJoinCompanyLogic) ApplyJoinCompany(req *types.ApplyJoinCompanyRequ
 	// 检查用户是否已经加入公司
 	existingEmployee, _ := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if existingEmployee != nil {
-		return utils.Response.BusinessError("您已经加入了公司，无法再次申请"), nil
+		return utils.Response.BusinessError("already_in_company"), nil
 	}
 
 	// 检查是否有待审批的申请
 	pendingApp, _ := l.svcCtx.JoinApplicationModel.FindPendingByUserId(l.ctx, userID)
 	if pendingApp != nil {
-		return utils.Response.BusinessError("您已有待审批的申请，请等待审批结果"), nil
+		return utils.Response.BusinessError("pending_application"), nil
 	}
 
 	// 验证邀请码
@@ -63,12 +63,12 @@ func (l *ApplyJoinCompanyLogic) ApplyJoinCompany(req *types.ApplyJoinCompanyRequ
 	company, err := l.svcCtx.CompanyModel.FindOne(l.ctx, inviteData.CompanyID)
 	if err != nil {
 		l.logger.WithContext(l.ctx).Errorf("查询公司失败: companyId=%s, err=%v", inviteData.CompanyID, err)
-		return utils.Response.BusinessError("邀请码对应的公司不存在"), nil
+		return utils.Response.BusinessError("invite_company_not_found"), nil
 	}
 
 	// 检查公司状态
 	if company.Status != 1 {
-		return utils.Response.BusinessError("该公司已停用，无法申请加入"), nil
+		return utils.Response.BusinessError("company_disabled"), nil
 	}
 
 	// 创建加入申请

@@ -129,7 +129,7 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 			_, err = l.svcCtx.EmployeeModel.FindOne(l.ctx, executorID)
 			if err != nil {
 				if errors.Is(err, sqlx.ErrNotFound) {
-					return utils.Response.BusinessError(fmt.Sprintf("指定的执行人 %s 不存在", executorID)), nil
+					return utils.Response.BusinessError("executor_not_found"), nil
 				}
 				return nil, err
 			}

@@ -36,7 +36,7 @@ func (l *GetInviteCodeListLogic) GetInviteCodeList(req *types.GetInviteCodeListR
 	// 获取当前员工信息
 	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
 	if err != nil || employee == nil {
-		return utils.Response.BusinessError("您尚未加入任何公司"), nil
+		return utils.Response.BusinessError("employee_not_in_company"), nil
 	}
 
 	// 获取公司信息
@@ -66,7 +66,7 @@ func (l *GetInviteCodeListLogic) GetInviteCodeList(req *types.GetInviteCodeListR
 	}
 
 	if !isFounder && !isHR && !isManager {
-		return utils.Response.BusinessError("只有公司创始人、人事部门或管理人员可以查看邀请码列表"), nil
+		return utils.Response.BusinessError("only_admin_can_view_invite"), nil
 	}
 
 	// 获取邀请码列表

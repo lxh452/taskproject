@@ -30,12 +30,12 @@ func NewResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Res
 func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (resp *types.BaseResponse, err error) {
 	// 1. 验证邮箱格式
 	if !utils.Common.IsValidEmail(req.Email) {
-		return utils.Response.BusinessError("邮箱格式不正确"), nil
+		return utils.Response.BusinessError("email_format_invalid"), nil
 	}
 
 	// 2. 验证密码强度
 	if !utils.Common.IsValidPassword(req.NewPassword) {
-		return utils.Response.BusinessError("密码必须8-32位，包含数字、大小写字母和特殊字符"), nil
+		return utils.Response.BusinessError("password_format_invalid"), nil
 	}
 
 	// 3. 验证验证码
