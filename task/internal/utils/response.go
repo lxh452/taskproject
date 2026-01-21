@@ -285,6 +285,17 @@ func (r *ResponseHelper) BusinessError(key string) *types.BaseResponse {
 	}
 }
 
+// BusinessError 业务错误响应
+func (r *ResponseHelper) BusinessErrorWithNum(msg string) *types.BaseResponse {
+	if msg == "" {
+		msg = "业务错误"
+	}
+	return &types.BaseResponse{
+		Code: BAD_REQUEST,
+		Msg:  msg,
+	}
+}
+
 // ValidationError 验证错误响应
 func (r *ResponseHelper) ValidationError(message string) *types.BaseResponse {
 	return &types.BaseResponse{
