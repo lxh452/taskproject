@@ -77,7 +77,7 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		// 计算剩余锁定时间
 		remainingMinutes := int(userInfo.LockedUntil.Time.Sub(time.Now()).Minutes()) + 1
 		logx.Infof("用户 %s 仍处于锁定状态，剩余 %d 分钟", userInfo.Username, remainingMinutes)
-		return utils.Response.BusinessError(fmt.Sprintf("账户已锁定，请在 %d 分钟后重试", remainingMinutes)), nil
+		return utils.Response.BusinessErrorWithNum(fmt.Sprintf("账户已锁定，请在 %d 分钟后重试", remainingMinutes)), nil
 	}
 
 	// 如果锁定时间已过期，自动解锁（重置失败次数和锁定状态）
@@ -119,7 +119,7 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		remainingAttempts := 5 - failedCount
 		// 记录登录失败日志（密码错误）
 		l.recordLoginLog(userInfo.Id, req.Username, 0, fmt.Sprintf("密码错误，剩余%d次尝试", remainingAttempts))
-		return utils.Response.BusinessError(fmt.Sprintf("用户名或密码错误，还剩 %d 次尝试机会", remainingAttempts)), nil
+		return utils.Response.BusinessErrorWithNum(fmt.Sprintf("用户名或密码错误，还剩 %d 次尝试机会", remainingAttempts)), nil
 	}
 
 	// 如果用户已加入公司，查询员工ID
