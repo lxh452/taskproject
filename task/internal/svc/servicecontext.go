@@ -143,17 +143,14 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Region:     c.SMS.Region,
 	})
 
-	// 初始化 Redis 客户端 - 临时禁用以允许系统运行
-	var redisClient *redis.Redis
-	logx.Infof("[ServiceContext] Redis temporarily disabled for testing")
-	/*
-		redisClient := redis.MustNewRedis(redis.RedisConf{
-			Host: redisAddr,
-			Pass: c.Redis.Password,
-			Type: "node",
-		})
-		logx.Infof("[ServiceContext] Redis client initialized: addr=%s", redisAddr)
-	*/
+	// 初始化 Redis 客户端
+	redisAddr := fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port)
+	redisClient := redis.MustNewRedis(redis.RedisConf{
+		Host: redisAddr,
+		Pass: c.Redis.Password,
+		Type: "node",
+	})
+	logx.Infof("[ServiceContext] Redis client initialized: addr=%s", redisAddr)
 
 	// 初始化 MongoDB model (可选)
 	var uploadFileModel upload.Upload_fileModel
