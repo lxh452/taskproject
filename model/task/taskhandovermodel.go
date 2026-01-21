@@ -36,6 +36,7 @@ type (
 		GetTaskHandoverCountByTaskNode(ctx context.Context, taskNodeID string) (int64, error)
 		GetTaskHandoverCountByFromEmployee(ctx context.Context, fromEmployeeID string) (int64, error)
 		GetTaskHandoverCountByToEmployee(ctx context.Context, toEmployeeID string) (int64, error)
+		FindPendingApprovalsByEmployee(ctx context.Context, employeeID string, page, pageSize int) ([]*TaskHandover, int64, error)
 	}
 
 	customTaskHandoverModel struct {
@@ -261,5 +262,30 @@ func (m *customTaskHandoverModel) FindByEmployeeInvolved(ctx context.Context, em
 	offset := (page - 1) * pageSize
 	query := `SELECT * FROM task_handover WHERE from_employee_id = ? OR to_employee_id = ? OR approver_id = ? ORDER BY create_time DESC LIMIT ? OFFSET ?`
 	err = m.conn.QueryRowsCtx(ctx, &taskHandovers, query, employeeID, employeeID, employeeID, pageSize, offset)
+	return taskHandovers, total, err
+}
+
+// FindPendingApprovalsByEmployee 查询需要指定员工审批的交接记录
+// 包括：待接收确认(status=0, to_employee_id=employeeId) 和 待上级审批(status=1, approver_id=employeeId)
+func (m *customTaskHandoverModel) FindPendingApprovalsByEmployee(ctx context.Context, employeeID string, page, pageSize int) ([]*TaskHandover, int64, error) {
+	var taskHandovers []*TaskHandover
+	var total int64
+
+	// 查询总数
+	countQuery := `SELECT COUNT(*) FROM task_handover 
+		WHERE (handover_status = 0 AND to_employee_id = ?) 
+		OR (handover_status = 1 AND approver_id = ?)`
+	err := m.conn.QueryRowCtx(ctx, &total, countQuery, employeeID, employeeID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	query := `SELECT * FROM task_handover 
+		WHERE (handover_status = 0 AND to_employee_id = ?) 
+		OR (handover_status = 1 AND approver_id = ?) 
+		ORDER BY create_time DESC LIMIT ? OFFSET ?`
+	err = m.conn.QueryRowsCtx(ctx, &taskHandovers, query, employeeID, employeeID, pageSize, offset)
 	return taskHandovers, total, err
 }

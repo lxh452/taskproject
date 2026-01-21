@@ -23,6 +23,7 @@ const (
 
 // InviteCodeData 邀请码数据
 type InviteCodeData struct {
+	Code        string `json:"code"` // 邀请码
 	CompanyID   string `json:"companyId"`
 	CompanyName string `json:"companyName"`
 	CreatedBy   string `json:"createdBy"` // 创建者员工ID
@@ -64,6 +65,7 @@ func (s *InviteCodeService) GenerateInviteCode(ctx context.Context, companyID, c
 	// 构建邀请码数据
 	now := time.Now()
 	data := InviteCodeData{
+		Code:        code,
 		CompanyID:   companyID,
 		CompanyName: companyName,
 		CreatedBy:   createdBy,
@@ -188,6 +190,52 @@ func (s *InviteCodeService) RevokeInviteCode(ctx context.Context, code string) e
 
 	logx.Infof("撤销邀请码成功: code=%s", code)
 	return nil
+}
+
+// ListInviteCodesByCompany 获取公司的所有邀请码列表
+func (s *InviteCodeService) ListInviteCodesByCompany(ctx context.Context, companyID string) ([]InviteCodeData, error) {
+	// 扫描所有邀请码key
+	pattern := InviteCodeKeyPrefix + "*"
+	keys, err := s.redisClient.Keys(pattern)
+	if err != nil {
+		logx.Errorf("扫描邀请码失败: pattern=%s, err=%v", pattern, err)
+		return nil, fmt.Errorf("扫描邀请码失败: %w", err)
+	}
+
+	logx.Infof("[ListInviteCodesByCompany] 扫描到的key数量: %d, pattern=%s, companyID=%s", len(keys), pattern, companyID)
+
+	var result []InviteCodeData
+
+	for _, key := range keys {
+		// 获取邀请码数据
+		jsonData, err := s.redisClient.Get(key)
+		if err != nil || jsonData == "" {
+			logx.Errorf("[ListInviteCodesByCompany] 获取key失败或数据为空: key=%s, err=%v", key, err)
+			continue
+		}
+
+		var data InviteCodeData
+		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+			logx.Errorf("解析邀请码数据失败: key=%s, err=%v", key, err)
+			continue
+		}
+
+		logx.Infof("[ListInviteCodesByCompany] 解析邀请码: key=%s, companyID=%s, dataCompanyID=%s", key, companyID, data.CompanyID)
+
+		// 只返回当前公司的邀请码
+		if data.CompanyID == companyID {
+			// 从key中提取邀请码
+			code := strings.TrimPrefix(key, InviteCodeKeyPrefix)
+			data.Code = code
+
+			// 返回所有邀请码（包括已过期的），让前端处理过滤
+			result = append(result, data)
+			logx.Infof("[ListInviteCodesByCompany] 添加邀请码到结果: code=%s", code)
+		}
+	}
+
+	logx.Infof("获取公司邀请码列表: companyID=%s, count=%d", companyID, len(result))
+	return result, nil
 }
 
 // generateRandomCode 生成随机邀请码

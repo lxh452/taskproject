@@ -236,6 +236,15 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		return nil, err
 	}
 
+	// 6.5 如果更新了节点状态，同步更新任务整体进度
+	if len(req.NodeStatus) > 0 {
+		err = l.updateTaskProgress(req.NodeID)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务整体进度失败: %v", err)
+			// 不影响主流程，继续执行
+		}
+	}
+
 	// 7. 创建任务日志
 	logContent := fmt.Sprintf("任务节点 %s 已更新：%s", taskNode.NodeName, fmt.Sprintf("%v", updateFields))
 	taskLog := &task.TaskLog{
@@ -299,4 +308,72 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		"message":       "任务节点更新成功",
 		"updatedFields": updateFields,
 	}), nil
+}
+
+// updateTaskProgress 根据所有任务节点进度更新任务整体进度
+func (l *UpdateTaskNodeLogic) updateTaskProgress(taskNodeId string) error {
+	// 获取任务节点信息
+	taskNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
+	if err != nil {
+		return err
+	}
+
+	// 获取该任务的所有节点
+	nodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, taskNode.TaskId)
+	if err != nil {
+		return err
+	}
+
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	// 计算平均进度和完成节点数
+	// 节点状态：0-未开始，1-进行中，2-已完成，3-已逾期
+	var totalProgress int64
+	var completedCount int64
+	allNodesCompleted := true
+	for _, node := range nodes {
+		totalProgress += node.Progress
+		if node.NodeStatus == 2 { // 状态为已完成
+			completedCount++
+		} else {
+			allNodesCompleted = false
+		}
+	}
+	avgProgress := int(totalProgress / int64(len(nodes)))
+
+	// 更新任务进度
+	err = l.svcCtx.TaskModel.UpdateProgress(l.ctx, taskNode.TaskId, avgProgress)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务进度失败: %v", err)
+	}
+
+	// 只有当所有节点都完成（状态2）且平均进度达到100%时，才更新任务状态为已完成
+	// 任务状态：0-未开始，1-进行中，2-已完成，3-逾期完成
+	if allNodesCompleted && avgProgress == 100 {
+		err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 2)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+		}
+		l.Logger.WithContext(l.ctx).Infof("任务 %s 所有节点已完成，任务状态更新为已完成", taskNode.TaskId)
+	} else if completedCount > 0 || avgProgress > 0 {
+		// 如果有节点完成或有进度，但不是全部完成，确保任务状态为进行中
+		taskInfo, taskErr := l.svcCtx.TaskModel.FindOne(l.ctx, taskNode.TaskId)
+		if taskErr == nil && taskInfo.TaskStatus == 0 {
+			err = l.svcCtx.TaskModel.UpdateStatus(l.ctx, taskNode.TaskId, 1)
+			if err != nil {
+				l.Logger.WithContext(l.ctx).Errorf("更新任务状态失败: %v", err)
+			}
+			l.Logger.WithContext(l.ctx).Infof("任务 %s 有进展，任务状态更新为进行中", taskNode.TaskId)
+		}
+	}
+
+	// 更新任务节点统计
+	err = l.svcCtx.TaskModel.UpdateNodeCount(l.ctx, taskNode.TaskId, int64(len(nodes)), completedCount)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("更新任务节点统计失败: %v", err)
+	}
+
+	return nil
 }

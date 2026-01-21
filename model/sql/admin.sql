@@ -47,5 +47,5 @@ CREATE TABLE `login_record` (
 -- 初始管理员账号 (密码: admin123)
 -- 密码哈希使用 bcrypt 生成，cost=10
 INSERT INTO `admin` (`id`, `username`, `password_hash`, `real_name`, `email`, `role`, `status`) VALUES
-('admin_super_001', 'superadmin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', '超级管理员', 'admin@example.com', 'super_admin', 1)
+('admin_super_001', 'superadmin', '$2a$10$qMmHPwWrAiWhf7mmDFB/UexRIlrrTIAx6igedg5p.SWmpoRGvVG.O', '超级管理员', 'admin@example.com', 'super_admin', 1)
 ON DUPLICATE KEY UPDATE `id` = `id`;

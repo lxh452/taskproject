@@ -127,6 +127,10 @@ services:
       TENCENT_CLOUD_SECRET_KEY: "${TENCENT_CLOUD_SECRET_KEY}"
       TENCENT_CLOUD_COS_BUCKET: "${TENCENT_CLOUD_COS_BUCKET:-lxh452-task-1385490051}"
       TENCENT_CLOUD_COS_REGION: "${TENCENT_CLOUD_COS_REGION:-ap-guangzhou}"
+      # JWT安全配置
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
+      # 限流配置
+      RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
       TZ: Asia/Shanghai
       GO111MODULE: "on"
       GOPROXY: "https://goproxy.cn,direct"

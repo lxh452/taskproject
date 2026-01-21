@@ -9,6 +9,49 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+// ==================== 状态常量定义 ====================
+
+// 审批状态（ApprovalType）
+const (
+	ApprovalTypePending  = 0 // 待审批
+	ApprovalTypeApproved = 1 // 已同意/已通过
+	ApprovalTypeRejected = 2 // 已拒绝
+)
+
+// 审批步骤（ApprovalStep）
+const (
+	ApprovalStepReceiverConfirm  = 1 // 交接接收人确认
+	ApprovalStepSuperiorApprove  = 2 // 上级审批
+	ApprovalStepTaskNodeComplete = 3 // 任务节点完成审批
+)
+
+// 任务节点状态（NodeStatus）
+const (
+	NodeStatusNotStarted = 0 // 未开始
+	NodeStatusInProgress = 1 // 进行中
+	NodeStatusCompleted  = 2 // 已完成
+	NodeStatusOverdue    = 3 // 已逾期
+)
+
+// 任务状态（TaskStatus）
+const (
+	TaskStatusNotStarted      = 0 // 未开始
+	TaskStatusInProgress      = 1 // 进行中
+	TaskStatusCompleted       = 2 // 已完成
+	TaskStatusOverdueComplete = 3 // 逾期完成
+)
+
+// 交接状态（HandoverStatus）
+const (
+	HandoverStatusPendingReceiver = 0 // 待接收人确认
+	HandoverStatusPendingApprover = 1 // 待上级审批
+	HandoverStatusApproved        = 2 // 已通过
+	HandoverStatusRejected        = 3 // 已拒绝
+	HandoverStatusCompleted       = 4 // 已完成
+)
+
+// ==================== 模型定义 ====================
+
 // HandoverApproval 交接审批记录（同时支持交接审批和任务节点完成审批）
 type HandoverApproval struct {
 	Id           int64          `db:"id"`            // 自增ID
@@ -122,18 +165,19 @@ func (m *defaultHandoverApprovalModel) Update(ctx context.Context, data *Handove
 }
 
 // FindTaskNodeApprovalsByApprover 查询与指定审批人相关的任务节点完成审批记录
+// 只返回待审批状态（approval_type = 0）的记录
 func (m *defaultHandoverApprovalModel) FindTaskNodeApprovalsByApprover(ctx context.Context, approverId string, page, pageSize int) ([]*HandoverApproval, int64, error) {
-	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE approval_step = 3 AND approver_id = ?", m.table)
+	// 查询总数（只统计待审批的记录）
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE approval_step = 3 AND approver_id = ? AND approval_type = 0", m.table)
 	var total int64
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, approverId)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 查询列表
+	// 查询列表（只返回待审批的记录）
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT id, approval_id, handover_id, COALESCE(task_node_id, '') as task_node_id, approval_step, approver_id, approver_name, approval_type, comment, create_time, update_time FROM %s WHERE approval_step = 3 AND approver_id = ? ORDER BY create_time DESC LIMIT ? OFFSET ?", m.table)
+	query := fmt.Sprintf("SELECT id, approval_id, handover_id, COALESCE(task_node_id, '') as task_node_id, approval_step, approver_id, approver_name, approval_type, comment, create_time, update_time FROM %s WHERE approval_step = 3 AND approver_id = ? AND approval_type = 0 ORDER BY create_time DESC LIMIT ? OFFSET ?", m.table)
 	var approvals []*HandoverApproval
 	err = m.conn.QueryRowsCtx(ctx, &approvals, query, approverId, pageSize, offset)
 	return approvals, total, err

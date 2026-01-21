@@ -178,6 +178,28 @@ type (
 	GetFileDetailRequest {
 		FileID string `json:"fileId"`
 	}
+	// 获取我的附件列表请求
+	GetMyAttachmentsRequest {
+		PageReq
+		FileType string `json:"fileType,optional"` // 文件类型筛选
+		Module   string `json:"module,optional"` // 模块筛选
+	}
+	// 我的附件信息
+	MyAttachmentInfo {
+		FileID      string `json:"fileId"`
+		FileURL     string `json:"fileUrl"`
+		FileName    string `json:"fileName"`
+		FileSize    int64  `json:"fileSize"`
+		FileType    string `json:"fileType"`
+		Module      string `json:"module"`
+		Category    string `json:"category"`
+		RelatedID   string `json:"relatedId,optional"`
+		RelatedName string `json:"relatedName,optional"` // 关联任务/节点名称
+		TaskNodeID  string `json:"taskNodeId,optional"`
+		Description string `json:"description,optional"`
+		Tags        string `json:"tags,optional"`
+		UploadTime  string `json:"uploadTime"`
+	}
 	// 代理文件内容请求（用于解决CORS问题）
 	ProxyFileRequest {
 		FileID string `json:"fileId"`
@@ -306,6 +328,28 @@ type (
 	}
 	// 解析邀请码请求
 	ParseInviteCodeRequest {
+		InviteCode string `json:"inviteCode"`
+	}
+	// 获取邀请码列表请求
+	GetInviteCodeListRequest {
+		PageReq
+	}
+	// 邀请码信息
+	InviteCodeInfo {
+		InviteCode  string `json:"inviteCode"`
+		CompanyID   string `json:"companyId"`
+		CompanyName string `json:"companyName"`
+		CreatedBy   string `json:"createdBy"`
+		CreatorName string `json:"creatorName,optional"`
+		ExpireDays  int    `json:"expireDays"`
+		ExpireAt    string `json:"expireAt"`
+		MaxUses     int    `json:"maxUses"`
+		UsedCount   int    `json:"usedCount"`
+		Status      string `json:"status"` // active/expired/exhausted
+		CreateTime  string `json:"createTime"`
+	}
+	// 撤销邀请码请求
+	RevokeInviteCodeRequest {
 		InviteCode string `json:"inviteCode"`
 	}
 	// 公司信息响应
@@ -1110,6 +1154,22 @@ service taskprojectapi {
 	@doc "获取公司列表"
 	@handler GetCompanyList
 	post /list (CompanyListRequest) returns (BaseResponse)
+
+	@doc "生成邀请码"
+	@handler GenerateInviteCode
+	post /invite/generate (GenerateInviteCodeRequest) returns (BaseResponse)
+
+	@doc "解析邀请码"
+	@handler ParseInviteCode
+	post /invite/parse (ParseInviteCodeRequest) returns (BaseResponse)
+
+	@doc "获取邀请码列表"
+	@handler GetInviteCodeList
+	post /invite/list (GetInviteCodeListRequest) returns (BaseResponse)
+
+	@doc "撤销邀请码"
+	@handler RevokeInviteCode
+	post /invite/revoke (RevokeInviteCodeRequest) returns (BaseResponse)
 }
 
 @server (
@@ -1377,6 +1437,10 @@ service taskprojectapi {
 	@handler GetHandoverList
 	post /list (HandoverListRequest) returns (BaseResponse)
 
+	@doc "获取我的待审批交接列表"
+	@handler GetMyHandoverApprovals
+	post /my-approvals (HandoverListRequest) returns (BaseResponse)
+
 	@doc "确认交接"
 	@handler ConfirmHandover
 	post /confirm (ConfirmHandoverRequest) returns (BaseResponse)
@@ -1462,14 +1526,16 @@ service taskprojectapi {
 	@doc "代理文件内容（解决CORS问题）"
 	@handler ProxyFile
 	get /file/proxy (ProxyFileRequest)
-}
 
+	@doc "获取我的附件列表"
+	@handler GetMyAttachments
+	post /my/list (GetMyAttachmentsRequest) returns (BaseResponse)
+}
 
 // AI助手相关类型
 type (
 	// AI建议请求
-	GetAiSuggestionRequest {
-	}
+	GetAiSuggestionRequest  {}
 )
 
 @server (
@@ -1499,3 +1565,4 @@ service taskprojectapi {
 	@handler GetDashboardStats
 	get /stats (GetDashboardStatsRequest) returns (BaseResponse)
 }
+

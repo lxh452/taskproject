@@ -27,4 +27,3 @@ func ParseInviteCodeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 	}
 }
-

@@ -28,6 +28,117 @@ import (
 )
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
+	// Admin路由 - 不需要管理员认证的路由
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 管理员登录
+				Method:  http.MethodPost,
+				Path:    "/login",
+				Handler: admin.AdminLoginHandler(serverCtx),
+			},
+			{
+				// 管理员登出
+				Method:  http.MethodPost,
+				Path:    "/logout",
+				Handler: admin.AdminLogoutHandler(serverCtx),
+			},
+			{
+				// 获取公司列表（临时无需认证）
+				Method:  http.MethodPost,
+				Path:    "/company/list",
+				Handler: admin.CompanyListHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/admin"),
+	)
+
+	// Admin路由 - 需要管理员认证的路由
+	protectedAdminRoutes := []rest.Route{
+		{
+			// 禁用用户
+			Method:  http.MethodPost,
+			Path:    "/user/ban",
+			Handler: admin.BanUserHandler(serverCtx),
+		},
+		{
+			// 解禁用户
+			Method:  http.MethodPost,
+			Path:    "/user/unban",
+			Handler: admin.UnbanUserHandler(serverCtx),
+		},
+		{
+			// 恢复用户
+			Method:  http.MethodPost,
+			Path:    "/user/restore",
+			Handler: admin.RestoreUserHandler(serverCtx),
+		},
+		{
+			// 获取用户列表
+			Method:  http.MethodPost,
+			Path:    "/user/list",
+			Handler: admin.UserListHandler(serverCtx),
+		},
+		{
+			// 禁用公司
+			Method:  http.MethodPost,
+			Path:    "/company/disable",
+			Handler: admin.DisableCompanyHandler(serverCtx),
+		},
+		{
+			// 启用公司
+			Method:  http.MethodPost,
+			Path:    "/company/enable",
+			Handler: admin.EnableCompanyHandler(serverCtx),
+		},
+
+		{
+			// 获取登录记录
+			Method:  http.MethodPost,
+			Path:    "/login-records",
+			Handler: admin.LoginRecordListHandler(serverCtx),
+		},
+		{
+			// 获取系统日志
+			Method:  http.MethodPost,
+			Path:    "/logs",
+			Handler: admin.LogListHandler(serverCtx),
+		},
+		{
+			// 获取仪表盘统计
+			Method:  http.MethodGet,
+			Path:    "/dashboard/stats",
+			Handler: admin.GetPlatformStatsHandler(serverCtx),
+		},
+		{
+			// 获取服务器指标
+			Method:  http.MethodGet,
+			Path:    "/metrics",
+			Handler: admin.MetricsHandler(serverCtx),
+		},
+	}
+
+	// 为需要管理员认证的路由添加中间件
+	for _, route := range protectedAdminRoutes {
+		server.AddRoute(rest.Route{
+			Method:  route.Method,
+			Path:    route.Path,
+			Handler: serverCtx.AdminAuthMiddleware.Handle(route.Handler),
+		}, rest.WithPrefix("/api/v1/admin"))
+	}
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 获取AI工作建议
+				Method:  http.MethodGet,
+				Path:    "/suggestion",
+				Handler: ai.GetAiSuggestionHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/ai"),
+	)
+
 	server.AddRoutes(
 		[]rest.Route{
 			{
@@ -109,6 +220,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: checklist.GetMyChecklistHandler(serverCtx),
 			},
 			{
+				// 获取我的任务节点完成审批列表
+				Method:  http.MethodPost,
+				Path:    "/approvals/my",
+				Handler: checklist.GetMyTaskNodeApprovalsHandler(serverCtx),
+			},
+			{
 				// 提交任务节点完成审批
 				Method:  http.MethodPost,
 				Path:    "/submit/approval",
@@ -145,22 +262,34 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: company.GetCompanyHandler(serverCtx),
 			},
 			{
-				// 获取公司列表
-				Method:  http.MethodPost,
-				Path:    "/list",
-				Handler: company.GetCompanyListHandler(serverCtx),
-			},
-			{
 				// 生成邀请码
 				Method:  http.MethodPost,
 				Path:    "/invite/generate",
 				Handler: company.GenerateInviteCodeHandler(serverCtx),
 			},
 			{
+				// 获取邀请码列表
+				Method:  http.MethodPost,
+				Path:    "/invite/list",
+				Handler: company.GetInviteCodeListHandler(serverCtx),
+			},
+			{
 				// 解析邀请码
 				Method:  http.MethodPost,
 				Path:    "/invite/parse",
 				Handler: company.ParseInviteCodeHandler(serverCtx),
+			},
+			{
+				// 撤销邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/revoke",
+				Handler: company.RevokeInviteCodeHandler(serverCtx),
+			},
+			{
+				// 获取公司列表
+				Method:  http.MethodPost,
+				Path:    "/list",
+				Handler: company.GetCompanyListHandler(serverCtx),
 			},
 			{
 				// 更新公司信息
@@ -170,6 +299,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/api/v1/company"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 获取仪表盘统计数据
+				Method:  http.MethodGet,
+				Path:    "/stats",
+				Handler: dashboard.GetDashboardStatsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1/dashboard"),
 	)
 
 	server.AddRoutes(
@@ -259,12 +400,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: employee.EmployeeLeaveHandler(serverCtx),
 			},
 			{
-				// 更新员工直属上级
-				Method:  http.MethodPut,
-				Path:    "/supervisor",
-				Handler: employee.UpdateEmployeeSupervisorHandler(serverCtx),
-			},
-			{
 				// 确认离职审批
 				Method:  http.MethodPost,
 				Path:    "/leave/approve",
@@ -281,6 +416,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/me",
 				Handler: employee.GetSelfEmployeeHandler(serverCtx),
+			},
+			{
+				// 更新员工直属上级
+				Method:  http.MethodPut,
+				Path:    "/supervisor",
+				Handler: employee.UpdateEmployeeSupervisorHandler(serverCtx),
 			},
 			{
 				// 更新员工信息
@@ -323,6 +464,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/list",
 				Handler: handover.GetHandoverListHandler(serverCtx),
+			},
+			{
+				// 获取我的待审批交接列表
+				Method:  http.MethodPost,
+				Path:    "/my-approvals",
+				Handler: handover.GetMyHandoverApprovalsHandler(serverCtx),
+			},
+			{
+				// 获取可交接的任务列表
+				Method:  http.MethodGet,
+				Path:    "/tasks",
+				Handler: handover.GetHandoverableTasksHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/v1/handover"),
@@ -637,6 +790,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: upload.ProxyFileHandler(serverCtx),
 			},
 			{
+				// 获取我的附件列表
+				Method:  http.MethodPost,
+				Path:    "/my/list",
+				Handler: upload.GetMyAttachmentsHandler(serverCtx),
+			},
+			{
 				// 获取任务附件列表
 				Method:  http.MethodPost,
 				Path:    "/task/attachments",
@@ -662,122 +821,5 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/api/v1/user"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 获取AI工作建议
-				Method:  http.MethodGet,
-				Path:    "/suggestion",
-				Handler: ai.GetAiSuggestionHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/v1/ai"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 获取仪表盘统计数据
-				Method:  http.MethodGet,
-				Path:    "/stats",
-				Handler: dashboard.GetDashboardStatsHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/v1/dashboard"),
-	)
-
-	// 管理员公开路由（无需认证）
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 管理员登录
-				Method:  http.MethodPost,
-				Path:    "/login",
-				Handler: admin.AdminLoginHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/v1/admin"),
-	)
-
-	// 管理员认证路由（需要管理员认证）
-	adminAuthMiddleware := serverCtx.AdminAuthMiddleware.Handle
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 管理员登出
-				Method:  http.MethodPost,
-				Path:    "/logout",
-				Handler: adminAuthMiddleware(admin.AdminLogoutHandler(serverCtx)),
-			},
-			{
-				// 平台统计概览
-				Method:  http.MethodGet,
-				Path:    "/stats",
-				Handler: adminAuthMiddleware(admin.GetPlatformStatsHandler(serverCtx)),
-			},
-			{
-				// 公司列表
-				Method:  http.MethodPost,
-				Path:    "/company/list",
-				Handler: adminAuthMiddleware(admin.CompanyListHandler(serverCtx)),
-			},
-			{
-				// 禁用公司
-				Method:  http.MethodPost,
-				Path:    "/company/disable",
-				Handler: adminAuthMiddleware(admin.DisableCompanyHandler(serverCtx)),
-			},
-			{
-				// 启用公司
-				Method:  http.MethodPost,
-				Path:    "/company/enable",
-				Handler: adminAuthMiddleware(admin.EnableCompanyHandler(serverCtx)),
-			},
-			{
-				// 用户列表
-				Method:  http.MethodPost,
-				Path:    "/user/list",
-				Handler: adminAuthMiddleware(admin.UserListHandler(serverCtx)),
-			},
-			{
-				// 封禁用户
-				Method:  http.MethodPost,
-				Path:    "/user/ban",
-				Handler: adminAuthMiddleware(admin.BanUserHandler(serverCtx)),
-			},
-			{
-				// 解封用户
-				Method:  http.MethodPost,
-				Path:    "/user/unban",
-				Handler: adminAuthMiddleware(admin.UnbanUserHandler(serverCtx)),
-			},
-			{
-				// 恢复已删除用户
-				Method:  http.MethodPost,
-				Path:    "/user/restore",
-				Handler: adminAuthMiddleware(admin.RestoreUserHandler(serverCtx)),
-			},
-			{
-				// 登录记录列表
-				Method:  http.MethodPost,
-				Path:    "/login-records",
-				Handler: adminAuthMiddleware(admin.LoginRecordListHandler(serverCtx)),
-			},
-			{
-				// 服务器性能指标
-				Method:  http.MethodGet,
-				Path:    "/metrics",
-				Handler: adminAuthMiddleware(admin.MetricsHandler(serverCtx)),
-			},
-			{
-				// 系统日志列表
-				Method:  http.MethodPost,
-				Path:    "/logs",
-				Handler: adminAuthMiddleware(admin.LogListHandler(serverCtx)),
-			},
-		},
-		rest.WithPrefix("/api/v1/admin"),
 	)
 }

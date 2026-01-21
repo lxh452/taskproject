@@ -138,6 +138,53 @@ func (l *CreateTaskNodeLogic) CreateTaskNode(req *types.CreateTaskNodeRequest) (
 		return nil, err
 	}
 
+	// 更新任务的 node_employee_ids（去重）
+	if len(req.ExecutorIDs) > 0 {
+		// 获取当前任务的 node_employee_ids
+		currentNodeEmployeeIds := ""
+		if currentTask.NodeEmployeeIds.Valid {
+			currentNodeEmployeeIds = currentTask.NodeEmployeeIds.String
+		}
+
+		// 创建一个 map 用于去重
+		employeeIdSet := make(map[string]bool)
+
+		// 添加现有的员工ID
+		if currentNodeEmployeeIds != "" {
+			existingIds := strings.Split(currentNodeEmployeeIds, ",")
+			for _, id := range existingIds {
+				trimmedId := strings.TrimSpace(id)
+				if trimmedId != "" {
+					employeeIdSet[trimmedId] = true
+				}
+			}
+		}
+
+		// 添加新的执行人ID
+		for _, executorId := range req.ExecutorIDs {
+			trimmedId := strings.TrimSpace(executorId)
+			if trimmedId != "" {
+				employeeIdSet[trimmedId] = true
+			}
+		}
+
+		// 将 map 转换回逗号分隔的字符串
+		var updatedEmployeeIds []string
+		for id := range employeeIdSet {
+			updatedEmployeeIds = append(updatedEmployeeIds, id)
+		}
+		newNodeEmployeeIds := strings.Join(updatedEmployeeIds, ",")
+
+		// 更新任务的 node_employee_ids
+		err = l.svcCtx.TaskModel.UpdateNodeEmployeeIds(l.ctx, req.TaskID, newNodeEmployeeIds)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("更新任务的节点员工列表失败：%v", err)
+			// 不返回错误，因为节点已经创建成功，这只是辅助信息更新失败
+		} else {
+			l.Logger.WithContext(l.ctx).Infof("成功更新任务 %s 的节点员工列表: %s", req.TaskID, newNodeEmployeeIds)
+		}
+	}
+
 	// 更新任务的总节点数
 	totalNodeCount, err := l.svcCtx.TaskNodeModel.GetTaskNodeCountByTask(l.ctx, req.TaskID)
 	if err != nil {

@@ -31,6 +31,10 @@ type (
 		FindByCreatorIdWithPage(ctx context.Context, creatorId string, isCompleted int64, page, pageSize int) ([]*TaskChecklist, int64, error)
 		// 统计创建者的未完成清单数量
 		CountUncompletedByCreatorId(ctx context.Context, creatorId string) (int64, error)
+		// 根据执行人ID分页查询清单（我的清单 - 基于任务节点执行人）
+		FindByExecutorIdWithPage(ctx context.Context, executorId string, isCompleted int64, page, pageSize int) ([]*TaskChecklist, int64, error)
+		// 统计执行人的未完成清单数量
+		CountUncompletedByExecutorId(ctx context.Context, executorId string) (int64, error)
 	}
 
 	customTaskChecklistModel struct {
@@ -193,5 +197,93 @@ func (m *customTaskChecklistModel) CountUncompletedByCreatorId(ctx context.Conte
 	query := fmt.Sprintf("select count(*) from %s where `creator_id` = ? and `is_completed` = 0 and `delete_time` is null", m.table)
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, query, creatorId)
+	return count, err
+}
+
+// FindByExecutorIdWithPage 根据执行人ID分页查询清单（我的清单 - 基于任务节点执行人）
+// isCompleted: -1或其他-全部, 0-未完成, 1-已完成
+func (m *customTaskChecklistModel) FindByExecutorIdWithPage(ctx context.Context, executorId string, isCompleted int64, page, pageSize int) ([]*TaskChecklist, int64, error) {
+	var countQuery, dataQuery string
+	var args []interface{}
+
+	// 构建JOIN查询，关联task_node表获取executor_id
+	baseJoin := fmt.Sprintf(`
+		FROM %s tc
+		INNER JOIN task_node tn ON tc.task_node_id = tn.task_node_id
+		WHERE tn.executor_id = ? 
+		AND tc.delete_time IS NULL 
+		AND tn.delete_time IS NULL
+	`, m.table)
+
+	if isCompleted == 0 || isCompleted == 1 {
+		// 筛选特定状态
+		countQuery = fmt.Sprintf("SELECT COUNT(*) %s AND tc.is_completed = ?", baseJoin)
+		args = []interface{}{executorId, isCompleted}
+	} else {
+		// 全部状态
+		countQuery = fmt.Sprintf("SELECT COUNT(*) %s", baseJoin)
+		args = []interface{}{executorId}
+	}
+
+	var total int64
+	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询 - 使用 tc. 前缀避免列名歧义
+	offset := (page - 1) * pageSize
+	selectColumns := "tc.checklist_id, tc.task_node_id, tc.creator_id, tc.content, tc.is_completed, tc.complete_time, tc.sort_order, tc.create_time, tc.update_time, tc.delete_time"
+
+	if isCompleted == 0 || isCompleted == 1 {
+		dataQuery = fmt.Sprintf(`
+			SELECT %s 
+			FROM %s tc
+			INNER JOIN task_node tn ON tc.task_node_id = tn.task_node_id
+			WHERE tn.executor_id = ? 
+			AND tc.delete_time IS NULL 
+			AND tn.delete_time IS NULL
+			AND tc.is_completed = ?
+			ORDER BY tc.create_time DESC 
+			LIMIT ?, ?
+		`, selectColumns, m.table)
+		args = []interface{}{executorId, isCompleted, offset, pageSize}
+	} else {
+		dataQuery = fmt.Sprintf(`
+			SELECT %s 
+			FROM %s tc
+			INNER JOIN task_node tn ON tc.task_node_id = tn.task_node_id
+			WHERE tn.executor_id = ? 
+			AND tc.delete_time IS NULL 
+			AND tn.delete_time IS NULL
+			ORDER BY tc.create_time DESC 
+			LIMIT ?, ?
+		`, selectColumns, m.table)
+		args = []interface{}{executorId, offset, pageSize}
+	}
+
+	var resp []*TaskChecklist
+	err = m.conn.QueryRowsCtx(ctx, &resp, dataQuery, args...)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, 0, err
+	}
+
+	return resp, total, nil
+}
+
+// CountUncompletedByExecutorId 统计执行人的未完成清单数量
+func (m *customTaskChecklistModel) CountUncompletedByExecutorId(ctx context.Context, executorId string) (int64, error) {
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) 
+		FROM %s tc
+		INNER JOIN task_node tn ON tc.task_node_id = tn.task_node_id
+		WHERE tn.executor_id = ? 
+		AND tc.is_completed = 0 
+		AND tc.delete_time IS NULL 
+		AND tn.delete_time IS NULL
+	`, m.table)
+
+	var count int64
+	err := m.conn.QueryRowCtx(ctx, &count, query, executorId)
 	return count, err
 }

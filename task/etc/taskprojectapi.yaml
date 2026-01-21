@@ -42,7 +42,7 @@ JWT:
 
 # 邮件配置
 Email:
-  Enabled: false  # 是否启用邮件发送（VPN可能会干扰SMTP连接，如遇问题可设为false）
+  Enabled: true
   Host: "smtp.qq.com"
   Port: 587
   Username: "1844554263@qq.com"
@@ -66,9 +66,9 @@ RabbitMQ:
   Exchange: "task.exchange"
   Queue: "task.queue"
 
-# MongoDB配置
+# MongoDB配置 - temporarily disabled
 Mongo:
-  Host: localhost
+  Host: ""
   Port: 27017
   Database: task_project
   Username: admin
@@ -87,3 +87,12 @@ GLM:
   APIKey: ""
   BaseURL: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
   Model: "glm-4.7"
+
+# 限流配置
+# 环境变量：RATE_LIMIT_ENABLED, RATE_LIMIT_LOGIN, RATE_LIMIT_API
+RateLimit:
+  Enabled: true           # 是否启用限流
+  LoginLimit: 10          # 登录接口限制: 10次/分钟/IP
+  APILimit: 100           # 普通API限制: 100次/分钟/用户
+  BurstSize: 20           # 突发容量
+  BlockDuration: 15       # 封禁时长(分钟)

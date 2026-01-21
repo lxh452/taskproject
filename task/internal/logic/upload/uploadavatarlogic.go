@@ -42,6 +42,13 @@ func (l *UploadAvatarLogic) UploadAvatar(req *types.UploadAvatarRequest, handler
 		userID = currentUserID
 	}
 
+	// 获取当前员工信息（使用 employeeID 作为 uploaderID）
+	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
+	if err != nil || employee == nil {
+		return nil, fmt.Errorf("您尚未加入任何公司")
+	}
+	uploaderID := employee.Id
+
 	// 验证文件类型
 	fileName := handler.Filename
 	fileExt := strings.ToLower(filepath.Ext(fileName))
@@ -98,6 +105,7 @@ func (l *UploadAvatarLogic) UploadAvatar(req *types.UploadAvatarRequest, handler
 		Module:      "user",
 		Category:    "avatar",
 		RelatedID:   userID,
+		UploaderID:  uploaderID,
 		Description: "用户头像",
 		Tags:        "",
 		CreateAt:    time.Now(),
@@ -117,4 +125,3 @@ func (l *UploadAvatarLogic) UploadAvatar(req *types.UploadAvatarRequest, handler
 		FileID:    fileID,
 	}, nil
 }
-

@@ -43,7 +43,17 @@ func (l *UploadInfoLogic) UploadInfo(req *types.UploadInfoRequest, handler *mult
 	fileSize := handler.Size
 
 	// 获取当前用户ID
-	uploaderID, _ := utils.Common.GetCurrentUserID(l.ctx)
+	userID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	if !ok {
+		return nil, errors.New("未授权")
+	}
+
+	// 获取当前员工信息（使用 employeeID 作为 uploaderID）
+	employee, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, userID)
+	if err != nil || employee == nil {
+		return nil, errors.New("您尚未加入任何公司")
+	}
+	uploaderID := employee.Id
 
 	// 验证必要参数
 	if req.Module == "" {

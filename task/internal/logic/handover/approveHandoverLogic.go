@@ -163,25 +163,40 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		return nil, err
 	}
 
-	// 8. 插入审批记录到数据库
-	comment := req.Comment
-	if comment == "" && approvalType == 1 {
-		comment = "上级审批通过"
+	// 8. 检查是否已有Step 2的审批记录
+	existingApprovals, err := l.svcCtx.HandoverApprovalModel.FindByHandoverId(l.ctx, req.HandoverID)
+	if err == nil {
+		for _, approval := range existingApprovals {
+			if approval.ApprovalStep == 2 {
+				l.Logger.WithContext(l.ctx).Infof("交接 %s 已存在Step 2审批记录，跳过插入", req.HandoverID)
+				goto skipInsertApproval
+			}
+		}
 	}
-	approvalRecord := &taskModel.HandoverApproval{
-		ApprovalId:   utils.Common.GenerateIDWithPrefix("approval"),
-		HandoverId:   req.HandoverID,
-		ApprovalStep: 2, // 第二步：上级审批
-		ApproverId:   currentEmployeeID,
-		ApproverName: approverName,
-		ApprovalType: approvalType,
-		Comment:      sql.NullString{String: comment, Valid: comment != ""},
-		CreateTime:   time.Now(),
+
+	// 8.5. 插入审批记录到数据库
+	{
+		comment := req.Comment
+		if comment == "" && approvalType == 1 {
+			comment = "上级审批通过"
+		}
+		approvalRecord := &taskModel.HandoverApproval{
+			ApprovalId:   utils.Common.GenerateIDWithPrefix("approval"),
+			HandoverId:   req.HandoverID,
+			ApprovalStep: 2, // 第二步：上级审批
+			ApproverId:   currentEmployeeID,
+			ApproverName: approverName,
+			ApprovalType: approvalType,
+			Comment:      sql.NullString{String: comment, Valid: comment != ""},
+			CreateTime:   time.Now(),
+		}
+		_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
+		}
 	}
-	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
-	if err != nil {
-		l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
-	}
+
+skipInsertApproval:
 
 	// 9. 如果通过，更新任务和任务节点的相关人员
 	if newStatus == 2 {
@@ -201,10 +216,10 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					l.Logger.WithContext(l.ctx).Infof("更新任务创建者: %s -> %s", handover.FromEmployeeId, handover.ToEmployeeId)
 				}
 
-				// 检查并更新任务负责人列表
+				// 检查并更新任务负责人列表（使用精确匹配替换）
 				if taskInfo.ResponsibleEmployeeIds.Valid && taskInfo.ResponsibleEmployeeIds.String != "" {
 					oldIds := taskInfo.ResponsibleEmployeeIds.String
-					newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
+					newIds := l.replaceEmployeeIdInList(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
 					if oldIds != newIds {
 						taskInfo.ResponsibleEmployeeIds = sql.NullString{String: newIds, Valid: true}
 						needUpdateTask = true
@@ -212,10 +227,10 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					}
 				}
 
-				// 检查并更新任务节点员工列表
+				// 检查并更新任务节点员工列表（使用精确匹配替换）
 				if taskInfo.NodeEmployeeIds.Valid && taskInfo.NodeEmployeeIds.String != "" {
 					oldIds := taskInfo.NodeEmployeeIds.String
-					newIds := strings.ReplaceAll(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
+					newIds := l.replaceEmployeeIdInList(oldIds, handover.FromEmployeeId, handover.ToEmployeeId)
 					if oldIds != newIds {
 						taskInfo.NodeEmployeeIds = sql.NullString{String: newIds, Valid: true}
 						needUpdateTask = true
@@ -241,18 +256,24 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 				for _, node := range nodes {
 					needUpdateNode := false
 
-					// 更新执行人
-					if node.ExecutorId == handover.FromEmployeeId {
-						node.ExecutorId = handover.ToEmployeeId
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					// 更新执行人（使用精确匹配替换）
+					if node.ExecutorId != "" {
+						newExecutorId := l.replaceEmployeeIdInList(node.ExecutorId, handover.FromEmployeeId, handover.ToEmployeeId)
+						if newExecutorId != node.ExecutorId {
+							node.ExecutorId = newExecutorId
+							needUpdateNode = true
+							l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, newExecutorId)
+						}
 					}
 
-					// 更新负责人
-					if node.LeaderId == handover.FromEmployeeId {
-						node.LeaderId = handover.ToEmployeeId
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
+					// 更新负责人（使用精确匹配替换）
+					if node.LeaderId != "" {
+						newLeaderId := l.replaceEmployeeIdInList(node.LeaderId, handover.FromEmployeeId, handover.ToEmployeeId)
+						if newLeaderId != node.LeaderId {
+							node.LeaderId = newLeaderId
+							needUpdateNode = true
+							l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, newLeaderId)
+						}
 					}
 
 					if needUpdateNode {
@@ -291,48 +312,24 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 				for _, node := range nodeMap {
 					needUpdateNode := false
 
-					// 更新执行人（支持多执行人，使用字符串替换）
-					if node.ExecutorId != "" && strings.Contains(node.ExecutorId, handover.FromEmployeeId) {
-						// 处理多执行人的情况
-						executorIds := strings.Split(node.ExecutorId, ",")
-						newExecutorIds := make([]string, 0, len(executorIds))
-						for _, id := range executorIds {
-							if strings.TrimSpace(id) != handover.FromEmployeeId {
-								newExecutorIds = append(newExecutorIds, strings.TrimSpace(id))
-							}
+					// 更新执行人（使用精确匹配替换）
+					if node.ExecutorId != "" {
+						newExecutorId := l.replaceEmployeeIdInList(node.ExecutorId, handover.FromEmployeeId, handover.ToEmployeeId)
+						if newExecutorId != node.ExecutorId {
+							node.ExecutorId = newExecutorId
+							needUpdateNode = true
+							l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, newExecutorId)
 						}
-						// 添加新的交接人
-						newExecutorIds = append(newExecutorIds, handover.ToEmployeeId)
-						node.ExecutorId = strings.Join(newExecutorIds, ",")
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, node.ExecutorId, handover.ToEmployeeId)
-					} else if node.ExecutorId == handover.FromEmployeeId {
-						// 单执行人情况
-						node.ExecutorId = handover.ToEmployeeId
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 执行人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
-					// 更新负责人（支持多负责人）
-					if node.LeaderId != "" && strings.Contains(node.LeaderId, handover.FromEmployeeId) {
-						// 处理多负责人的情况
-						leaderIds := strings.Split(node.LeaderId, ",")
-						newLeaderIds := make([]string, 0, len(leaderIds))
-						for _, id := range leaderIds {
-							if strings.TrimSpace(id) != handover.FromEmployeeId {
-								newLeaderIds = append(newLeaderIds, strings.TrimSpace(id))
-							}
+					// 更新负责人（使用精确匹配替换）
+					if node.LeaderId != "" {
+						newLeaderId := l.replaceEmployeeIdInList(node.LeaderId, handover.FromEmployeeId, handover.ToEmployeeId)
+						if newLeaderId != node.LeaderId {
+							node.LeaderId = newLeaderId
+							needUpdateNode = true
+							l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, newLeaderId)
 						}
-						// 添加新的交接人
-						newLeaderIds = append(newLeaderIds, handover.ToEmployeeId)
-						node.LeaderId = strings.Join(newLeaderIds, ",")
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, node.LeaderId, handover.ToEmployeeId)
-					} else if node.LeaderId == handover.FromEmployeeId {
-						// 单负责人情况
-						node.LeaderId = handover.ToEmployeeId
-						needUpdateNode = true
-						l.Logger.WithContext(l.ctx).Infof("更新节点 %s 负责人: %s -> %s", node.TaskNodeId, handover.FromEmployeeId, handover.ToEmployeeId)
 					}
 
 					if needUpdateNode {
@@ -349,19 +346,7 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 				l.Logger.WithContext(l.ctx).Infof("离职员工没有需要交接的任务节点")
 			}
 
-			// 9.4 更新员工状态为离职
-			updateData := map[string]interface{}{
-				"status":     0, // 离职
-				"leave_date": time.Now(),
-			}
-			err = l.svcCtx.EmployeeModel.SelectiveUpdate(l.ctx, handover.FromEmployeeId, updateData)
-			if err != nil {
-				l.Logger.WithContext(l.ctx).Errorf("更新员工离职状态失败: %v", err)
-			} else {
-				l.Logger.WithContext(l.ctx).Infof("员工 %s 状态已更新为离职", handover.FromEmployeeId)
-			}
-
-			// 9.5 更新用户的 has_joined_company 为 0
+			// 9.4 更新用户的 has_joined_company 为 0
 			fromEmployee, fromEmpErr := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.FromEmployeeId)
 			if fromEmpErr == nil && fromEmployee.UserId != "" {
 				if userErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, fromEmployee.UserId, false); userErr != nil {
@@ -370,10 +355,13 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 					l.Logger.WithContext(l.ctx).Infof("用户 %s 的 has_joined_company 已更新为 0", fromEmployee.UserId)
 				}
 			}
-			// 9.6删除该员工信息
+
+			// 9.5 软删除员工档案（包含更新状态为离职和leave_date）
 			executorErr = l.svcCtx.EmployeeModel.SoftDelete(l.ctx, handover.FromEmployeeId)
 			if executorErr != nil {
-				l.Logger.WithContext(l.ctx).Errorf("删除员工档案  失败: %v", executorErr)
+				l.Logger.WithContext(l.ctx).Errorf("删除员工档案失败: %v", executorErr)
+			} else {
+				l.Logger.WithContext(l.ctx).Infof("员工 %s 已软删除（离职）", handover.FromEmployeeId)
 			}
 		}
 	}
@@ -440,4 +428,37 @@ func (l *ApproveHandoverLogic) ApproveHandover(req *types.ApproveHandoverRequest
 		"statusText": statusText,
 		"message":    fmt.Sprintf("交接审批完成，状态: %s", statusText),
 	}), nil
+}
+
+// replaceEmployeeIdInList 在逗号分隔的ID列表中精确替换员工ID
+// 例如: replaceEmployeeIdInList("emp1,emp10,emp2", "emp1", "emp3") -> "emp3,emp10,emp2"
+// 避免了 strings.ReplaceAll 的误匹配问题（如 "emp1" 会误匹配 "emp10"）
+func (l *ApproveHandoverLogic) replaceEmployeeIdInList(idList, oldId, newId string) string {
+	if idList == "" || oldId == "" {
+		return idList
+	}
+
+	ids := strings.Split(idList, ",")
+	newIds := make([]string, 0, len(ids))
+	replaced := false
+
+	for _, id := range ids {
+		trimmedId := strings.TrimSpace(id)
+		if trimmedId == oldId {
+			// 只有在还没有添加新ID的情况下才添加（避免重复）
+			if !replaced {
+				newIds = append(newIds, newId)
+				replaced = true
+			}
+		} else if trimmedId != "" {
+			newIds = append(newIds, trimmedId)
+		}
+	}
+
+	// 如果没有找到旧ID，但列表不为空，说明旧ID不在列表中，返回原列表
+	if !replaced && len(newIds) > 0 {
+		return idList
+	}
+
+	return strings.Join(newIds, ",")
 }

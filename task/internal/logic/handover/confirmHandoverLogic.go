@@ -77,6 +77,16 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 		return utils.Response.ValidationError("只有交接接收人才能确认"), nil
 	}
 
+	// 5.5. 检查接收人是否已离职
+	toEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.ToEmployeeId)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("获取接收人信息失败: %v", err)
+		return utils.Response.ValidationError("接收人信息不存在"), nil
+	}
+	if toEmployee.Status == 0 {
+		return utils.Response.ValidationError("接收人已离职，无法确认交接"), nil
+	}
+
 	// 6. 获取任务信息
 	taskInfo, err := l.svcCtx.TaskModel.FindOne(l.ctx, handover.TaskId)
 	if err != nil {
@@ -95,21 +105,36 @@ func (l *ConfirmHandoverLogic) ConfirmHandover(req *types.ConfirmHandoverRequest
 		return nil, err
 	}
 
-	// 8. 插入审批记录到数据库
-	approvalRecord := &taskModel.HandoverApproval{
-		ApprovalId:   utils.Common.GenerateIDWithPrefix("approval"),
-		HandoverId:   req.HandoverID,
-		ApprovalStep: 1, // 第一步：接收人确认
-		ApproverId:   currentEmployeeID,
-		ApproverName: approverName,
-		ApprovalType: 1, // 同意
-		Comment:      sql.NullString{String: "接收人同意接收任务", Valid: true},
-		CreateTime:   time.Now(),
+	// 8. 检查是否已有Step 1的审批记录
+	existingApprovals, err := l.svcCtx.HandoverApprovalModel.FindByHandoverId(l.ctx, req.HandoverID)
+	if err == nil {
+		for _, approval := range existingApprovals {
+			if approval.ApprovalStep == 1 {
+				l.Logger.WithContext(l.ctx).Infof("交接 %s 已存在Step 1审批记录，跳过插入", req.HandoverID)
+				goto skipInsertApproval
+			}
+		}
 	}
-	_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
-	if err != nil {
-		l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
+
+	// 8.5. 插入审批记录到数据库
+	{
+		approvalRecord := &taskModel.HandoverApproval{
+			ApprovalId:   utils.Common.GenerateIDWithPrefix("approval"),
+			HandoverId:   req.HandoverID,
+			ApprovalStep: 1, // 第一步：接收人确认
+			ApproverId:   currentEmployeeID,
+			ApproverName: approverName,
+			ApprovalType: 1, // 同意
+			Comment:      sql.NullString{String: "接收人同意接收任务", Valid: true},
+			CreateTime:   time.Now(),
+		}
+		_, err = l.svcCtx.HandoverApprovalModel.Insert(l.ctx, approvalRecord)
+		if err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("插入审批记录失败: %v", err)
+		}
 	}
+
+skipInsertApproval:
 
 	// 9. 创建任务日志
 	taskLog := &taskModel.TaskLog{

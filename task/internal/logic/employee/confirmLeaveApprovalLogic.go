@@ -80,6 +80,22 @@ func (l *ConfirmLeaveApprovalLogic) ConfirmLeaveApproval(req *types.ConfirmLeave
 		// 不影响主流程，只记录错误
 	}
 
+	// 8. 更新用户的 has_joined_company 为 false
+	if employee.UserId != "" {
+		if userErr := l.svcCtx.UserModel.UpdateHasJoinedCompany(l.ctx, employee.UserId, false); userErr != nil {
+			logx.Errorf("更新用户 has_joined_company 失败: %v", userErr)
+		} else {
+			logx.Infof("用户 %s 的 has_joined_company 已更新为 false", employee.UserId)
+		}
+	}
+
+	// 9. 软删除员工档案
+	if delErr := l.svcCtx.EmployeeModel.SoftDelete(l.ctx, approval.FromEmployeeId); delErr != nil {
+		logx.Errorf("软删除员工档案失败: %v", delErr)
+	} else {
+		logx.Infof("员工 %s 已软删除（离职）", approval.FromEmployeeId)
+	}
+
 	return utils.Response.Success(map[string]interface{}{
 		"message":      "离职审批已通过，任务已重新派发",
 		"employeeName": employee.RealName,
@@ -98,7 +114,7 @@ func (l *ConfirmLeaveApprovalLogic) handleTaskRedispatch(employeeID string) erro
 
 	// 2. 对每个进行中的任务节点进行处理
 	for _, node := range taskNodes {
-		if node.NodeStatus == 2 { // 进行中
+		if node.NodeStatus == 1 { // 进行中（1=进行中，2=已完成）
 			// 清空执行人，让任务进入闲置状态
 			err = l.svcCtx.TaskNodeModel.UpdateExecutor(l.ctx, node.TaskNodeId, "")
 			if err != nil {

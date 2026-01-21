@@ -108,45 +108,63 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 
 	// 11. 如果审批通过，更新节点状态为已完成（状态2）并设置进度为100%
 	if req.Approved == 1 {
-		// 更新节点状态
-		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, taskNodeId, 2)
+		// 先更新节点完成时间和进度
+		updatedNode := *taskNode
+		updatedNode.NodeStatus = 2 // 设置状态为已完成
+		updatedNode.Progress = 100 // 设置进度为100%
+		updatedNode.NodeFinishTime = sql.NullTime{Time: time.Now(), Valid: true}
+		updatedNode.UpdateTime = time.Now()
+		err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedNode)
 		if err != nil {
-			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
+			l.Logger.WithContext(l.ctx).Errorf("更新任务节点失败: %v", err)
 			return nil, err
 		}
 
-		// 更新节点进度为100%
-		err = l.svcCtx.TaskNodeModel.UpdateProgress(l.ctx, taskNodeId, 100)
-		if err != nil {
-			l.Logger.WithContext(l.ctx).Errorf("更新任务节点进度失败: %v", err)
-		}
-
+		// 获取当前任务的所有节点
 		current, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, taskNodeId)
 		if err != nil {
 			return nil, err
 		}
-		//遍历查看哪个任务节点的前置节点是该节点，如果存在该节点修正他的状态让他进行中
+
+		// 遍历查看哪个任务节点的前置节点是该节点，如果存在该节点且该节点状态为未开始(0)，则修正为进行中(1)
 		nodes, err := l.svcCtx.TaskNodeModel.FindByTaskID(l.ctx, current.TaskId)
-		if len(nodes) > 2 {
-			//遍历节点查看前置节点是否有该节点
+		if err == nil && len(nodes) > 1 {
+			// 遍历节点查看前置节点是否有该节点
 			for _, node := range nodes {
-				split := strings.Split(node.ExNodeIds, ",")
-				for _, v := range split {
-					if v == taskNodeId {
-						l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+				// 跳过当前已完成的节点，避免覆盖其状态
+				if node.TaskNodeId == taskNodeId {
+					continue
+				}
+
+				// 只有当节点状态为未开始(0)时，才检查是否应该激活
+				if node.NodeStatus == 0 && node.ExNodeIds != "" {
+					split := strings.Split(node.ExNodeIds, ",")
+					for _, v := range split {
+						if strings.TrimSpace(v) == taskNodeId {
+							// 检查该节点的所有前置节点是否都已完成
+							allPrerequisitesCompleted := true
+							for _, preNodeId := range split {
+								preNodeId = strings.TrimSpace(preNodeId)
+								if preNodeId == "" {
+									continue
+								}
+								preNode, err := l.svcCtx.TaskNodeModel.FindOne(l.ctx, preNodeId)
+								if err != nil || preNode.NodeStatus != 2 {
+									allPrerequisitesCompleted = false
+									break
+								}
+							}
+
+							// 只有当所有前置节点都已完成时，才将该节点状态更新为进行中
+							if allPrerequisitesCompleted {
+								l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, node.TaskNodeId, 1)
+								l.Logger.WithContext(l.ctx).Infof("节点 %s 的所有前置节点已完成，状态更新为进行中", node.TaskNodeId)
+							}
+							break
+						}
 					}
 				}
 			}
-		}
-
-		// 更新节点完成时间
-		updatedNode := *taskNode
-		updatedNode.NodeFinishTime = sql.NullTime{Time: time.Now(), Valid: true}
-		updatedNode.UpdateTime = time.Now()
-		updatedNode.Progress = 100 // 确保进度为100%
-		err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedNode)
-		if err != nil {
-			l.Logger.WithContext(l.ctx).Errorf("更新任务节点完成时间失败: %v", err)
 		}
 
 		// 更新任务整体进度
@@ -155,42 +173,70 @@ func (l *ApproveTaskNodeCompletionLogic) ApproveTaskNodeCompletion(req *types.Ap
 			l.Logger.WithContext(l.ctx).Errorf("更新任务整体进度失败: %v", err)
 		}
 
-		// 发送通知给节点执行人
+		// 发送通知给节点执行人（支持多执行人）
 		if l.svcCtx.NotificationMQService != nil && taskNode.ExecutorId != "" {
-			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
-				svc.TaskNodeCompleted,
-				[]string{taskNode.ExecutorId},
-				taskNodeId,
-				svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: taskNodeId},
-			)
-			notificationEvent.Title = "任务节点审批通过"
-			notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批已通过", taskNode.NodeName)
-			notificationEvent.Priority = 1
-			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+			// 拆分多个执行人ID
+			executorIds := strings.Split(taskNode.ExecutorId, ",")
+			notifyEmployees := make([]string, 0, len(executorIds))
+			for _, id := range executorIds {
+				trimmedId := strings.TrimSpace(id)
+				if trimmedId != "" {
+					notifyEmployees = append(notifyEmployees, trimmedId)
+				}
+			}
+
+			if len(notifyEmployees) > 0 {
+				notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+					svc.TaskNodeCompleted,
+					notifyEmployees,
+					taskNodeId,
+					svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: taskNodeId},
+				)
+				notificationEvent.Title = "任务节点审批通过"
+				notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批已通过", taskNode.NodeName)
+				notificationEvent.Priority = 1
+				if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
+					l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+				}
 			}
 		}
 	} else {
-		// 如果审批拒绝，将节点状态改回进行中（状态1）
-		err = l.svcCtx.TaskNodeModel.UpdateStatus(l.ctx, taskNodeId, 1)
+		// 如果审批拒绝，将节点状态改回进行中（状态1）并重置进度
+		updatedNode := *taskNode
+		updatedNode.NodeStatus = 1 // 设置状态为进行中
+		updatedNode.Progress = 0   // 重置进度为0，要求重新完成
+		updatedNode.UpdateTime = time.Now()
+		err = l.svcCtx.TaskNodeModel.Update(l.ctx, &updatedNode)
 		if err != nil {
 			l.Logger.WithContext(l.ctx).Errorf("更新任务节点状态失败: %v", err)
 			return nil, err
 		}
 
-		// 发送通知给节点执行人
+		// 发送通知给节点执行人（支持多执行人）
 		if l.svcCtx.NotificationMQService != nil && taskNode.ExecutorId != "" {
-			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
-				svc.TaskNodeCompletionApproval,
-				[]string{taskNode.ExecutorId},
-				taskNodeId,
-				svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: taskNodeId},
-			)
-			notificationEvent.Title = "任务节点审批被拒绝"
-			notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批被拒绝，请继续完善工作", taskNode.NodeName)
-			notificationEvent.Priority = 2
-			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
-				l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+			// 拆分多个执行人ID
+			executorIds := strings.Split(taskNode.ExecutorId, ",")
+			notifyEmployees := make([]string, 0, len(executorIds))
+			for _, id := range executorIds {
+				trimmedId := strings.TrimSpace(id)
+				if trimmedId != "" {
+					notifyEmployees = append(notifyEmployees, trimmedId)
+				}
+			}
+
+			if len(notifyEmployees) > 0 {
+				notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(
+					svc.TaskNodeCompletionApproval,
+					notifyEmployees,
+					taskNodeId,
+					svc.NotificationEventOptions{TaskID: taskNode.TaskId, NodeID: taskNodeId},
+				)
+				notificationEvent.Title = "任务节点审批被拒绝"
+				notificationEvent.Content = fmt.Sprintf("任务节点 %s 的完成审批被拒绝，请继续完善工作", taskNode.NodeName)
+				notificationEvent.Priority = 2
+				if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(l.ctx, notificationEvent); err != nil {
+					l.Logger.WithContext(l.ctx).Errorf("发布通知事件失败: %v", err)
+				}
 			}
 		}
 	}

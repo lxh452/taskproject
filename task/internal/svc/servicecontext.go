@@ -5,6 +5,7 @@ package svc
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	adminModel "task_Project/model/admin"
 	"task_Project/model/company"
@@ -30,6 +31,7 @@ type ServiceContext struct {
 	AdminAuthMiddleware *middleware.AdminAuthMiddleware
 	EmailMiddleware     *middleware.EmailMiddleware
 	SMSMiddleware       *middleware.SMSMiddleware
+	RateLimiter         *middleware.RateLimiter // 限流中间件
 
 	// Redis 客户端（用于Token存储和验证）
 	RedisClient *redis.Redis
@@ -49,6 +51,9 @@ type ServiceContext struct {
 
 	// 系统日志服务
 	SystemLogService *SystemLogService
+
+	// 安全日志服务
+	SecurityLogService *SecurityLogService
 
 	// 公司相关模型
 	CompanyModel    company.CompanyModel
@@ -138,31 +143,50 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Region:     c.SMS.Region,
 	})
 
-	// 初始化 Redis 客户端
-	redisAddr := fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port)
-	redisClient := redis.MustNewRedis(redis.RedisConf{
-		Host: redisAddr,
-		Pass: c.Redis.Password,
-		Type: "node",
-	})
-	logx.Infof("[ServiceContext] Redis client initialized: addr=%s", redisAddr)
+	// 初始化 Redis 客户端 - 临时禁用以允许系统运行
+	var redisClient *redis.Redis
+	logx.Infof("[ServiceContext] Redis temporarily disabled for testing")
+	/*
+		redisClient := redis.MustNewRedis(redis.RedisConf{
+			Host: redisAddr,
+			Pass: c.Redis.Password,
+			Type: "node",
+		})
+		logx.Infof("[ServiceContext] Redis client initialized: addr=%s", redisAddr)
+	*/
 
-	// 构建 MongoDB 连接 URL
-	// 格式: mongodb://[username:password@]host[:port]/[database][?authSource=admin]
-	mongoURL := fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
-		c.Mongo.Username,
-		c.Mongo.Password,
-		c.Mongo.Host,
-		c.Mongo.Port,
-		c.Mongo.Database,
-		c.Mongo.AuthSource,
-	)
+	// 初始化 MongoDB model (可选)
+	var uploadFileModel upload.Upload_fileModel
+	var taskProjectDetailModel task.Task_project_detailModel
+	var taskCommentModel task.Task_commentModel
+	var attachmentCommentModel upload.Attachment_commentModel
+	var mongoURL, mongoDB string
 
-	// 初始化 MongoDB model
-	uploadFileModel := upload.NewUpload_fileModel(mongoURL, c.Mongo.Database, "file_upload")
-	taskProjectDetailModel := task.NewTask_project_detailModel(mongoURL, c.Mongo.Database, "task_project_detail")
-	taskCommentModel := task.NewTask_commentModel(mongoURL, c.Mongo.Database, "task_comment")
-	attachmentCommentModel := upload.NewAttachment_commentModel(mongoURL, c.Mongo.Database, "attachment_comment")
+	// 只有当Mongo配置存在时才初始化MongoDB
+	if c.Mongo.Host != "" {
+		// 构建 MongoDB 连接 URL
+		// 格式: mongodb://[username:password@]host[:port]/[database][?authSource=admin]
+		mongoURL = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
+			c.Mongo.Username,
+			c.Mongo.Password,
+			c.Mongo.Host,
+			c.Mongo.Port,
+			c.Mongo.Database,
+			c.Mongo.AuthSource,
+		)
+		mongoDB = c.Mongo.Database
+
+		uploadFileModel = upload.NewUpload_fileModel(mongoURL, c.Mongo.Database, "file_upload")
+		taskProjectDetailModel = task.NewTask_project_detailModel(mongoURL, c.Mongo.Database, "task_project_detail")
+		taskCommentModel = task.NewTask_commentModel(mongoURL, c.Mongo.Database, "task_comment")
+		attachmentCommentModel = upload.NewAttachment_commentModel(mongoURL, c.Mongo.Database, "attachment_comment")
+	} else {
+		// MongoDB disabled - set nil placeholders
+		uploadFileModel = nil
+		taskProjectDetailModel = nil
+		taskCommentModel = nil
+		attachmentCommentModel = nil
+	}
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
 
@@ -214,7 +238,15 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 管理员相关模型
 	adminModelInstance := adminModel.NewAdminModel(conn)
 	loginRecordModel := adminModel.NewLoginRecordModel(conn)
-	systemLogModel := adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs")
+	// systemLogModel := adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs") // MongoDB disabled
+	var systemLogModel adminModel.SystemLogModel // nil placeholder
+
+	// 初始化默认管理员账户（如果不存在）
+	if err := initDefaultAdmin(adminModelInstance); err != nil {
+		logx.Errorf("[ServiceContext] 初始化默认管理员失败: %v", err)
+	} else {
+		logx.Info("[ServiceContext] 默认管理员账户检查完成")
+	}
 
 	// 任务相关模型
 	taskModel := task.NewTaskModel(conn)
@@ -291,12 +323,49 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 初始化管理员认证中间件
 	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(jwtMiddleware, redisClient)
 
+	// 初始化限流中间件
+	var rateLimiter *middleware.RateLimiter
+	enabled, loginLimit, apiLimit, burstSize, blockDuration := c.GetRateLimitConfig()
+	if enabled {
+		rateLimiterConfig := middleware.RateLimiterConfig{
+			LoginLimit:    loginLimit,
+			LoginWindow:   time.Minute,
+			APILimit:      apiLimit,
+			APIWindow:     time.Minute,
+			BurstSize:     burstSize,
+			BlockDuration: time.Duration(blockDuration) * time.Minute,
+		}
+		rateLimiter = middleware.NewRateLimiter(redisClient, rateLimiterConfig)
+		logx.Infof("[ServiceContext] 限流中间件初始化成功: LoginLimit=%d/min, APILimit=%d/min, BlockDuration=%dmin",
+			loginLimit, apiLimit, blockDuration)
+	} else {
+		logx.Info("[ServiceContext] 限流中间件未启用")
+	}
+
+	// 初始化安全日志服务
+	var securityLogService *SecurityLogService
+	if mongoURL != "" {
+		securityLogService, err = NewSecurityLogService(mongoURL, c.Mongo.Database)
+		if err != nil {
+			logx.Errorf("[ServiceContext] 安全日志服务初始化失败: %v", err)
+		} else {
+			logx.Info("[ServiceContext] 安全日志服务初始化成功")
+			// 将安全日志服务注入到限流中间件
+			if rateLimiter != nil {
+				rateLimiter.SetSecurityLogger(securityLogService)
+			}
+		}
+	} else {
+		logx.Info("[ServiceContext] MongoDB未配置，安全日志服务已禁用")
+	}
+
 	s := &ServiceContext{
 		Config:              c,
 		JWTMiddleware:       jwtMiddleware,
 		AdminAuthMiddleware: adminAuthMiddleware,
 		EmailMiddleware:     emailMiddleware,
 		SMSMiddleware:       smsMiddleware,
+		RateLimiter:         rateLimiter,
 
 		// Redis 客户端
 		RedisClient: redisClient,
@@ -316,6 +385,9 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 		// 系统日志服务
 		SystemLogService: NewSystemLogService(systemLogModel),
+
+		// 安全日志服务
+		SecurityLogService: securityLogService,
 
 		// 公司相关模型
 		CompanyModel:    companyModel,
@@ -346,7 +418,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 		// MongoDB 相关
 		MongoURL:               mongoURL,
-		MongoDB:                c.Mongo.Database,
+		MongoDB:                mongoDB,
 		UploadFileModel:        uploadFileModel,
 		TaskProjectDetailModel: taskProjectDetailModel,
 		TaskCommentModel:       taskCommentModel,
@@ -417,4 +489,39 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 
 	return s
+}
+
+// initDefaultAdmin 初始化默认管理员账户
+func initDefaultAdmin(adminModelInstance adminModel.AdminModel) error {
+	// 检查是否已存在管理员
+	count, err := adminModelInstance.GetAdminCount(context.Background())
+	if err != nil {
+		return fmt.Errorf("检查管理员数量失败: %v", err)
+	}
+
+	if count > 0 {
+		logx.Info("[initDefaultAdmin] 管理员账户已存在，跳过初始化")
+		return nil
+	}
+
+	// 创建默认管理员
+	defaultAdmin := &adminModel.Admin{
+		Id:           "admin_super_001",
+		Username:     "superadmin",
+		PasswordHash: "$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW", // admin123
+		RealName:     sql.NullString{String: "超级管理员", Valid: true},
+		Email:        sql.NullString{String: "admin@example.com", Valid: true},
+		Role:         "super_admin",
+		Status:       1, // 启用状态
+		CreateTime:   time.Now(),
+		UpdateTime:   time.Now(),
+	}
+
+	_, err = adminModelInstance.Insert(context.Background(), defaultAdmin)
+	if err != nil {
+		return fmt.Errorf("创建默认管理员失败: %v", err)
+	}
+
+	logx.Info("[initDefaultAdmin] 默认管理员账户创建成功")
+	return nil
 }

@@ -405,11 +405,6 @@ type EmployeeLeaveRequest struct {
 	LeaveDate   string `json:"leaveDate,optional"`
 }
 
-type UpdateEmployeeSupervisorRequest struct {
-	EmployeeID   string `json:"employeeId"`
-	SupervisorID string `json:"supervisorId"`
-}
-
 type EmployeeListRequest struct {
 	PageReq
 	CompanyID    string `json:"companyId"`
@@ -425,6 +420,9 @@ type EmployeeRolesRequest struct {
 type GenerateInviteCodeRequest struct {
 	ExpireDays int `json:"expireDays,optional"` // 有效期（天）
 	MaxUses    int `json:"maxUses,optional"`    // 最大使用次数，0表示不限制
+}
+
+type GetAiSuggestionRequest struct {
 }
 
 type GetAttachmentCommentsRequest struct {
@@ -445,6 +443,10 @@ type GetCompanyRequest struct {
 	CompanyID string `json:"companyId"`
 }
 
+type GetDashboardStatsRequest struct {
+	Scope string `form:"scope,optional"` // 范围：personal（个人）或 department（部门），默认personal
+}
+
 type GetDepartmentRequest struct {
 	ID string `json:"id"`
 }
@@ -459,6 +461,16 @@ type GetFileDetailRequest struct {
 
 type GetHandoverRequest struct {
 	HandoverID string `json:"handoverId"`
+}
+
+type GetInviteCodeListRequest struct {
+	PageReq
+}
+
+type GetMyAttachmentsRequest struct {
+	PageReq
+	FileType string `json:"fileType,optional"` // 文件类型筛选
+	Module   string `json:"module,optional"`   // 模块筛选
 }
 
 type GetMyChecklistRequest struct {
@@ -533,6 +545,20 @@ type HandoverTaskRequest struct {
 	Description  string `json:"description"`
 }
 
+type InviteCodeInfo struct {
+	InviteCode  string `json:"inviteCode"`
+	CompanyID   string `json:"companyId"`
+	CompanyName string `json:"companyName"`
+	CreatedBy   string `json:"createdBy"`
+	CreatorName string `json:"creatorName,optional"`
+	ExpireDays  int    `json:"expireDays"`
+	ExpireAt    string `json:"expireAt"`
+	MaxUses     int    `json:"maxUses"`
+	UsedCount   int    `json:"usedCount"`
+	Status      string `json:"status"` // active/expired/exhausted
+	CreateTime  string `json:"createTime"`
+}
+
 type JoinApplicationInfo struct {
 	ID          string `json:"id"`
 	UserID      string `json:"userId"`
@@ -574,6 +600,22 @@ type LoginResponse struct {
 
 type MarkNotificationReadRequest struct {
 	NotificationID string `json:"notificationId"`
+}
+
+type MyAttachmentInfo struct {
+	FileID      string `json:"fileId"`
+	FileURL     string `json:"fileUrl"`
+	FileName    string `json:"fileName"`
+	FileSize    int64  `json:"fileSize"`
+	FileType    string `json:"fileType"`
+	Module      string `json:"module"`
+	Category    string `json:"category"`
+	RelatedID   string `json:"relatedId,optional"`
+	RelatedName string `json:"relatedName,optional"` // 关联任务/节点名称
+	TaskNodeID  string `json:"taskNodeId,optional"`
+	Description string `json:"description,optional"`
+	Tags        string `json:"tags,optional"`
+	UploadTime  string `json:"uploadTime"`
 }
 
 type MyChecklistItem struct {
@@ -691,6 +733,10 @@ type ResolveAttachmentCommentRequest struct {
 	Resolved  int    `json:"resolved"` // 1-已解决，0-未解决
 }
 
+type RevokeInviteCodeRequest struct {
+	InviteCode string `json:"inviteCode"`
+}
+
 type RevokeRoleRequest struct {
 	PositionId string `json:"positionId"` // 职位ID（改为从职位撤销角色）
 	RoleId     string `json:"roleId"`
@@ -750,7 +796,7 @@ type TaskCommentInfo struct {
 type TaskDetailInfo struct {
 	TaskInfo
 	Logs         []TaskLogInfo `json:"logs,optional"`
-	IsFullAccess bool          `json:"isFullAccess"` // 是否有完全访问权限（任务创建者/负责人可编辑，节点执行人只能查看自己的节点）
+	IsFullAccess bool          `json:"isFullAccess"` // 是否有完全访问权限
 }
 
 type TaskDetailRequest struct {
@@ -873,6 +919,11 @@ type UpdateEmployeeRequest struct {
 	LeaveDate    string `json:"leaveDate,optional"`
 }
 
+type UpdateEmployeeSupervisorRequest struct {
+	EmployeeID   string `json:"employeeId"`
+	SupervisorID string `json:"supervisorId"`
+}
+
 type UpdateInfoRequest struct {
 	UserId   string             `json:"userId,optional"`   // 用户id
 	NickName string             `json:"nickname,optional"` // 昵称
@@ -979,24 +1030,11 @@ type UploadInfoResponse struct {
 	FileType  string `json:"fileType"`           // 文件类型
 }
 
-// AI建议请求
-type GetAiSuggestionRequest struct {
-}
-
-// 仪表盘统计请求
-type GetDashboardStatsRequest struct {
-	Scope string `form:"scope,optional"` // 范围：personal（个人）或 department（部门），默认personal
-}
-
-// ==================== 管理员相关类型 ====================
-
-// 管理员登录请求
 type AdminLoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-// 管理员登录响应
 type AdminLoginResponse struct {
 	Token    string `json:"token"`
 	AdminID  string `json:"adminId"`
@@ -1005,11 +1043,119 @@ type AdminLoginResponse struct {
 	Role     string `json:"role"`
 }
 
-// 管理员登出请求
-type AdminLogoutRequest struct {
+type AdminLogoutRequest struct{}
+
+type AdminCompanyListRequest struct {
+	Page     int    `json:"page"`
+	PageSize int    `json:"pageSize"`
+	Name     string `json:"name,optional"`
+	Status   int    `json:"status,optional"`
 }
 
-// 平台统计响应
+type BanUserRequest struct {
+	UserID    string `json:"userId"`
+	BanReason string `json:"banReason,optional"`
+}
+
+type DisableCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+	Reason    string `json:"reason,optional"`
+}
+
+type EnableCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+}
+
+type LoginRecordListRequest struct {
+	Page        int    `json:"page"`
+	PageSize    int    `json:"pageSize"`
+	UserID      string `json:"userId,optional"`
+	UserType    string `json:"userType,optional"`
+	LoginStatus int    `json:"loginStatus,optional"`
+	StartTime   string `json:"startTime,optional"`
+	EndTime     string `json:"endTime,optional"`
+}
+
+type LoginRecordInfo struct {
+	ID          string `json:"id"`
+	UserID      string `json:"userId,optional"`
+	Username    string `json:"username,optional"`
+	UserType    string `json:"userType"`
+	LoginIP     string `json:"loginIp,optional"`
+	UserAgent   string `json:"userAgent,optional"`
+	LoginStatus int    `json:"loginStatus"`
+	FailReason  string `json:"failReason,optional"`
+	LoginTime   string `json:"loginTime"`
+	CreateTime  string `json:"createTime"`
+}
+
+type RestoreUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+type SystemLogListRequest struct {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	Level     string `json:"level,optional"`
+	Module    string `json:"module,optional"`
+	Keyword   string `json:"keyword,optional"`
+	UserID    string `json:"userId,optional"`
+	UserType  string `json:"userType,optional"`
+	StartTime string `json:"startTime,optional"`
+	EndTime   string `json:"endTime,optional"`
+}
+
+type UnbanUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+type UserListRequest struct {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	Username  string `json:"username,optional"`
+	Status    int    `json:"status,optional"`
+	CompanyID string `json:"companyId,optional"`
+}
+
+type CompanyEmployeeCount struct {
+	CompanyID     string `json:"companyId"`
+	CompanyName   string `json:"companyName"`
+	EmployeeCount int64  `json:"employeeCount"`
+}
+
+type TrendData struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+type AdminUserInfo struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	Email       string `json:"email,optional"`
+	Phone       string `json:"phone,optional"`
+	RealName    string `json:"realName,optional"`
+	Avatar      string `json:"avatar,optional"`
+	Status      int    `json:"status"`
+	CompanyID   string `json:"companyId,optional"`
+	CompanyName string `json:"companyName,optional"`
+	CreateTime  string `json:"createTime"`
+}
+
+type ServerMetricsResponse struct {
+	CPUUsage    float64 `json:"cpuUsage"`
+	MemoryUsage float64 `json:"memoryUsage"`
+	MemoryTotal int64   `json:"memoryTotal"`
+	MemoryUsed  int64   `json:"memoryUsed"`
+	DiskUsage   float64 `json:"diskUsage"`
+	DiskTotal   int64   `json:"diskTotal"`
+	DiskUsed    int64   `json:"diskUsed"`
+	GoRoutines  int     `json:"goRoutines"`
+	ActiveConns int     `json:"activeConns"`
+	MySQLConns  int     `json:"mySqlConns"`
+	RedisConns  int     `json:"redisConns"`
+	Uptime      int64   `json:"uptime"`
+}
+
 type PlatformStatsResponse struct {
 	TotalCompanies      int64                  `json:"totalCompanies"`
 	TotalUsers          int64                  `json:"totalUsers"`
@@ -1020,35 +1166,20 @@ type PlatformStatsResponse struct {
 	TaskTrend           []TrendData            `json:"taskTrend"`
 }
 
-// 公司员工数量
-type CompanyEmployeeCount struct {
-	CompanyID     string `json:"companyId"`
-	CompanyName   string `json:"companyName"`
-	EmployeeCount int64  `json:"employeeCount"`
-}
-
-// 趋势数据
-type TrendData struct {
-	Date  string `json:"date"`
-	Count int64  `json:"count"`
-}
-
-// 管理员公司列表请求
-type AdminCompanyListRequest struct {
-	PageReq
-	Name      string `json:"name,optional"`
+type AdminUserListRequest struct {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	Username  string `json:"username,optional"`
 	Status    int    `json:"status,optional"`
-	StartDate string `json:"startDate,optional"`
-	EndDate   string `json:"endDate,optional"`
+	CompanyID string `json:"companyId,optional"`
 }
 
-// 管理员公司信息
 type AdminCompanyInfo struct {
 	ID                string `json:"id"`
 	Name              string `json:"name"`
+	Owner             string `json:"owner"`
 	CompanyAttributes int    `json:"companyAttributes"`
 	CompanyBusiness   int    `json:"companyBusiness"`
-	Owner             string `json:"owner"`
 	Description       string `json:"description"`
 	Address           string `json:"address"`
 	Phone             string `json:"phone"`
@@ -1061,135 +1192,20 @@ type AdminCompanyInfo struct {
 	UpdateTime        string `json:"updateTime"`
 }
 
-// 禁用公司请求
-type DisableCompanyRequest struct {
-	CompanyID string `json:"companyId"`
-	Reason    string `json:"reason,optional"`
-}
-
-// 启用公司请求
-type EnableCompanyRequest struct {
-	CompanyID string `json:"companyId"`
-}
-
-// 管理员用户列表请求
-type AdminUserListRequest struct {
-	PageReq
-	Username  string `json:"username,optional"`
-	Email     string `json:"email,optional"`
-	Status    int    `json:"status,optional"`
-	CompanyID string `json:"companyId,optional"`
-}
-
-// 管理员用户信息
-type AdminUserInfo struct {
-	ID               string `json:"id"`
-	Username         string `json:"username"`
-	Email            string `json:"email"`
-	Phone            string `json:"phone"`
-	RealName         string `json:"realName"`
-	Avatar           string `json:"avatar"`
-	Status           int    `json:"status"`
-	HasJoinedCompany bool   `json:"hasJoinedCompany"`
-	CompanyID        string `json:"companyId,optional"`
-	CompanyName      string `json:"companyName,optional"`
-	LastLoginTime    string `json:"lastLoginTime"`
-	LastLoginIP      string `json:"lastLoginIp"`
-	CreateTime       string `json:"createTime"`
-	UpdateTime       string `json:"updateTime"`
-	DeleteTime       string `json:"deleteTime,optional"`
-}
-
-// 封禁用户请求
-type BanUserRequest struct {
-	UserID    string `json:"userId"`
-	BanReason string `json:"banReason"`
-}
-
-// 解封用户请求
-type UnbanUserRequest struct {
-	UserID string `json:"userId"`
-}
-
-// 恢复用户请求
-type RestoreUserRequest struct {
-	UserID string `json:"userId"`
-}
-
-// 登录记录列表请求
-type LoginRecordListRequest struct {
-	PageReq
-	UserID      string `json:"userId,optional"`
-	UserType    string `json:"userType,optional"`
-	LoginStatus int    `json:"loginStatus,optional"`
-	StartTime   string `json:"startTime,optional"`
-	EndTime     string `json:"endTime,optional"`
-}
-
-// 登录记录信息
-type LoginRecordInfo struct {
-	ID          string `json:"id"`
-	UserID      string `json:"userId"`
-	UserType    string `json:"userType"`
-	Username    string `json:"username"`
-	LoginTime   string `json:"loginTime"`
-	LoginIP     string `json:"loginIp"`
-	UserAgent   string `json:"userAgent"`
-	LoginStatus int    `json:"loginStatus"`
-	FailReason  string `json:"failReason,optional"`
-	CreateTime  string `json:"createTime"`
-}
-
-// 系统日志列表请求
-type SystemLogListRequest struct {
-	PageReq
-	Level     string `json:"level,optional"`
-	Module    string `json:"module,optional"`
-	Keyword   string `json:"keyword,optional"`
-	UserID    string `json:"userId,optional"`
-	UserType  string `json:"userType,optional"` // 用户类型: user, admin, 空表示全部
-	StartTime string `json:"startTime,optional"`
-	EndTime   string `json:"endTime,optional"`
-}
-
-// 系统日志列表响应
-type SystemLogListResponse struct {
-	Total    int64           `json:"total"`
-	Page     int             `json:"page"`
-	PageSize int             `json:"pageSize"`
-	List     []SystemLogInfo `json:"list"`
-}
-
-// 系统日志信息
 type SystemLogInfo struct {
 	LogID      string `json:"logId"`
 	Level      string `json:"level"`
 	Module     string `json:"module"`
 	Action     string `json:"action"`
 	Message    string `json:"message"`
-	Detail     string `json:"detail,optional"`
+	Detail     string `json:"detail"`
 	UserID     string `json:"userId,optional"`
 	UserType   string `json:"userType,optional"`
+	Username   string `json:"username,optional"`
 	IP         string `json:"ip,optional"`
 	UserAgent  string `json:"userAgent,optional"`
 	RequestID  string `json:"requestId,optional"`
 	TraceID    string `json:"traceId,optional"`
 	StackTrace string `json:"stackTrace,optional"`
 	CreateTime string `json:"createTime"`
-}
-
-// 服务器性能指标响应
-type ServerMetricsResponse struct {
-	CPUUsage    float64 `json:"cpuUsage"`
-	MemoryUsage float64 `json:"memoryUsage"`
-	MemoryTotal int64   `json:"memoryTotal"`
-	MemoryUsed  int64   `json:"memoryUsed"`
-	DiskUsage   float64 `json:"diskUsage"`
-	DiskTotal   int64   `json:"diskTotal"`
-	DiskUsed    int64   `json:"diskUsed"`
-	ActiveConns int     `json:"activeConns"`
-	MySQLConns  int     `json:"mysqlConns"`
-	RedisConns  int     `json:"redisConns"`
-	Uptime      int64   `json:"uptime"`
-	GoRoutines  int     `json:"goRoutines"`
 }

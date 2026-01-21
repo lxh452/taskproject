@@ -58,6 +58,17 @@ func main() {
 
 	server.Use(corsMiddleware)
 
+	// 全局限流中间件：在CORS之后、JWT之前
+	if ctx.RateLimiter != nil {
+		server.Use(ctx.RateLimiter.Handle)
+		logx.Info("限流中间件已注册")
+	}
+
+	// 全局安全响应头中间件
+	securityHeaders := mw.NewSecurityHeadersMiddleware()
+	server.Use(securityHeaders.Handle)
+	logx.Info("安全响应头中间件已注册")
+
 	// 全局JWT中间件：白名单放行，其余统一校验
 	server.Use(func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

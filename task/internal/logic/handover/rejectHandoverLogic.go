@@ -58,19 +58,29 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 		return utils.Response.BusinessError("handover_status_invalid"), nil
 	}
 
-	// 4. 获取当前用户ID（接收人）
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	// 4. 获取当前员工ID（接收人）
+	currentEmployeeID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
 
 	// 5. 验证是否是交接接收人
-	if handover.ToEmployeeId != currentUserID {
+	if handover.ToEmployeeId != currentEmployeeID {
 		return utils.Response.BusinessError("handover_reject_denied"), nil
 	}
 
+	// 5.5. 检查接收人是否已离职
+	toEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, handover.ToEmployeeId)
+	if err != nil {
+		l.Logger.WithContext(l.ctx).Errorf("获取接收人信息失败: %v", err)
+		return utils.Response.ValidationError("接收人信息不存在"), nil
+	}
+	if toEmployee.Status == 0 {
+		return utils.Response.ValidationError("接收人已离职，无法拒绝交接"), nil
+	}
+
 	// 6. 获取当前用户信息
-	currentEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, currentUserID)
+	currentEmployee, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, currentEmployeeID)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("获取当前用户信息失败: %v", err)
 	}
@@ -106,7 +116,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 		ApprovalId:   utils.Common.GenerateIDWithPrefix("approval"),
 		HandoverId:   req.HandoverID,
 		ApprovalStep: 1, // 第一步：接收人确认
-		ApproverId:   currentUserID,
+		ApproverId:   currentEmployeeID,
 		ApproverName: approverName,
 		ApprovalType: 2, // 拒绝
 		Comment:      sql.NullString{String: comment, Valid: true},
@@ -123,7 +133,7 @@ func (l *RejectHandoverLogic) RejectHandover(req *types.ApproveHandoverRequest) 
 		TaskId:     handover.TaskId,
 		LogType:    7, // 交接确认
 		LogContent: fmt.Sprintf("接收人拒绝交接: %s -> %s, 原因: %s", handover.FromEmployeeId, handover.ToEmployeeId, comment),
-		EmployeeId: currentUserID,
+		EmployeeId: currentEmployeeID,
 		CreateTime: time.Now(),
 	}
 	_, err = l.svcCtx.TaskLogModel.Insert(l.ctx, taskLog)

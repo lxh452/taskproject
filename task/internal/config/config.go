@@ -111,6 +111,15 @@ type Config struct {
 		BaseURL string `json:"baseURL"`
 		Model   string `json:"model"`
 	} `json:"glm"`
+
+	// 限流配置
+	RateLimit struct {
+		Enabled       bool `json:"enabled"`       // 是否启用限流
+		LoginLimit    int  `json:"loginLimit"`    // 登录接口限制: 次数/分钟
+		APILimit      int  `json:"apiLimit"`      // 普通API限制: 次数/分钟
+		BurstSize     int  `json:"burstSize"`     // 突发容量
+		BlockDuration int  `json:"blockDuration"` // 封禁时长(分钟)
+	} `json:"rateLimit"`
 }
 
 // ApplyEnvOverrides 从环境变量覆盖配置
@@ -306,11 +315,51 @@ func (c *Config) ApplyEnvOverrides() {
 		overrideCount++
 	}
 
+	// RateLimit
+	if v := os.Getenv("RATE_LIMIT_ENABLED"); v != "" {
+		c.RateLimit.Enabled = v == "true" || v == "1"
+		overrideCount++
+	}
+	if v := os.Getenv("RATE_LIMIT_LOGIN"); v != "" {
+		if limit, err := strconv.Atoi(v); err == nil {
+			c.RateLimit.LoginLimit = limit
+			overrideCount++
+		}
+	}
+	if v := os.Getenv("RATE_LIMIT_API"); v != "" {
+		if limit, err := strconv.Atoi(v); err == nil {
+			c.RateLimit.APILimit = limit
+			overrideCount++
+		}
+	}
+
 	if overrideCount > 0 {
 		logx.Infof("[Config] 共 %d 个配置项已从环境变量覆盖", overrideCount)
 	} else {
 		logx.Info("[Config] 未检测到环境变量覆盖，使用 YAML 配置")
 	}
+}
+
+// GetRateLimitConfig 获取限流配置，如果未配置则返回默认值
+func (c *Config) GetRateLimitConfig() (enabled bool, loginLimit, apiLimit, burstSize, blockDuration int) {
+	enabled = c.RateLimit.Enabled
+	loginLimit = c.RateLimit.LoginLimit
+	if loginLimit <= 0 {
+		loginLimit = 10 // 默认10次/分钟
+	}
+	apiLimit = c.RateLimit.APILimit
+	if apiLimit <= 0 {
+		apiLimit = 100 // 默认100次/分钟
+	}
+	burstSize = c.RateLimit.BurstSize
+	if burstSize <= 0 {
+		burstSize = 20 // 默认突发20次
+	}
+	blockDuration = c.RateLimit.BlockDuration
+	if blockDuration <= 0 {
+		blockDuration = 15 // 默认封禁15分钟
+	}
+	return
 }
 
 // maskPassword 隐藏密码用于日志

@@ -319,39 +319,38 @@ func (l *ApproveJoinApplicationLogic) sendResultEmail(applicantUser *user.User, 
 func (l *ApproveJoinApplicationLogic) notifyApplicant(applicantUserID, companyName string, approved bool, note string) {
 	ctx := context.Background()
 
-	// 获取申请人的员工信息（如果已通过审批则有员工记录）
-	employee, _ := l.svcCtx.EmployeeModel.FindByUserID(ctx, applicantUserID)
-	if employee == nil {
-		// 如果没有员工记录，无法发送通知（拒绝的情况）
-		logx.Infof("申请人尚无员工记录，跳过通知: userId=%s", applicantUserID)
-		return
-	}
+	if approved {
+		// 审批通过：获取申请人的员工信息
+		employee, _ := l.svcCtx.EmployeeModel.FindByUserID(ctx, applicantUserID)
+		if employee == nil {
+			// 如果没有员工记录，说明创建员工失败，跳过通知
+			logx.Infof("申请人尚无员工记录，跳过通知: userId=%s", applicantUserID)
+			return
+		}
 
-	if l.svcCtx.NotificationMQService != nil {
-		var title, content string
-		if approved {
-			title = "加入申请已通过"
-			content = "恭喜！您加入 " + companyName + " 的申请已通过，欢迎加入团队！"
-		} else {
-			title = "加入申请已拒绝"
-			content = "抱歉，您加入 " + companyName + " 的申请未通过"
-			if note != "" {
-				content += "，原因：" + note
+		if l.svcCtx.NotificationMQService != nil {
+			title := "加入申请已通过"
+			content := "恭喜！您加入 " + companyName + " 的申请已通过，欢迎加入团队！"
+
+			event := &svc.NotificationEvent{
+				EventType:   "join.result",
+				EmployeeIDs: []string{employee.Id},
+				Title:       title,
+				Content:     content,
+				Type:        0, // 系统通知
+				Category:    "join_application",
+				Priority:    2, // 高优先级
+				RelatedType: "join_application",
+			}
+			if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
+				logx.Errorf("发送审批结果通知失败: %v", err)
 			}
 		}
-
-		event := &svc.NotificationEvent{
-			EventType:   "join.result",
-			EmployeeIDs: []string{employee.Id},
-			Title:       title,
-			Content:     content,
-			Type:        0, // 系统通知
-			Category:    "join_application",
-			Priority:    2, // 高优先级
-			RelatedType: "join_application",
-		}
-		if err := l.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
-			logx.Errorf("发送审批结果通知失败: %v", err)
-		}
+	} else {
+		// 审批拒绝：直接发送系统通知给用户（不需要员工记录）
+		// 注意：这里需要使用用户ID而不是员工ID，因为拒绝时没有员工记录
+		// 但当前的NotificationMQService只支持EmployeeIDs，所以拒绝通知只能通过邮件发送
+		// 系统通知在这里无法发送，因为用户还没有员工身份
+		logx.Infof("申请被拒绝，用户 %s 尚无员工记录，无法发送系统通知（已通过邮件通知）", applicantUserID)
 	}
 }

@@ -58,6 +58,7 @@ var BusinessErrorMessages = map[string]string{
 	"phone_exists":            "手机号已被注册",
 	"password_weak":           "密码强度不够",
 	"user_disabled":           "用户已被禁用",
+	"user_banned":             "您的账户已被封禁，如有疑问请联系管理员",
 	"user_locked":             "用户已被锁定",
 	"login_failed":            "用户名或密码错误",
 	"code_error":              "验证码已过期，请重新获取",

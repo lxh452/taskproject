@@ -4,11 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"task_Project/model/task"
-	"task_Project/model/user"
 	"task_Project/model/user_auth"
 	"task_Project/task/internal/utils"
 
@@ -56,19 +54,13 @@ func (s *SchedulerService) StartScheduler() {
 	// 启动进度缓慢检测定时任务
 	go s.startSlowProgressDetection()
 
-	// 启动员工离职检测定时任务
-	go s.startEmployeeLeaveDetection()
-
 	// 启动任务节点闲置检查定时任务
 	go s.startTaskNodeIdleCheck()
 }
 
 // 任务截止提醒定时任务
 func (s *SchedulerService) startDeadlineReminder() {
-	ticker := time.NewTicker(1 * time.Hour) // 每小时检查一次
-	if time.Now().Hour() > 17 {
-		ticker.Stop()
-	}
+	ticker := time.NewTicker(4 * time.Hour) // 每4小时检查一次
 	defer ticker.Stop()
 
 	for {
@@ -76,7 +68,11 @@ func (s *SchedulerService) startDeadlineReminder() {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			s.checkTaskDeadlines()
+			// 检查是否在工作时间（9:00-18:00）
+			hour := time.Now().Hour()
+			if hour >= 9 && hour < 18 {
+				s.checkTaskDeadlines()
+			}
 		}
 	}
 }
@@ -132,8 +128,7 @@ func (s *SchedulerService) checkTaskDeadlines() {
 
 // 每日汇报提醒定时任务
 func (s *SchedulerService) startDailyReportReminder() {
-	// 每天下午5点30分提醒
-	ticker := time.NewTicker(20 * time.Minute)
+	ticker := time.NewTicker(4 * time.Hour) // 每4小时检查一次
 	defer ticker.Stop()
 
 	for {
@@ -142,7 +137,9 @@ func (s *SchedulerService) startDailyReportReminder() {
 			return
 		case <-ticker.C:
 			now := time.Now()
-			if now.Hour() == 17 && now.Minute() >= 00 && now.Minute() < 31 {
+			hour := now.Hour()
+			// 检查是否在工作时间（9:00-18:00）且在下午5点到6点之间
+			if hour >= 9 && hour < 18 && hour == 17 {
 				s.sendDailyReportReminders()
 			}
 		}
@@ -178,7 +175,7 @@ func (s *SchedulerService) sendDailyReportReminders() {
 
 // 进度缓慢检测定时任务
 func (s *SchedulerService) startSlowProgressDetection() {
-	ticker := time.NewTicker(2 * time.Hour) // 每2小时检查一次
+	ticker := time.NewTicker(4 * time.Hour) // 每4小时检查一次
 	defer ticker.Stop()
 
 	for {
@@ -186,7 +183,11 @@ func (s *SchedulerService) startSlowProgressDetection() {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			s.checkSlowProgress()
+			// 检查是否在工作时间（9:00-18:00）
+			hour := time.Now().Hour()
+			if hour >= 9 && hour < 18 {
+				s.checkSlowProgress()
+			}
 		}
 	}
 }
@@ -226,78 +227,6 @@ func (s *SchedulerService) checkSlowProgress() {
 						logx.Errorf("发布进度缓慢提醒邮件事件失败: %v", err)
 					}
 				}
-			}
-		}
-	}
-}
-
-// 员工离职检测定时任务
-func (s *SchedulerService) startEmployeeLeaveDetection() {
-	ticker := time.NewTicker(1 * time.Hour) // 每小时检查一次
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-s.stopCh:
-			return
-		case <-ticker.C:
-			s.checkEmployeeLeave()
-		}
-	}
-}
-
-// 检查员工离职
-func (s *SchedulerService) checkEmployeeLeave() {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	// 获取离职员工
-	employees, err := s.svcCtx.EmployeeModel.FindByStatus(ctx, 0) // 离职
-	if err != nil {
-		logx.Errorf("查询离职员工失败: %v", err)
-		return
-	}
-
-	// 发送离职通知（通过消息队列）
-	for _, employee := range employees {
-		// 获取员工当前负责的任务节点
-		taskNodes := []string{}
-
-		// 发送邮件（通过消息队列）
-		recipientEmail := ""
-		if employee.DepartmentId.Valid && employee.DepartmentId.String != "" {
-			department, err := s.svcCtx.DepartmentModel.FindOne(ctx, employee.DepartmentId.String)
-			if err == nil && department.ManagerId.Valid && department.ManagerId.String != "" {
-				manager, err := s.svcCtx.EmployeeModel.FindOne(ctx, department.ManagerId.String)
-				if err == nil && manager.Email.Valid && manager.Email.String != "" {
-					recipientEmail = manager.Email.String
-				}
-			}
-		}
-
-		if recipientEmail == "" && employee.Email.Valid && employee.Email.String != "" {
-			recipientEmail = employee.Email.String
-		}
-
-		if recipientEmail != "" && s.svcCtx.EmailService != nil {
-			if err := s.svcCtx.EmailService.SendEmployeeLeaveEmail(ctx, recipientEmail, employee.RealName, taskNodes); err != nil {
-				logx.Errorf("发送离职邮件失败: %v", err)
-			}
-		}
-
-		// 创建系统通知（通过消息队列，消费者会查询并创建）
-		if s.svcCtx.NotificationMQService != nil {
-			event := &NotificationEvent{
-				EventType:   "employee.leave",
-				EmployeeIDs: []string{employee.Id}, // 离职员工ID，消费者会使用
-				Type:        3,                     // 离职通知
-				Category:    "employee",
-				Priority:    3, // 高优先级
-				RelatedID:   employee.Id,
-				RelatedType: "employee",
-			}
-			if err := s.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
-				logx.Errorf("发布通知事件失败: %v", err)
 			}
 		}
 	}
@@ -352,7 +281,7 @@ func (s *SchedulerService) SendSMSNotification(ctx context.Context, phone, conte
 
 // 任务节点闲置检查定时任务
 func (s *SchedulerService) startTaskNodeIdleCheck() {
-	ticker := time.NewTicker(30 * time.Minute) // 每30分钟检查一次
+	ticker := time.NewTicker(4 * time.Hour) // 每4小时检查一次
 	defer ticker.Stop()
 
 	for {
@@ -360,7 +289,11 @@ func (s *SchedulerService) startTaskNodeIdleCheck() {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			s.checkTaskNodeIdle()
+			// 检查是否在工作时间（9:00-18:00）
+			hour := time.Now().Hour()
+			if hour >= 9 && hour < 18 {
+				s.checkTaskNodeIdle()
+			}
 		}
 	}
 }
@@ -394,7 +327,7 @@ func (s *SchedulerService) CheckTaskNodeIdle() {
 	s.checkTaskNodeIdle()
 }
 
-// 验证任务节点执行人（不再自动派发，只记录问题）
+// 验证任务节点执行人（仅检查是否有执行人，不检查离职状态）
 func (s *SchedulerService) validateTaskNodeExecutor(ctx context.Context, node *task.TaskNode) error {
 	// 检查是否有执行人
 	if node.ExecutorId == "" {
@@ -402,105 +335,6 @@ func (s *SchedulerService) validateTaskNodeExecutor(ctx context.Context, node *t
 		return nil
 	}
 
-	// 分割执行人ID（支持多个执行人）
-	executorIDs := strings.Split(node.ExecutorId, ",")
-	var validExecutors []string
-	var invalidExecutors []string
-
-	// 检查每个执行人的状态
-	for _, executorID := range executorIDs {
-		executorID = strings.TrimSpace(executorID)
-		if executorID == "" {
-			continue
-		}
-
-		// 查询员工信息
-		employee, err := s.svcCtx.EmployeeModel.FindOneByEmployeeId(ctx, executorID)
-		if err != nil {
-			logx.Errorf("查询执行人 %s 失败: %v", executorID, err)
-			invalidExecutors = append(invalidExecutors, executorID)
-			continue
-		}
-
-		// 检查员工状态
-		if employee.Status == 0 { // 离职
-			logx.Infof("执行人 %s 已离职，从任务节点 %s 中移除", executorID, node.TaskNodeId)
-			invalidExecutors = append(invalidExecutors, executorID)
-
-			// 发送邮件通知离职员工
-			s.notifyLeftEmployee(ctx, employee, node)
-		} else {
-			validExecutors = append(validExecutors, executorID)
-		}
-	}
-
-	// 如果有无效的执行人，更新任务节点
-	if len(invalidExecutors) > 0 {
-		newExecutorID := strings.Join(validExecutors, ",")
-
-		// 更新任务节点执行人
-		err := s.svcCtx.TaskNodeModel.UpdateExecutor(ctx, node.TaskNodeId, newExecutorID)
-		if err != nil {
-			logx.Errorf("更新任务节点 %s 执行人失败: %v", node.TaskNodeId, err)
-			return err
-		}
-
-		logx.Infof("任务节点 %s 执行人已更新: %s -> %s", node.TaskNodeId, node.ExecutorId, newExecutorID)
-
-		// 如果所有执行人都无效，创建交接记录等待手动分配
-		if len(validExecutors) == 0 {
-			logx.Infof("任务节点 %s 所有执行人都无效，等待手动分配", node.TaskNodeId)
-			// 创建交接记录等待手动分配
-			handover := &task.TaskHandover{
-				HandoverId:     utils.Common.GenId("handover"),
-				TaskId:         node.TaskId,
-				FromEmployeeId: node.ExecutorId,
-				ToEmployeeId:   "", // 待分配
-				HandoverReason: sql.NullString{String: "系统检测到任务节点执行人已离职", Valid: true},
-				HandoverNote:   sql.NullString{String: "等待管理者手动分配接替者", Valid: true},
-				HandoverStatus: 1, // 待处理
-				CreateTime:     time.Now(),
-				UpdateTime:     time.Now(),
-			}
-
-			_, err = s.svcCtx.TaskHandoverModel.Insert(ctx, handover)
-			if err != nil {
-				logx.Errorf("创建交接记录失败: %v", err)
-			}
-		}
-	}
-
+	// 已有执行人，无需处理
 	return nil
-}
-
-// 通知离职员工（通过消息队列，消费者会查询并发送）
-func (s *SchedulerService) notifyLeftEmployee(ctx context.Context, employee *user.Employee, node *task.TaskNode) {
-	// 发布邮件事件（消费者会查询并发送）
-	if s.svcCtx.EmailMQService != nil {
-		emailEvent := &EmailEvent{
-			EventType:  "task.node.executor.left",
-			NodeID:     node.TaskNodeId,
-			EmployeeID: employee.Id, // 负责人ID
-		}
-		if err := s.svcCtx.EmailMQService.PublishEmailEvent(ctx, emailEvent); err != nil {
-			logx.Errorf("发布离职员工通知邮件事件失败: %v", err)
-		}
-	}
-
-	// 发布通知事件（消费者会查询并创建）
-	if s.svcCtx.NotificationMQService != nil {
-		event := &NotificationEvent{
-			EventType:   "task.node.executor.left",
-			NodeID:      node.TaskNodeId,
-			EmployeeIDs: []string{employee.Id}, // 负责人ID，消费者会使用
-			Type:        2,                     // 任务通知
-			Category:    "task",
-			Priority:    2, // 中优先级
-			RelatedID:   node.TaskNodeId,
-			RelatedType: "task",
-		}
-		if err := s.svcCtx.NotificationMQService.PublishNotificationEvent(ctx, event); err != nil {
-			logx.Errorf("发布通知事件失败: %v", err)
-		}
-	}
 }

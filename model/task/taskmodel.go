@@ -43,6 +43,8 @@ type (
 		GetTaskCountByDateRange(ctx context.Context, startTime, endTime string) (int64, error)
 		// UpdateNodeCount 更新任务的节点统计数
 		UpdateNodeCount(ctx context.Context, taskId string, totalCount, completedCount int64) error
+		// UpdateNodeEmployeeIds 更新任务的节点员工ID列表
+		UpdateNodeEmployeeIds(ctx context.Context, taskId string, nodeEmployeeIds string) error
 	}
 
 	customTaskModel struct {
@@ -209,25 +211,25 @@ func (m *customTaskModel) FindByPage(ctx context.Context, page, pageSize int) ([
 	return tasks, total, err
 }
 
-// SearchTasks 搜索任务
+// SearchTasks 搜索任务 (使用参数化查询防止SQL注入)
 func (m *customTaskModel) SearchTasks(ctx context.Context, keyword string, page, pageSize int) ([]*Task, int64, error) {
 	var tasks []*Task
 	var total int64
 
-	// 构建搜索条件
-	searchCondition := fmt.Sprintf("(task_title LIKE '%%%s%%' OR task_description LIKE '%%%s%%') AND delete_time IS NULL", keyword, keyword)
+	// 使用参数化查询 - 防止SQL注入攻击
+	searchPattern := "%" + keyword + "%"
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM task WHERE %s", searchCondition)
-	err := m.conn.QueryRowCtx(ctx, &total, countQuery)
+	countQuery := `SELECT COUNT(*) FROM task WHERE (task_title LIKE ? OR task_description LIKE ?) AND delete_time IS NULL`
+	err := m.conn.QueryRowCtx(ctx, &total, countQuery, searchPattern, searchPattern)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT * FROM task WHERE %s ORDER BY create_time DESC LIMIT ? OFFSET ?", searchCondition)
-	err = m.conn.QueryRowsCtx(ctx, &tasks, query, pageSize, offset)
+	query := `SELECT * FROM task WHERE (task_title LIKE ? OR task_description LIKE ?) AND delete_time IS NULL ORDER BY create_time DESC LIMIT ? OFFSET ?`
+	err = m.conn.QueryRowsCtx(ctx, &tasks, query, searchPattern, searchPattern, pageSize, offset)
 	return tasks, total, err
 }
 
@@ -345,5 +347,12 @@ func (m *customTaskModel) GetTaskCountByDateRange(ctx context.Context, startTime
 func (m *customTaskModel) UpdateNodeCount(ctx context.Context, taskId string, totalCount, completedCount int64) error {
 	query := `UPDATE task SET total_node_count = ?, completed_node_count = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, totalCount, completedCount, taskId)
+	return err
+}
+
+// UpdateNodeEmployeeIds 更新任务的节点员工ID列表
+func (m *customTaskModel) UpdateNodeEmployeeIds(ctx context.Context, taskId string, nodeEmployeeIds string) error {
+	query := `UPDATE task SET node_employee_ids = ?, update_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
+	_, err := m.conn.ExecCtx(ctx, query, nodeEmployeeIds, taskId)
 	return err
 }
