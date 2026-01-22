@@ -122,11 +122,17 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		return utils.Response.BusinessErrorWithNum(fmt.Sprintf("用户名或密码错误，还剩 %d 次尝试机会", remainingAttempts)), nil
 	}
 
-	// 如果用户已加入公司，查询员工ID
+	// 如果用户已加入公司，查询员工ID并检查员工状态
 	var employeeID, companyID string
 	if userInfo.HasJoinedCompany == 1 {
 		employee, err := l.svcCtx.EmployeeModel.FindOneByUserId(l.ctx, userInfo.Id)
 		if err == nil && employee != nil {
+			// 检查员工是否已离职（status = 0）
+			if employee.Status == 0 {
+				// 记录登录失败日志（员工已离职）
+				l.recordLoginLog(userInfo.Id, req.Username, 0, "员工已离职，无法登录")
+				return utils.Response.BusinessError("employee_left"), nil
+			}
 			employeeID = employee.Id
 			companyID = employee.CompanyId
 		}

@@ -279,9 +279,10 @@ func (m *customEmployeeModel) UpdateStatus(ctx context.Context, id string, statu
 	return err
 }
 
-// SoftDelete 软删除员工
+// SoftDelete 软删除员工（离职）
+// 同时更新 status=0（离职）和 leave_date（离职日期）
 func (m *customEmployeeModel) SoftDelete(ctx context.Context, id string) error {
-	query := fmt.Sprintf("UPDATE %s SET `delete_time` = NOW(), `update_time` = NOW() WHERE `id` = ?", m.table)
+	query := fmt.Sprintf("UPDATE %s SET `status` = 0, `leave_date` = NOW(), `delete_time` = NOW(), `update_time` = NOW() WHERE `id` = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }

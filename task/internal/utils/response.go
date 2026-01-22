@@ -157,6 +157,7 @@ var BusinessErrorMessages = map[string]string{
 	"employee_has_tasks":         "员工还有未完成的任务，无法删除",
 	"employee_not_in_company":    "您尚未加入任何公司",
 	"employee_already_left":      "员工已离职",
+	"employee_left":              "您已离职，无法登录系统",
 	"founder_cannot_leave":       "不能给公司创始人递交离职申请",
 	"permission_verify_failed":   "权限验证失败",
 	"invalid_leave_type":         "无效的离职类型",
