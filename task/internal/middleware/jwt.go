@@ -45,6 +45,8 @@ type StatusChecker interface {
 	CheckUserStatus(ctx context.Context, userID string) error
 	// CheckCompanyStatus 检查公司状态，返回错误信息（如果有）
 	CheckCompanyStatus(ctx context.Context, companyID string) error
+	// CheckEmployeeStatus 检查员工是否已离职，返回错误信息（如果有）
+	CheckEmployeeStatus(ctx context.Context, userID string, companyID string) error
 }
 
 // JWTMiddleware JWT中间件
@@ -226,10 +228,17 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			// 如果用户已加入公司，检查公司状态
+			// 如果用户已加入公司，检查公司状态和员工离职状态
 			if claims.CompanyID != "" {
 				if err := j.statusChecker.CheckCompanyStatus(r.Context(), claims.CompanyID); err != nil {
 					logx.Errorf("公司状态检查失败: %v, companyId=%s", err, claims.CompanyID)
+					http.Error(w, err.Error(), http.StatusForbidden)
+					return
+				}
+
+				// 检查员工是否已离职
+				if err := j.statusChecker.CheckEmployeeStatus(r.Context(), claims.UserID, claims.CompanyID); err != nil {
+					logx.Errorf("员工状态检查失败: %v, userId=%s, companyId=%s", err, claims.UserID, claims.CompanyID)
 					http.Error(w, err.Error(), http.StatusForbidden)
 					return
 				}

@@ -78,3 +78,26 @@ func (s *StatusCheckerService) CheckCompanyStatus(ctx context.Context, companyID
 
 	return nil
 }
+
+// CheckEmployeeStatus 检查员工是否已离职
+// 返回 nil 表示员工状态正常，返回 error 表示员工已离职
+func (s *StatusCheckerService) CheckEmployeeStatus(ctx context.Context, userID string, companyID string) error {
+	if userID == "" || companyID == "" {
+		return nil
+	}
+
+	userInfo, err := s.userModel.FindOne(ctx, userID)
+	if err != nil {
+		logx.Errorf("查询用户信息失败: %v, userId=%s", err, userID)
+		// 查询失败时不阻止请求，避免数据库问题影响正常使用
+		return nil
+	}
+
+	// 检查用户是否已离职
+	// has_joined_company = 0 表示已离职或未加入公司
+	if userInfo.HasJoinedCompany == 0 {
+		return errors.New("您已离职，无法访问公司资源")
+	}
+
+	return nil
+}
