@@ -112,7 +112,7 @@ func (l *EmployeeLeaveLogic) handleHRInitiatedLeave(employee *user.Employee, req
 		HandoverId:     approvalID,
 		TaskId:         "", // 离职审批不关联具体任务
 		FromEmployeeId: employee.Id,
-		ToEmployeeId:   "", // 待审批
+		ToEmployeeId:   employee.Id, // HR协商离职需要员工本人确认
 		HandoverReason: sql.NullString{String: req.LeaveReason, Valid: true},
 		HandoverNote:   sql.NullString{String: "HR协商离职，等待员工确认", Valid: true},
 		HandoverStatus: 0, // 待接收人确认（HR协商离职需要员工确认）
