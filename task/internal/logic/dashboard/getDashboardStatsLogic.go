@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"task_Project/task/internal/svc"
@@ -533,7 +532,6 @@ func (l *GetDashboardStatsLogic) countTaskNodesByDate(employeeID, startTime, end
 
 	// 获取作为执行人的任务节点
 	executorNodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
-	fmt.Println("目前你有", executorNodes)
 	if err == nil {
 		for _, node := range executorNodes {
 			var timeToCheck time.Time
@@ -556,7 +554,7 @@ func (l *GetDashboardStatsLogic) countTaskNodesByDate(employeeID, startTime, end
 
 	// 获取作为负责人的任务节点
 	leaderNodes, _, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, employeeID, 1, 1000)
-	fmt.Println("目前你有节点", executorNodes)
+
 	if err == nil {
 		for _, node := range leaderNodes {
 			var timeToCheck time.Time
@@ -588,5 +586,10 @@ func (l *GetDashboardStatsLogic) isTimeInRange(t time.Time, startStr, endStr str
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	return (t.Equal(start) || t.After(start)) && (t.Equal(end) || t.Before(end))
+	// 截断到秒级别，避免纳秒/微秒级别的比较问题
+	tTrunc := t.Truncate(time.Second)
+	startTrunc := start.Truncate(time.Second)
+	endTrunc := end.Truncate(time.Second)
+	// 使用 !Before 和 !After 进行范围判断，包含边界值
+	return !tTrunc.Before(startTrunc) && !tTrunc.After(endTrunc)
 }
