@@ -84,7 +84,7 @@ Mongo:
 # GLM AI配置（智谱AI - 用于智能任务派发）
 # 环境变量：GLM_API_KEY
 GLM:
-  APIKey: ""
+  APIKey: "ec6e5721fb8840bf9fa4c5f1cf7c850f.tQ3feqUEtDF3Nvqj"
   BaseURL: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
   Model: "glm-4.7"
 
