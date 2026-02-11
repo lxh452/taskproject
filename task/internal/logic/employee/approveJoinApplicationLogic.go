@@ -209,7 +209,7 @@ func (l *ApproveJoinApplicationLogic) approveAndCreateEmployee(application *user
 		realName = applicantUser.RealName.String
 	}
 
-	err := l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+	err := l.svcCtx.TransactionService.Transaction(l.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 1. 更新申请状态
 		if err := l.svcCtx.JoinApplicationModel.UpdateStatus(
 			ctx,

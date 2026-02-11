@@ -133,7 +133,7 @@ services:
       RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
       TZ: Asia/Shanghai
       GO111MODULE: "on"
-      GOPROXY: "https://goproxy.cn,direct"
+      GOPROXY: "https://proxy.golang.org,direct"
     ports:
       - "${BACKEND_PORT:-8887}:8888"
     volumes:

@@ -128,7 +128,7 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 	}
 
 	// 使用事务创建员工
-	err = l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+	err = l.svcCtx.TransactionService.Transaction(l.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 创建带会话的模型
 		employeeModelWithSession := l.svcCtx.TransactionHelper.GetEmployeeModelWithSession(session)
 		positionModelWithSession := l.svcCtx.TransactionHelper.GetPositionModelWithSession(session)

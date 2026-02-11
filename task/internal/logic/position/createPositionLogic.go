@@ -76,7 +76,7 @@ func (l *CreatePositionLogic) CreatePosition(req *types.CreatePositionRequest) (
 	}
 
 	// 使用事务创建职位和角色关联
-	err = l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+	err = l.svcCtx.TransactionService.Transaction(l.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 创建职位
 		positionModelWithSession := l.svcCtx.TransactionHelper.GetPositionModelWithSession(session)
 		_, err := positionModelWithSession.Insert(ctx, position)

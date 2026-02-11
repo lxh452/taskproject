@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -175,6 +176,9 @@ func (m *customTaskNodeModel) FindByLeader(ctx context.Context, leaderID string,
 	var taskNodes []*TaskNode
 	var total int64
 
+	// 调试日志
+	logx.WithContext(ctx).Infof("【调试】FindByLeader: leaderID=%s, page=%d, pageSize=%d", leaderID, page, pageSize)
+
 	// 查询总数（支持多负责人存储，使用 FIND_IN_SET）
 	countQuery := `SELECT COUNT(*) FROM task_node WHERE FIND_IN_SET(?, leader_id) AND delete_time IS NULL`
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, leaderID)
@@ -184,7 +188,7 @@ func (m *customTaskNodeModel) FindByLeader(ctx context.Context, leaderID string,
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	fmt.Println(pageSize)
+	logx.WithContext(ctx).Infof("【调试】FindByLeader查询: offset=%d, limit=%d, total=%d", offset, pageSize, total)
 	// 使用 COALESCE 保证 ex_node_ids 非空，避免扫描到 string 报错
 	query := `SELECT task_node_id, task_id, department_id, node_name, node_detail,
         COALESCE(ex_node_ids, '') AS ex_node_ids,

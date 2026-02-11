@@ -661,8 +661,8 @@ type NotificationListRequest struct {
 }
 
 type PageReq struct {
-	Page     int `json:"page,optional"`
-	PageSize int `json:"pageSize,optional"`
+	Page     int `json:"page,optional" form:"page,optional"`
+	PageSize int `json:"pageSize,optional" form:"pageSize,optional"`
 }
 
 type PageResp struct {

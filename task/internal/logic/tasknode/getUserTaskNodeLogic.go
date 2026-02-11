@@ -55,6 +55,11 @@ func (l *GetUserTaskNodeLogic) GetUserTaskNode(req *types.PageReq) (resp *types.
 	// 从JWT获取当前用户ID
 	userID, ok := utils.Common.GetCurrentUserID(l.ctx)
 	page, pageSize, _ := utils.Validator.ValidatePageParams(req.Page, req.PageSize)
+
+	// 调试日志
+	l.Logger.WithContext(l.ctx).Infof("【调试】分页参数: page=%d, pageSize=%d, req.Page=%d, req.PageSize=%d",
+		page, pageSize, req.Page, req.PageSize)
+
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}

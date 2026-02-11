@@ -30,7 +30,6 @@ type ServiceContext struct {
 	JWTMiddleware       *middleware.JWTMiddleware
 	AdminAuthMiddleware *middleware.AdminAuthMiddleware
 	EmailMiddleware     *middleware.EmailMiddleware
-	SMSMiddleware       *middleware.SMSMiddleware
 	RateLimiter         *middleware.RateLimiter // 限流中间件
 
 	// Redis 客户端（用于Token存储和验证）
@@ -130,17 +129,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Password: c.Email.Password,
 		From:     c.Email.From,
 		UseTLS:   c.Email.UseTLS,
-	})
-
-	// 初始化短信中间件
-	smsMiddleware := middleware.NewSMSMiddleware(middleware.SMSConfig{
-		Provider:   c.SMS.Provider,
-		AccessKey:  c.SMS.AccessKey,
-		SecretKey:  c.SMS.SecretKey,
-		SignName:   c.SMS.SignName,
-		TemplateID: c.SMS.TemplateID,
-		Endpoint:   c.SMS.Endpoint,
-		Region:     c.SMS.Region,
 	})
 
 	// 初始化 Redis 客户端
@@ -361,7 +349,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		JWTMiddleware:       jwtMiddleware,
 		AdminAuthMiddleware: adminAuthMiddleware,
 		EmailMiddleware:     emailMiddleware,
-		SMSMiddleware:       smsMiddleware,
 		RateLimiter:         rateLimiter,
 
 		// Redis 客户端

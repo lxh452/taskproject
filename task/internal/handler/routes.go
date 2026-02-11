@@ -8,6 +8,8 @@ import (
 
 	admin "task_Project/task/internal/handler/admin"
 	ai "task_Project/task/internal/handler/ai"
+	aiflow "task_Project/task/internal/handler/ai/flow"
+	aitask "task_Project/task/internal/handler/ai/task"
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
 	company "task_Project/task/internal/handler/company"
@@ -21,7 +23,6 @@ import (
 	task "task_Project/task/internal/handler/task"
 	tasknode "task_Project/task/internal/handler/tasknode"
 	upload "task_Project/task/internal/handler/upload"
-	user "task_Project/task/internal/handler/user"
 	"task_Project/task/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -134,6 +135,42 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/suggestion",
 				Handler: ai.GetAiSuggestionHandler(serverCtx),
+			},
+			{
+				// AI任务润色
+				Method:  http.MethodPost,
+				Path:    "/task/polish",
+				Handler: aitask.PolishTaskHandler(serverCtx),
+			},
+			{
+				// AI生成子任务
+				Method:  http.MethodPost,
+				Path:    "/task/subtasks",
+				Handler: aitask.GenerateSubtasksHandler(serverCtx),
+			},
+			{
+				// AI流程设计建议
+				Method:  http.MethodPost,
+				Path:    "/flow/designs",
+				Handler: aiflow.SuggestDesignsHandler(serverCtx),
+			},
+			{
+				// 流式AI任务润色
+				Method:  http.MethodPost,
+				Path:    "/task/polish/stream",
+				Handler: aitask.StreamPolishTaskHandler(serverCtx),
+			},
+			{
+				// 流式AI生成子任务
+				Method:  http.MethodPost,
+				Path:    "/task/subtasks/stream",
+				Handler: aitask.StreamGenerateSubtasksHandler(serverCtx),
+			},
+			{
+				// 流式AI对话（直接传递prompt）
+				Method:  http.MethodPost,
+				Path:    "/chat/stream",
+				Handler: aitask.StreamAIChatHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/v1/ai"),
@@ -707,7 +744,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				// 获取用户的任务节点信息
-				Method:  http.MethodGet,
+				Method:  http.MethodPost,
 				Path:    "/get/user",
 				Handler: tasknode.GetUserTaskNodeHandler(serverCtx),
 			},
@@ -811,15 +848,4 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithPrefix("/api/v1/upload"),
 	)
 
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 更新用户信息
-				Method:  http.MethodPut,
-				Path:    "/update",
-				Handler: user.UpdateInfoHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/v1/user"),
-	)
 }

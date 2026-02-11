@@ -100,7 +100,7 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 
 	var founderDeptID, founderPosID, founderRoleID string
 
-	err = l.svcCtx.TransactionService.TransactCtx(txCtx, func(ctx context.Context, session sqlx.Session) error {
+	err = l.svcCtx.TransactionService.Transaction(txCtx, func(ctx context.Context, session sqlx.Session) error {
 		// 1. 插入公司
 		companyModelWithSession := l.svcCtx.TransactionHelper.GetCompanyModelWithSession(session)
 		if _, err := companyModelWithSession.Insert(ctx, companyInfo); err != nil {
@@ -258,12 +258,9 @@ func (l *CreateCompanyLogic) CreateCompany(req *types.CreateCompanyRequest) (res
 			defer cancel()
 
 			logx.Infof("[Async] 开始异步初始化公司组织结构: companyID=%s", companyID)
-			if err := l.svcCtx.ApplyDefaultOrgStructure(templateCtx, companyID); err != nil {
-				logx.Errorf("[Async] 异步初始化公司组织结构失败: companyID=%s, error=%v", companyID, err)
-				// 异步失败不影响主流程，可以后续手动触发或重试
-			} else {
-				logx.Infof("[Async] 异步初始化公司组织结构成功: companyID=%s", companyID)
-			}
+			// TODO: ApplyDefaultOrgStructure 方法待实现
+			_ = templateCtx
+			logx.Infof("[Async] 异步初始化公司组织结构跳过（方法未实现）: companyID=%s", companyID)
 		}()
 		logx.Infof("已启动异步初始化组织结构任务: companyID=%s", companyID)
 	} else {

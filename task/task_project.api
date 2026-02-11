@@ -1367,7 +1367,7 @@ service taskprojectapi {
 
 	@doc "获取用户的任务节点信息"
 	@handler GetUserTaskNode
-	get /get/user (PageReq) returns (BaseResponse)
+	post /get/user (PageReq) returns (BaseResponse)
 
 	@doc "获取任务节点列表"
 	@handler GetTaskNodeList
@@ -1532,12 +1532,379 @@ service taskprojectapi {
 	post /my/list (GetMyAttachmentsRequest) returns (BaseResponse)
 }
 
-// AI助手相关类型
+// ==================== VibeCraft AI API Definitions ====================
+
+// AI Agent 相关类型
 type (
-	// AI建议请求
-	GetAiSuggestionRequest  {}
+	// Agent 基础信息
+	AgentInfo {
+		ID           string   `json:"id"`
+		Name         string   `json:"name"`
+		Type         string   `json:"type"` // planning, design, collection, decision, execution
+		Status       string   `json:"status"` // idle, running, paused, error
+		Capabilities []string `json:"capabilities"`
+		Description  string   `json:"description"`
+		Avatar       string   `json:"avatar,optional"`
+		CreatedAt    string   `json:"createdAt"`
+	}
+
+	// LLM 配置
+	LLMConfig {
+		Model       string  `json:"model"`
+		Temperature float64 `json:"temperature"`
+		MaxTokens   int     `json:"maxTokens"`
+	}
+
+	// 创建 Agent 请求
+	CreateAgentRequest {
+		Name         string    `json:"name"`
+		Type         string    `json:"type"`
+		Capabilities []string  `json:"capabilities"`
+		LLMConfig    LLMConfig `json:"llmConfig"`
+		Description  string    `json:"description,optional"`
+	}
+
+	// 执行 Agent 请求
+	ExecuteAgentRequest {
+		Input   string                 `json:"input"`
+		Context map[string]interface{} `json:"context,optional"`
+	}
+
+	// Agent 执行结果
+	AgentResult {
+		Type     string                 `json:"type"` // text, plan, designs, polished_task, subtasks, error
+		Data     map[string]interface{} `json:"data"`
+		Metadata map[string]interface{} `json:"metadata,optional"`
+	}
+
+	// AI 建议请求
+	GetAiSuggestionRequest {
+		TaskDescription string `json:"taskDescription,optional"`
+		Context         string `json:"context,optional"`
+	}
 )
 
+// AI 流程设计相关类型
+type (
+	// 流程设计请求
+	FlowDesignRequest {
+		Tasks       []string               `json:"tasks"`
+		Constraints map[string]interface{} `json:"constraints,optional"`
+	}
+
+	// 设计选项
+	DesignOption {
+		ID                  string  `json:"id"`
+		Name                string  `json:"name"`
+		Description         string  `json:"description"`
+		MermaidCode         string  `json:"mermaidCode,optional"`
+		EstimatedDays       int     `json:"estimatedDays"`
+		RequiredPeople      int     `json:"requiredPeople"`
+		RiskLevel           string  `json:"riskLevel"` // high, medium, low
+		RecommendationScore int     `json:"recommendationScore"`
+		IsRecommended       bool    `json:"isRecommended,optional"`
+		Tags                []string `json:"tags,optional"`
+	}
+
+	// 流程节点
+	FlowNode {
+		ID       string                 `json:"id"`
+		Type     string                 `json:"type"`
+		Position map[string]float64     `json:"position"` // x, y
+		Data     map[string]interface{} `json:"data"`
+	}
+
+	// 流程边
+	FlowEdge {
+		ID     string `json:"id"`
+		Source string `json:"source"`
+		Target string `json:"target"`
+		Type   string `json:"type,optional"`
+		Label  string `json:"label,optional"`
+	}
+
+	// 流程数据
+	FlowData {
+		Nodes []FlowNode `json:"nodes"`
+		Edges []FlowEdge `json:"edges"`
+	}
+
+	// 生成流程请求
+	GenerateFlowRequest {
+		SelectedDesignID string   `json:"selectedDesignId"`
+	}
+
+	// 生成任务请求
+	GenerateTasksFromFlowRequest {
+		DesignID string     `json:"designId"`
+		Nodes    []FlowNode `json:"nodes"`
+	}
+
+	// 设计方案响应
+	FlowDesignResponse {
+		Designs []DesignOption `json:"designs"`
+	}
+)
+
+// AI 任务润色相关类型
+type (
+	// 任务润色请求
+	PolishTaskRequest {
+		RawDescription string                 `json:"rawDescription"`
+		Context        map[string]interface{} `json:"context,optional"`
+	}
+
+	// 润色后的任务
+	PolishedTask {
+		Title               string               `json:"title"`
+		Description         string               `json:"description"`
+		Tags                []string             `json:"tags"`
+		SuggestedDueDate    string               `json:"suggestedDueDate"`
+		SuggestedPriority   string               `json:"suggestedPriority"` // high, medium, low
+		Complexity          string               `json:"complexity"`        // simple, medium, complex
+		KeyPoints           []string             `json:"keyPoints"`
+		Subtasks            []SubTask            `json:"subtasks,optional"`
+		SuggestedAssignee   *UserRecommendation   `json:"suggestedAssignee,optional"`
+		AIConfidence        int                  `json:"aiConfidence,optional"`
+	}
+
+	// 子任务
+	SubTask {
+		ID             string `json:"id,optional"`
+		Title          string `json:"title"`
+		Description    string `json:"description,optional"`
+		EstimatedHours int    `json:"estimatedHours"`
+		Order          int    `json:"order"`
+		Completed      bool   `json:"completed,optional"`
+	}
+
+	// 用户推荐
+	UserRecommendation {
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Avatar      string   `json:"avatar,optional"`
+		MatchScore  int      `json:"matchScore"`
+		MatchReason string   `json:"matchReason"`
+		Department  string   `json:"department,optional"`
+		Skills      []string `json:"skills,optional"`
+	}
+
+	// 生成子任务请求
+	GenerateSubtasksRequest {
+		TaskDescription string `json:"taskDescription"`
+	}
+
+	// 推荐负责人请求
+	SuggestAssigneeRequest {
+		TaskDescription string   `json:"taskDescription"`
+		Requirements    []string `json:"requirements,optional"`
+		ExcludeUsers    []string `json:"excludeUsers,optional"`
+	}
+
+	// 推荐负责人响应
+	AssigneeRecommendations {
+		Recommendations []UserRecommendation `json:"recommendations"`
+	}
+)
+
+// AI 规划相关类型
+type (
+	// 规划结果
+	Plan {
+		Tasks             []PlannedTask `json:"tasks"`
+		Milestones        []Milestone   `json:"milestones"`
+		Risks             []Risk        `json:"risks"`
+		TotalEstimatedDays int          `json:"totalEstimatedDays"`
+		CriticalPath      []string      `json:"criticalPath,optional"`
+	}
+
+	// 规划任务
+	PlannedTask {
+		ID             string   `json:"id"`
+		Name           string   `json:"name"`
+		Description    string   `json:"description"`
+		EstimatedHours int      `json:"estimatedHours"`
+		Dependencies   []string `json:"dependencies"`
+		Priority       string   `json:"priority"` // high, medium, low
+		Order          int      `json:"order,optional"`
+	}
+
+	// 里程碑
+	Milestone {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		TaskIndices []int  `json:"taskIndices"`
+		EstimatedDate string `json:"estimatedDate"`
+	}
+
+	// 风险
+	Risk {
+		ID          string `json:"id"`
+		Description string `json:"description"`
+		Probability string `json:"probability"` // high, medium, low
+		Impact      string `json:"impact"`    // high, medium, low
+		Mitigation  string `json:"mitigation"`
+	}
+)
+
+// RTS 仪表盘相关类型
+type (
+	// RTS 数据响应
+	RTSData {
+		Companies     []CompanyData  `json:"companies"`
+		TaskStats     TaskStats      `json:"taskStats"`
+		UserStats     UserStats      `json:"userStats"`
+		ResourceFlows []ResourceFlow `json:"resourceFlows"`
+		Insights      []AIInsight    `json:"insights"`
+		SystemLoad    int            `json:"systemLoad"`
+		Analytics     AnalyticsData  `json:"analytics"`
+		Timestamp     string         `json:"timestamp"`
+	}
+
+	// 公司数据
+	CompanyData {
+		ID            string  `json:"id"`
+		Name          string  `json:"name"`
+		ActiveTasks   int     `json:"activeTasks"`
+		PendingTasks  int     `json:"pendingTasks"`
+		ResourceUsage float64 `json:"resourceUsage"`
+		Status        string  `json:"status"` // normal, warning, critical
+		Position      Position `json:"position"`
+		Employees     int     `json:"employees,optional"`
+	}
+
+	// 位置
+	Position {
+		X float64 `json:"x"`
+		Y float64 `json:"y"`
+	}
+
+	// 任务统计
+	TaskStats {
+		Total      int `json:"total"`
+		InProgress int `json:"inProgress"`
+		Completed  int `json:"completed"`
+		Pending    int `json:"pending"`
+		DueSoon    int `json:"dueSoon"`
+		Overdue    int `json:"overdue"`
+		Progress   int `json:"progress"`
+	}
+
+	// 用户统计
+	UserStats {
+		Online int `json:"online"`
+		Total  int `json:"total"`
+		Trend  int `json:"trend"`
+	}
+
+	// 资源流动
+	ResourceFlow {
+		ID     string  `json:"id"`
+		From   string  `json:"from"`
+		To     string  `json:"to"`
+		Amount float64 `json:"amount"`
+		Type   string  `json:"type"` // task, person, resource
+	}
+
+	// AI 洞察
+	AIInsight {
+		ID       string  `json:"id"`
+		Priority string  `json:"priority"` // high, medium, low
+		Message  string  `json:"message"`
+		Actions  []Action `json:"actions"`
+	}
+
+	// 操作
+	Action {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+		Type  string `json:"type,optional"` // button, link
+	}
+
+	// 分析数据
+	AnalyticsData {
+		Summary string  `json:"summary"`
+		Trend   []int   `json:"trend"`
+		Labels  []string `json:"labels,optional"`
+	}
+)
+
+// ==================== VibeCraft AI Services ====================
+
+@server (
+	group:  ai-agent
+	prefix: /api/v1/agents
+)
+service taskprojectapi {
+	@doc "获取 Agent 列表"
+	@handler ListAgents
+	get / returns (BaseResponse)
+
+	@doc "创建 Agent"
+	@handler CreateAgent
+	post / (CreateAgentRequest) returns (BaseResponse)
+
+	@doc "执行 Agent"
+	@handler ExecuteAgent
+	post /:id/execute (ExecuteAgentRequest) returns (BaseResponse)
+
+	@doc "获取 Agent 状态"
+	@handler GetAgentStatus
+	get /:id/status returns (BaseResponse)
+}
+
+@server (
+	group:  ai-flow
+	prefix: /api/v1/ai/flow
+)
+service taskprojectapi {
+	@doc "生成设计方案"
+	@handler SuggestDesigns
+	post /designs (FlowDesignRequest) returns (BaseResponse)
+
+	@doc "生成流程图"
+	@handler GenerateFlow
+	post /generate (GenerateFlowRequest) returns (BaseResponse)
+
+	@doc "根据流程生成任务"
+	@handler GenerateTasksFromFlow
+	post /generate-tasks (GenerateTasksFromFlowRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  ai-task
+	prefix: /api/v1/ai/task
+)
+service taskprojectapi {
+	@doc "润色任务"
+	@handler PolishTask
+	post /polish (PolishTaskRequest) returns (BaseResponse)
+
+	@doc "生成子任务"
+	@handler GenerateSubtasks
+	post /subtasks (GenerateSubtasksRequest) returns (BaseResponse)
+
+	@doc "推荐负责人"
+	@handler SuggestAssignee
+	post /assignee (SuggestAssigneeRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  ai-dashboard
+	prefix: /api/v1/ai/dashboard
+)
+service taskprojectapi {
+	@doc "获取 RTS 数据"
+	@handler GetRTSData
+	get /rts returns (BaseResponse)
+
+	@doc "获取 AI 洞察"
+	@handler GetAIInsights
+	get /insights returns (BaseResponse)
+}
+
+// ==================== Original AI API ====================
 @server (
 	group:  ai
 	prefix: /api/v1/ai

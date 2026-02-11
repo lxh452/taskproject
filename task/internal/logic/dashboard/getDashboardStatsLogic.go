@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"context"
-	"time"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -27,22 +26,14 @@ func NewGetDashboardStatsLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 
 // DashboardStats 仪表盘统计数据
 type DashboardStats struct {
-	TotalTasks        int64           `json:"totalTasks"`        // 总任务数（执行人+负责人）
-	PendingApprovals  int64           `json:"pendingApprovals"`  // 待审批数量
-	CompletedTasks    int64           `json:"completedTasks"`    // 已完成任务数
-	CriticalTasks     int64           `json:"criticalTasks"`     // 紧急任务数
-	OverdueTasks      int64           `json:"overdueTasks"`      // 逾期任务数
-	AvgCompletionDays int64           `json:"avgCompletionDays"` // 平均完成天数
-	OnTimeRate        int64           `json:"onTimeRate"`        // 按时完成率（百分比）
-	ActiveMembers     int64           `json:"activeMembers"`     // 活跃成员数
-	TaskTrend         []TaskTrendData `json:"taskTrend"`         // 任务趋势数据
-}
-
-// TaskTrendData 任务趋势数据点
-type TaskTrendData struct {
-	Date      string `json:"date"`      // 日期 YYYY-MM-DD
-	Created   int64  `json:"created"`   // 创建的任务数
-	Completed int64  `json:"completed"` // 完成的任务数
+	TotalTasks        int64 `json:"totalTasks"`        // 总任务数（执行人+负责人）
+	PendingApprovals  int64 `json:"pendingApprovals"`  // 待审批数量
+	CompletedTasks    int64 `json:"completedTasks"`    // 已完成任务数
+	CriticalTasks     int64 `json:"criticalTasks"`     // 紧急任务数
+	OverdueTasks      int64 `json:"overdueTasks"`      // 逾期任务数
+	AvgCompletionDays int64 `json:"avgCompletionDays"` // 平均完成天数
+	OnTimeRate        int64 `json:"onTimeRate"`        // 按时完成率（百分比）
+	ActiveMembers     int64 `json:"activeMembers"`     // 活跃成员数
 }
 
 func (l *GetDashboardStatsLogic) GetDashboardStats(req *types.GetDashboardStatsRequest) (resp *types.BaseResponse, err error) {
@@ -90,9 +81,6 @@ func (l *GetDashboardStatsLogic) GetDashboardStats(req *types.GetDashboardStatsR
 	if req.Scope == "department" && departmentID != "" {
 		stats.ActiveMembers = l.getActiveMembersCount(departmentID)
 	}
-
-	// 9. 计算任务趋势数据（最近7天）
-	stats.TaskTrend = l.getTaskTrend(employeeID, 7)
 
 	return utils.Response.Success(stats), nil
 }
@@ -495,101 +483,4 @@ func (l *GetDashboardStatsLogic) getActiveMembersCount(departmentID string) int6
 	}
 
 	return int64(len(activeMembers))
-}
-
-// getTaskTrend 获取任务趋势数据
-func (l *GetDashboardStatsLogic) getTaskTrend(employeeID string, days int) []TaskTrendData {
-	var trendData []TaskTrendData
-	now := time.Now()
-
-	// 遍历每一天统计数据
-	for i := days - 1; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i)
-		dateStr := date.Format("2006-01-02")
-		startTime := date.Format("2006-01-02 00:00:00")
-		endTime := date.Format("2006-01-02 23:59:59")
-
-		// 统计当天创建的任务节点数(作为执行人或负责人)
-		createdCount := l.countTaskNodesByDate(employeeID, startTime, endTime, "create")
-
-		// 统计当天完成的任务节点数(作为执行人或负责人)
-		completedCount := l.countTaskNodesByDate(employeeID, startTime, endTime, "complete")
-
-		trendData = append(trendData, TaskTrendData{
-			Date:      dateStr,
-			Created:   createdCount,
-			Completed: completedCount,
-		})
-	}
-
-	return trendData
-}
-
-// countTaskNodesByDate 统计指定日期范围内的任务节点数
-func (l *GetDashboardStatsLogic) countTaskNodesByDate(employeeID, startTime, endTime, countType string) int64 {
-	var count int64
-	nodeMap := make(map[string]bool)
-
-	// 获取作为执行人的任务节点
-	executorNodes, _, err := l.svcCtx.TaskNodeModel.FindByExecutor(l.ctx, employeeID, 1, 1000)
-	if err == nil {
-		for _, node := range executorNodes {
-			var timeToCheck time.Time
-			if countType == "create" {
-				timeToCheck = node.CreateTime
-			} else if countType == "complete" {
-				if node.NodeStatus == 2 { // 已完成
-					timeToCheck = node.UpdateTime
-				} else {
-					continue
-				}
-			}
-
-			// 检查时间是否在范围内
-			if l.isTimeInRange(timeToCheck, startTime, endTime) {
-				nodeMap[node.TaskNodeId] = true
-			}
-		}
-	}
-
-	// 获取作为负责人的任务节点
-	leaderNodes, _, err := l.svcCtx.TaskNodeModel.FindByLeader(l.ctx, employeeID, 1, 1000)
-
-	if err == nil {
-		for _, node := range leaderNodes {
-			var timeToCheck time.Time
-			if countType == "create" {
-				timeToCheck = node.CreateTime
-			} else if countType == "complete" {
-				if node.NodeStatus == 2 { // 已完成
-					timeToCheck = node.UpdateTime
-				} else {
-					continue
-				}
-			}
-
-			// 检查时间是否在范围内
-			if l.isTimeInRange(timeToCheck, startTime, endTime) {
-				nodeMap[node.TaskNodeId] = true
-			}
-		}
-	}
-
-	count = int64(len(nodeMap))
-	return count
-}
-
-// isTimeInRange 检查时间是否在指定范围内
-func (l *GetDashboardStatsLogic) isTimeInRange(t time.Time, startStr, endStr string) bool {
-	start, err1 := time.Parse("2006-01-02 15:04:05", startStr)
-	end, err2 := time.Parse("2006-01-02 15:04:05", endStr)
-	if err1 != nil || err2 != nil {
-		return false
-	}
-	// 截断到秒级别，避免纳秒/微秒级别的比较问题
-	tTrunc := t.Truncate(time.Second)
-	startTrunc := start.Truncate(time.Second)
-	endTrunc := end.Truncate(time.Second)
-	// 使用 !Before 和 !After 进行范围判断，包含边界值
-	return !tTrunc.Before(startTrunc) && !tTrunc.After(endTrunc)
 }

@@ -274,9 +274,10 @@ func (s *SchedulerService) SendEmailNotification(ctx context.Context, to []strin
 	return fmt.Errorf("email service not available")
 }
 
-// 发送短信通知
+// 发送短信通知（已禁用）
 func (s *SchedulerService) SendSMSNotification(ctx context.Context, phone, content string) error {
-	return s.svcCtx.SMSMiddleware.SendNotificationSMS(ctx, phone, content)
+	logx.Infof("SMS service disabled, skipping SMS to %s", phone)
+	return nil
 }
 
 // 任务节点闲置检查定时任务

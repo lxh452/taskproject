@@ -122,9 +122,6 @@ type Config struct {
 	} `json:"rateLimit"`
 }
 
-// ApplyEnvOverrides 从环境变量覆盖配置
-// 环境变量命名规则: MYSQL_DATASOURCE, REDIS_HOST, MONGO_HOST 等
-// 支持 Railway / Render / Fly.io 等云平台的环境变量注入
 func (c *Config) ApplyEnvOverrides() {
 	logx.Info("[Config] 检查环境变量覆盖...")
 
@@ -166,10 +163,7 @@ func (c *Config) ApplyEnvOverrides() {
 			overrideCount++
 		}
 	}
-	// 支持 Railway 的 REDIS_URL 格式（需要解析）
 	if v := os.Getenv("REDIS_URL"); v != "" {
-		// Railway 格式: redis://default:password@host:port
-		// 简单处理：如果有 REDIS_URL 但没有单独的 Host，则记录日志提示
 		logx.Infof("[Config] 检测到 REDIS_URL: %s (如需使用请手动解析或设置 REDIS_HOST/PORT/PASSWORD)", maskPassword(v))
 	}
 

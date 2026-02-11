@@ -1,12 +1,14 @@
 package svc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -25,6 +27,12 @@ type GLMConfig struct {
 	BaseURL string
 }
 
+// AgentConfig AI代理配置（本地定义，避免依赖types包）
+type AgentConfig struct {
+	Model        string
+	SystemPrompt string
+}
+
 // NewGLMService 创建GLM服务
 func NewGLMService(config GLMConfig) *GLMService {
 	baseURL := config.BaseURL
@@ -35,15 +43,95 @@ func NewGLMService(config GLMConfig) *GLMService {
 		apiKey:  config.APIKey,
 		baseURL: baseURL,
 		client: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 120 * time.Second, // 增加到120秒
 		},
 	}
+}
+
+// Generate 实现 GLMClientInterface 接口
+func (s *GLMService) Generate(ctx context.Context, prompt string, config AgentConfig) (string, error) {
+	return s.GenerateWithContext(ctx, prompt, nil, config)
+}
+
+// GenerateWithContext 实现 GLMClientInterface 接口
+func (s *GLMService) GenerateWithContext(ctx context.Context, prompt string, contextData map[string]interface{}, config AgentConfig) (string, error) {
+	// 构建消息
+	messages := []GLMMessage{
+		{
+			Role:    "system",
+			Content: config.SystemPrompt,
+		},
+		{
+			Role:    "user",
+			Content: prompt,
+		},
+	}
+
+	// 构建请求
+	reqBody := GLMRequest{
+		Model:    config.Model,
+		Messages: messages,
+	}
+
+	// 如果有上下文，添加到消息中
+	if contextData != nil {
+		contextJSON, _ := json.Marshal(contextData)
+		messages = append(messages, GLMMessage{
+			Role:    "user",
+			Content: "Context: " + string(contextJSON),
+		})
+		reqBody.Messages = messages
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	// 创建请求
+	req, err := http.NewRequestWithContext(ctx, "POST", s.baseURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+
+	// 发送请求
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GLM API error: status=%d, body=%s", resp.StatusCode, string(body))
+	}
+
+	// 解析响应
+	var glmResp GLMResponse
+	if err := json.Unmarshal(body, &glmResp); err != nil {
+		return "", err
+	}
+
+	if len(glmResp.Choices) > 0 {
+		return glmResp.Choices[0].Message.Content, nil
+	}
+
+	return "", fmt.Errorf("no response from GLM")
 }
 
 // GLMRequest GLM请求结构
 type GLMRequest struct {
 	Model    string       `json:"model"`
 	Messages []GLMMessage `json:"messages"`
+	Stream   bool         `json:"stream,omitempty"`
 }
 
 // GLMMessage GLM消息
@@ -343,4 +431,90 @@ func (s *GLMService) CallGLMWithPrompt(ctx context.Context, prompt string) (stri
 		return "", fmt.Errorf("GLM API Key未配置")
 	}
 	return s.callGLM(ctx, prompt)
+}
+
+// StreamCallGLMWithPrompt 流式GLM调用方法
+func (s *GLMService) StreamCallGLMWithPrompt(ctx context.Context, prompt string, onChunk func(chunk string)) error {
+	if s.apiKey == "" {
+		return fmt.Errorf("GLM API Key未配置")
+	}
+	return s.callGLMStream(ctx, prompt, onChunk)
+}
+
+// callGLMStream 流式调用GLM API
+func (s *GLMService) callGLMStream(ctx context.Context, prompt string, onChunk func(chunk string)) error {
+	reqBody := GLMRequest{
+		Model:    "glm-4-flash",
+		Messages: []GLMMessage{{Role: "user", Content: prompt}},
+		Stream:   true, // 启用流式
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("序列化请求失败: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", s.baseURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.apiKey))
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("发送请求失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API返回错误: %d, %s", resp.StatusCode, string(body))
+	}
+
+	// 读取流式响应
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("读取流失败: %v", err)
+		}
+
+		// 解析SSE格式: data: {...}
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+
+		data := strings.TrimPrefix(line, "data: ")
+		if data == "[DONE]" {
+			break
+		}
+
+		// 解析JSON
+		var streamResp struct {
+			Choices []struct {
+				Delta struct {
+					Content string `json:"content"`
+				} `json:"delta"`
+			} `json:"choices"`
+		}
+
+		if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
+			continue // 忽略解析错误
+		}
+
+		if len(streamResp.Choices) > 0 {
+			content := streamResp.Choices[0].Delta.Content
+			if content != "" {
+				onChunk(content)
+			}
+		}
+	}
+
+	return nil
 }

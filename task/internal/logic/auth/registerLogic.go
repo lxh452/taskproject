@@ -139,7 +139,7 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 	}
 
 	// 使用事务创建用户
-	err = l.svcCtx.TransactionService.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+	err = l.svcCtx.TransactionService.Transaction(l.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 创建带会话的用户模型
 		userModelWithSession := l.svcCtx.TransactionHelper.GetUserModelWithSession(session)
 		_, err := userModelWithSession.Insert(ctx, userInfo)
@@ -161,12 +161,10 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		}
 	}()
 
-	// 发送注册成功短信
+	// 发送注册成功短信（已禁用）
 	go func() {
 		if req.Phone != "" {
-			if err := l.svcCtx.SMSMiddleware.SendNotificationSMS(context.Background(), req.Phone, "欢迎注册企业任务系统！您的账户已成功创建。"); err != nil {
-				logx.Errorf("发送注册成功短信失败: %v", err)
-			}
+			logx.Infof("SMS service disabled, skipping registration SMS to %s", req.Phone)
 		}
 	}()
 

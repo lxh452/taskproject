@@ -13,6 +13,34 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+// Task_comment 任务评论结构体
+type Task_comment struct {
+	ID              bson.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	CommentID       string        `bson:"commentId" json:"commentId"`             // 评论ID
+	TaskID          string        `bson:"taskId" json:"taskId"`                   // 任务ID
+	TaskNodeID      string        `bson:"taskNodeId" json:"taskNodeId"`           // 任务节点ID
+	UserID          string        `bson:"userId" json:"userId"`                   // 用户ID
+	UserName        string        `bson:"userName" json:"userName"`               // 用户名
+	EmployeeID      string        `bson:"employeeId" json:"employeeId"`           // 员工ID
+	EmployeeName    string        `bson:"employeeName" json:"employeeName"`       // 员工姓名
+	Avatar          string        `bson:"avatar" json:"avatar"`                   // 用户头像
+	Content         string        `bson:"content" json:"content"`                 // 评论内容
+	ContentHTML     string        `bson:"contentHtml" json:"contentHtml"`         // HTML格式内容
+	AtEmployeeIDs   []string      `bson:"atEmployeeIds" json:"atEmployeeIds"`     // @的员工ID列表
+	AtEmployeeNames []string      `bson:"atEmployeeNames" json:"atEmployeeNames"` // @的员工姓名列表
+	ParentID        string        `bson:"parentId" json:"parentId"`               // 父评论ID（用于回复）
+	ReplyToUserID   string        `bson:"replyToUserId" json:"replyToUserId"`     // 回复目标用户ID
+	ReplyToName     string        `bson:"replyToName" json:"replyToName"`         // 回复目标用户名
+	AttachmentIDs   []string      `bson:"attachmentIds" json:"attachmentIds"`     // 附件ID列表
+	AttachmentURLs  []string      `bson:"attachmentUrls" json:"attachmentUrls"`   // 附件URL列表
+	LikeCount       int64         `bson:"likeCount" json:"likeCount"`             // 点赞数
+	LikedBy         []string      `bson:"likedBy" json:"likedBy"`                 // 点赞用户ID列表
+	IsDeleted       bool          `bson:"isDeleted" json:"isDeleted"`             // 是否已删除
+	DeletedAt       time.Time     `bson:"deletedAt" json:"deletedAt"`             // 删除时间
+	CreateAt        time.Time     `bson:"createAt" json:"createAt"`               // 创建时间
+	UpdateAt        time.Time     `bson:"updateAt" json:"updateAt"`               // 更新时间
+}
+
 type task_commentModel interface {
 	Insert(ctx context.Context, data *Task_comment) error
 	FindOne(ctx context.Context, id string) (*Task_comment, error)
@@ -80,7 +108,7 @@ func (m *defaultTask_commentModel) FindByCommentID(ctx context.Context, commentI
 
 func (m *defaultTask_commentModel) FindByTaskID(ctx context.Context, taskID string, page, pageSize int64) ([]*Task_comment, int64, error) {
 	filter := bson.M{"taskId": taskID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	// 计算总数
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
@@ -90,7 +118,7 @@ func (m *defaultTask_commentModel) FindByTaskID(ctx context.Context, taskID stri
 	// 分页查询
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Task_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -102,7 +130,7 @@ func (m *defaultTask_commentModel) FindByTaskID(ctx context.Context, taskID stri
 
 func (m *defaultTask_commentModel) FindByTaskNodeID(ctx context.Context, taskNodeID string, page, pageSize int64) ([]*Task_comment, int64, error) {
 	filter := bson.M{"taskNodeId": taskNodeID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -110,7 +138,7 @@ func (m *defaultTask_commentModel) FindByTaskNodeID(ctx context.Context, taskNod
 
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Task_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -122,7 +150,7 @@ func (m *defaultTask_commentModel) FindByTaskNodeID(ctx context.Context, taskNod
 
 func (m *defaultTask_commentModel) FindByUserID(ctx context.Context, userID string, page, pageSize int64) ([]*Task_comment, int64, error) {
 	filter := bson.M{"userId": userID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -130,7 +158,7 @@ func (m *defaultTask_commentModel) FindByUserID(ctx context.Context, userID stri
 
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Task_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -143,7 +171,7 @@ func (m *defaultTask_commentModel) FindByUserID(ctx context.Context, userID stri
 func (m *defaultTask_commentModel) FindReplies(ctx context.Context, parentID string) ([]*Task_comment, error) {
 	filter := bson.M{"parentId": parentID, "isDeleted": bson.M{"$ne": true}}
 	opts := options.Find().SetSort(bson.M{"createAt": 1})
-	
+
 	var data []*Task_comment
 	err := m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -202,4 +230,3 @@ func (m *defaultTask_commentModel) RemoveLike(ctx context.Context, commentID, us
 	})
 	return err
 }
-
