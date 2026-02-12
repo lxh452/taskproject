@@ -13,7 +13,6 @@ import (
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
 	company "task_Project/task/internal/handler/company"
-	dashboard "task_Project/task/internal/handler/dashboard"
 	department "task_Project/task/internal/handler/department"
 	employee "task_Project/task/internal/handler/employee"
 	handover "task_Project/task/internal/handler/handover"
@@ -104,18 +103,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			Method:  http.MethodPost,
 			Path:    "/logs",
 			Handler: admin.LogListHandler(serverCtx),
-		},
-		{
-			// 获取仪表盘统计
-			Method:  http.MethodGet,
-			Path:    "/dashboard/stats",
-			Handler: admin.GetPlatformStatsHandler(serverCtx),
-		},
-		{
-			// 获取服务器指标
-			Method:  http.MethodGet,
-			Path:    "/metrics",
-			Handler: admin.MetricsHandler(serverCtx),
 		},
 	}
 
@@ -336,18 +323,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 		},
 		rest.WithPrefix("/api/v1/company"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 获取仪表盘统计数据
-				Method:  http.MethodGet,
-				Path:    "/stats",
-				Handler: dashboard.GetDashboardStatsHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/v1/dashboard"),
 	)
 
 	server.AddRoutes(
