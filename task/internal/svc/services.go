@@ -1,14 +1,18 @@
 package svc
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/tencentyun/cos-go-sdk-v5"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -108,6 +112,7 @@ type COSStorageService struct {
 	bucket    string
 	region    string
 	urlPrefix string
+	client    *cos.Client
 }
 
 // NewCOSStorageService 创建COS存储服务
@@ -115,30 +120,93 @@ func NewCOSStorageService(secretID, secretKey, bucket, region, urlPrefix string)
 	if secretID == "" || secretKey == "" || bucket == "" || region == "" {
 		return nil, fmt.Errorf("COS配置不完整")
 	}
+
+	// 构建COS客户端
+	cosURL := fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region)
+	u, err := url.Parse(cosURL)
+	if err != nil {
+		return nil, fmt.Errorf("解析COS URL失败: %v", err)
+	}
+
+	b := &cos.BaseURL{BucketURL: u}
+	client := cos.NewClient(b, &http.Client{
+		Transport: &cos.AuthorizationTransport{
+			SecretID:  secretID,
+			SecretKey: secretKey,
+		},
+	})
+
 	return &COSStorageService{
 		secretID:  secretID,
 		secretKey: secretKey,
 		bucket:    bucket,
 		region:    region,
 		urlPrefix: urlPrefix,
+		client:    client,
 	}, nil
 }
 
 // Upload 上传文件
 func (s *COSStorageService) Upload(ctx context.Context, key string, data []byte, contentType string) (string, error) {
-	// TODO: 实现COS上传
-	return "", nil
+	if s.client == nil {
+		return "", fmt.Errorf("COS客户端未初始化")
+	}
+
+	// 构建上传选项
+	opt := &cos.ObjectPutOptions{
+		ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{
+			ContentType: contentType,
+		},
+	}
+
+	// 如果未指定ContentType，尝试从文件名推断
+	if contentType == "" {
+		opt.ObjectPutHeaderOptions.ContentType = getContentTypeByExt(key)
+	}
+
+	// 上传文件到COS
+	_, err := s.client.Object.Put(ctx, key, bytes.NewReader(data), opt)
+	if err != nil {
+		return "", fmt.Errorf("上传文件到COS失败: %v", err)
+	}
+
+	return s.GetURL(key), nil
 }
 
 // Download 下载文件
 func (s *COSStorageService) Download(ctx context.Context, key string) ([]byte, error) {
-	// TODO: 实现COS下载
-	return nil, nil
+	if s.client == nil {
+		return nil, fmt.Errorf("COS客户端未初始化")
+	}
+
+	// 从COS获取文件
+	resp, err := s.client.Object.Get(ctx, key, nil)
+	if err != nil {
+		return nil, fmt.Errorf("从COS下载文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取文件内容
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取文件内容失败: %v", err)
+	}
+
+	return data, nil
 }
 
 // Delete 删除文件
 func (s *COSStorageService) Delete(ctx context.Context, key string) error {
-	// TODO: 实现COS删除
+	if s.client == nil {
+		return fmt.Errorf("COS客户端未初始化")
+	}
+
+	// 从COS删除文件
+	_, err := s.client.Object.Delete(ctx, key)
+	if err != nil {
+		return fmt.Errorf("从COS删除文件失败: %v", err)
+	}
+
 	return nil
 }
 
@@ -178,4 +246,43 @@ func (s *COSStorageService) DeleteFile(filePath string) error {
 // GetFile 获取文件内容（扩展方法）
 func (s *COSStorageService) GetFile(filePath string) ([]byte, error) {
 	return s.Download(context.Background(), filePath)
+}
+
+// getContentTypeByExt 根据文件扩展名获取Content-Type
+func getContentTypeByExt(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".pdf":
+		return "application/pdf"
+	case ".doc", ".docx":
+		return "application/msword"
+	case ".xls", ".xlsx":
+		return "application/vnd.ms-excel"
+	case ".ppt", ".pptx":
+		return "application/vnd.ms-powerpoint"
+	case ".txt":
+		return "text/plain"
+	case ".md":
+		return "text/markdown"
+	case ".json":
+		return "application/json"
+	case ".xml":
+		return "application/xml"
+	case ".zip":
+		return "application/zip"
+	case ".mp4":
+		return "video/mp4"
+	case ".mp3":
+		return "audio/mpeg"
+	default:
+		return "application/octet-stream"
+	}
 }
