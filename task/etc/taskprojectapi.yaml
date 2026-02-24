@@ -3,6 +3,7 @@ Host: 0.0.0.0
 Port: 8888
 Mode: dev
 Timeout: 30000
+MaxBytes: 52428800
 
 # 系统配置（用于拼接前端链接，例如邮件中的跳转地址）
 System:
