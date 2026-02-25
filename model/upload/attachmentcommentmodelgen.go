@@ -25,6 +25,7 @@ type attachment_commentModel interface {
 	Delete(ctx context.Context, id string) (int64, error)
 	SoftDelete(ctx context.Context, id string) error
 	MarkResolved(ctx context.Context, commentID, resolvedBy string) error
+	ToggleLike(ctx context.Context, commentID, userID string, isLike bool) (int, error)
 }
 
 type defaultAttachment_commentModel struct {
@@ -79,7 +80,7 @@ func (m *defaultAttachment_commentModel) FindByCommentID(ctx context.Context, co
 
 func (m *defaultAttachment_commentModel) FindByFileID(ctx context.Context, fileID string, page, pageSize int64) ([]*Attachment_comment, int64, error) {
 	filter := bson.M{"fileId": fileID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -87,7 +88,7 @@ func (m *defaultAttachment_commentModel) FindByFileID(ctx context.Context, fileI
 
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Attachment_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -99,7 +100,7 @@ func (m *defaultAttachment_commentModel) FindByFileID(ctx context.Context, fileI
 
 func (m *defaultAttachment_commentModel) FindByTaskID(ctx context.Context, taskID string, page, pageSize int64) ([]*Attachment_comment, int64, error) {
 	filter := bson.M{"taskId": taskID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -107,7 +108,7 @@ func (m *defaultAttachment_commentModel) FindByTaskID(ctx context.Context, taskI
 
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Attachment_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -119,7 +120,7 @@ func (m *defaultAttachment_commentModel) FindByTaskID(ctx context.Context, taskI
 
 func (m *defaultAttachment_commentModel) FindByTaskNodeID(ctx context.Context, taskNodeID string, page, pageSize int64) ([]*Attachment_comment, int64, error) {
 	filter := bson.M{"taskNodeId": taskNodeID, "isDeleted": bson.M{"$ne": true}}
-	
+
 	total, err := m.conn.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -127,7 +128,7 @@ func (m *defaultAttachment_commentModel) FindByTaskNodeID(ctx context.Context, t
 
 	skip := (page - 1) * pageSize
 	opts := options.Find().SetSort(bson.M{"createAt": -1}).SetSkip(skip).SetLimit(pageSize)
-	
+
 	var data []*Attachment_comment
 	err = m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -140,7 +141,7 @@ func (m *defaultAttachment_commentModel) FindByTaskNodeID(ctx context.Context, t
 func (m *defaultAttachment_commentModel) FindReplies(ctx context.Context, parentID string) ([]*Attachment_comment, error) {
 	filter := bson.M{"parentId": parentID, "isDeleted": bson.M{"$ne": true}}
 	opts := options.Find().SetSort(bson.M{"createAt": 1})
-	
+
 	var data []*Attachment_comment
 	err := m.conn.Find(ctx, &data, filter, opts)
 	if err != nil {
@@ -194,3 +195,32 @@ func (m *defaultAttachment_commentModel) MarkResolved(ctx context.Context, comme
 	return err
 }
 
+func (m *defaultAttachment_commentModel) ToggleLike(ctx context.Context, commentID, userID string, isLike bool) (int, error) {
+	var update bson.M
+	if isLike {
+		update = bson.M{
+			"$addToSet": bson.M{"likedBy": userID},
+			"$inc":      bson.M{"likeCount": 1},
+			"$set":      bson.M{"updateAt": time.Now()},
+		}
+	} else {
+		update = bson.M{
+			"$pull": bson.M{"likedBy": userID},
+			"$inc":  bson.M{"likeCount": -1},
+			"$set":  bson.M{"updateAt": time.Now()},
+		}
+	}
+
+	_, err := m.conn.UpdateOne(ctx, bson.M{"commentId": commentID, "isDeleted": bson.M{"$ne": true}}, update)
+	if err != nil {
+		return 0, err
+	}
+
+	// 查询最新的 likeCount
+	var data Attachment_comment
+	err = m.conn.FindOne(ctx, &data, bson.M{"commentId": commentID})
+	if err != nil {
+		return 0, err
+	}
+	return data.LikeCount, nil
+}

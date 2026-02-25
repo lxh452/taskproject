@@ -778,6 +778,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: upload.ResolveAttachmentCommentHandler(serverCtx),
 			},
 			{
+				// 点赞/取消点赞附件评论
+				Method:  http.MethodPost,
+				Path:    "/comment/like",
+				Handler: upload.LikeAttachmentCommentHandler(serverCtx),
+			},
+			{
 				// 删除附件
 				Method:  http.MethodPost,
 				Path:    "/delete",

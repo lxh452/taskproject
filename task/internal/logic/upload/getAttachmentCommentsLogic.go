@@ -122,6 +122,8 @@ func (l *GetAttachmentCommentsLogic) convertToCommentInfo(c *uploadModel.Attachm
 		IsResolved:      c.IsResolved,
 		ResolvedBy:      c.ResolvedBy,
 		ResolvedAt:      resolvedAt,
+		LikeCount:       c.LikeCount,
+		LikedBy:         c.LikedBy,
 		CreateTime:      c.CreateAt.Format(time.RFC3339),
 		UpdateTime:      c.UpdateAt.Format(time.RFC3339),
 	}

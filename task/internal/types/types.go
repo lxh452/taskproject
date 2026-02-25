@@ -75,6 +75,8 @@ type AttachmentCommentInfo struct {
 	AtEmployeeIDs   []string                `json:"atEmployeeIds,optional"`
 	AtEmployeeNames []string                `json:"atEmployeeNames,optional"`
 	Replies         []AttachmentCommentInfo `json:"replies,optional"` // 回复列表
+	LikeCount       int                     `json:"likeCount"`
+	LikedBy         []string                `json:"likedBy,optional"`
 	CreateTime      string                  `json:"createTime"`
 	UpdateTime      string                  `json:"updateTime"`
 }
