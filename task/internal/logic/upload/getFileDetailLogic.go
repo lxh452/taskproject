@@ -35,8 +35,9 @@ func (l *GetFileDetailLogic) GetFileDetail(req *types.GetFileDetailRequest) (res
 		return utils.Response.ValidationError("文件ID不能为空"), nil
 	}
 
-	// 获取当前用户ID
+	// 获取当前用户ID和员工ID
 	currentUserID, _ := utils.Common.GetCurrentUserID(l.ctx)
+	currentEmployeeID, _ := l.ctx.Value("employeeId").(string)
 
 	// 从MongoDB查询文件信息
 	file, err := l.svcCtx.UploadFileModel.FindByFileID(l.ctx, req.FileID)
@@ -49,8 +50,8 @@ func (l *GetFileDetailLogic) GetFileDetail(req *types.GetFileDetailRequest) (res
 	if file.Module == "task" && file.TaskNodeID != "" {
 		hasAccess := false
 
-		// 如果是上传者，允许访问
-		if file.UploaderID == currentUserID {
+		// 如果是上传者，允许访问（UploaderID 存储的是员工ID，需要同时比较 userID 和 employeeID）
+		if file.UploaderID == currentUserID || file.UploaderID == currentEmployeeID {
 			hasAccess = true
 		}
 

@@ -68,7 +68,8 @@ func (l *ProxyFileLogic) ProxyFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUserID := claims.UserID
-	logx.Infof("代理文件请求，用户ID: %s, 文件ID: %s", currentUserID, fileId)
+	currentEmployeeID := claims.EmployeeID
+	logx.Infof("代理文件请求，用户ID: %s, 员工ID: %s, 文件ID: %s", currentUserID, currentEmployeeID, fileId)
 
 	// 将用户信息更新到context（确保后续操作可以使用）
 	ctx := l.ctx
@@ -92,8 +93,8 @@ func (l *ProxyFileLogic) ProxyFile(w http.ResponseWriter, r *http.Request) {
 	if file.Module == "task" && file.TaskNodeID != "" {
 		hasAccess := false
 
-		// 如果是上传者，允许访问
-		if file.UploaderID == currentUserID {
+		// 如果是上传者，允许访问（UploaderID 存储的是员工ID，需要同时比较 userID 和 employeeID）
+		if file.UploaderID == currentUserID || file.UploaderID == currentEmployeeID {
 			hasAccess = true
 		}
 
