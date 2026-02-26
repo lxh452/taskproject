@@ -148,6 +148,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	var mongoURL, mongoDB string
 
 	// 只有当Mongo配置存在时才初始化MongoDB
+	var systemLogModel adminModel.SystemLogModel
 	if c.Mongo.Host != "" {
 		// 构建 MongoDB 连接 URL
 		// 格式: mongodb://[username:password@]host[:port]/[database][?authSource=admin]
@@ -165,12 +166,18 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		taskProjectDetailModel = task.NewTask_project_detailModel(mongoURL, c.Mongo.Database, "task_project_detail")
 		taskCommentModel = task.NewTask_commentModel(mongoURL, c.Mongo.Database, "task_comment")
 		attachmentCommentModel = upload.NewAttachment_commentModel(mongoURL, c.Mongo.Database, "attachment_comment")
+
+		// 初始化系统日志模型
+		systemLogModel = adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs")
+		logx.Infof("[ServiceContext] SystemLogModel initialized with MongoDB: %s", c.Mongo.Host)
 	} else {
 		// MongoDB disabled - set nil placeholders
 		uploadFileModel = nil
 		taskProjectDetailModel = nil
 		taskCommentModel = nil
 		attachmentCommentModel = nil
+		systemLogModel = nil
+		logx.Info("[ServiceContext] MongoDB not configured, SystemLogModel disabled")
 	}
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
@@ -223,8 +230,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 管理员相关模型
 	adminModelInstance := adminModel.NewAdminModel(conn)
 	loginRecordModel := adminModel.NewLoginRecordModel(conn)
-	// systemLogModel := adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs") // MongoDB disabled
-	var systemLogModel adminModel.SystemLogModel // nil placeholder
 
 	// 初始化默认管理员账户（如果不存在）
 	if err := initDefaultAdmin(adminModelInstance); err != nil {
