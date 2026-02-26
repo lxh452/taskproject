@@ -49,6 +49,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/company/list",
 				Handler: admin.CompanyListHandler(serverCtx),
 			},
+			{
+				// 获取仪表盘统计数据
+				Method:  http.MethodGet,
+				Path:    "/dashboard/stats",
+				Handler: admin.DashboardStatsHandler(serverCtx),
+			},
+			{
+				// 获取服务器监控指标
+				Method:  http.MethodGet,
+				Path:    "/metrics",
+				Handler: admin.ServerMetricsHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/v1/admin"),
 	)
