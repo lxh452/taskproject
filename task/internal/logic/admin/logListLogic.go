@@ -68,6 +68,17 @@ func (l *LogListLogic) LogList(req *types.SystemLogListRequest) (*types.BaseResp
 		}
 	}
 
+	// 检查 SystemLogModel 是否可用
+	if l.svcCtx.SystemLogModel == nil {
+		l.Info("SystemLogModel is nil, returning empty log list")
+		return utils.Response.SuccessWithData(map[string]interface{}{
+			"list":     []types.SystemLogInfo{},
+			"total":    0,
+			"page":     page,
+			"pageSize": pageSize,
+		}), nil
+	}
+
 	// 查询日志列表
 	logs, total, err := l.svcCtx.SystemLogModel.FindList(l.ctx, filter, int64(page), int64(pageSize))
 	if err != nil {
