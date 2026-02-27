@@ -186,16 +186,23 @@ func (e *TemplateEngine) Render(templateName string, data TemplateData) (string,
 
 	e.mu.RLock()
 	tmpl, exists := e.templates[templateName]
+	def := e.definitions[templateName]
 	e.mu.RUnlock()
 
 	if !exists {
 		return "", fmt.Errorf("template %s not found", templateName)
 	}
 
-	// 执行模板渲染
+	// 执行模板渲染 - 使用命名模板执行
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("failed to execute template %s: %w", templateName, err)
+	// 将文件路径转换为模板定义名称，例如：email/auth/verification_code -> auth_verification_code
+	executeName := strings.ReplaceAll(def.Name, "/", "_")
+	if err := tmpl.ExecuteTemplate(&buf, executeName, data); err != nil {
+		// 如果命名模板执行失败，尝试默认执行
+		buf.Reset()
+		if err := tmpl.Execute(&buf, data); err != nil {
+			return "", fmt.Errorf("failed to execute template %s: %w", templateName, err)
+		}
 	}
 
 	result := buf.String()
