@@ -5,6 +5,26 @@ Mode: dev
 Timeout: 30000
 MaxBytes: 52428800
 
+# CORS跨域配置
+Cors:
+  Enabled: true
+  AllowOrigins:
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+    - "http://localhost:3000"
+  AllowMethods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  AllowHeaders:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Requested-With"
+  AllowCredentials: true
+  MaxAge: 86400
+
 # 系统配置（用于拼接前端链接，例如邮件中的跳转地址）
 System:
   BaseURL: "http://localhost:5173"
