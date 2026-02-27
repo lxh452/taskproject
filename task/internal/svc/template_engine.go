@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -120,6 +121,13 @@ func (e *TemplateEngine) loadTemplates() error {
 	e.templates = make(map[string]*template.Template)
 	e.definitions = make(map[string]TemplateDefinition)
 
+	// 首先加载基础模板
+	baseTmplContent, err := fs.ReadFile(os.DirFS(e.baseDir), "email/base.tpl")
+	if err != nil {
+		logx.Errorf("Failed to read base template: %v", err)
+		baseTmplContent = nil
+	}
+
 	// 遍历模板目录
 	return filepath.WalkDir(e.baseDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -127,6 +135,11 @@ func (e *TemplateEngine) loadTemplates() error {
 		}
 
 		if d.IsDir() || !strings.HasSuffix(path, ".tpl") {
+			return nil
+		}
+
+		// 跳过基础模板本身
+		if strings.HasSuffix(path, "base.tpl") {
 			return nil
 		}
 
@@ -153,10 +166,33 @@ func (e *TemplateEngine) loadTemplates() error {
 			name = strings.Join(parts[2:], "/")
 		}
 
-		// 加载模板
-		tmpl, err := template.ParseFiles(path)
-		if err != nil {
-			logx.Errorf("Failed to parse template %s: %v", path, err)
+		// 加载模板 - 如果有基础模板，则一起解析
+		var tmpl *template.Template
+		if baseTmplContent != nil {
+			// 读取当前模板内容
+			content, err := os.ReadFile(path)
+			if err != nil {
+				logx.Errorf("Failed to read template %s: %v", path, err)
+				return nil
+			}
+			// 合并基础模板和当前模板
+			combinedContent := string(baseTmplContent) + "\n" + string(content)
+			tmpl, err = template.New(name).Parse(combinedContent)
+			if err != nil {
+				logx.Errorf("Failed to parse combined template %s: %v", path, err)
+				// 回退到单独解析
+				tmpl, _ = template.ParseFiles(path)
+			}
+		} else {
+			tmpl, err = template.ParseFiles(path)
+			if err != nil {
+				logx.Errorf("Failed to parse template %s: %v", path, err)
+				return nil
+			}
+		}
+
+		if tmpl == nil {
+			logx.Errorf("Template is nil after parsing: %s", path)
 			return nil
 		}
 
