@@ -16,6 +16,25 @@ type Action struct {
 	Type  string `json:"type,optional"` // button, link
 }
 
+type AdminCompanyInfo struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	Code              string `json:"code"`
+	CompanyAttributes int    `json:"companyAttributes"`
+	CompanyBusiness   int    `json:"companyBusiness"`
+	Owner             string `json:"owner"`
+	Description       string `json:"description"`
+	Address           string `json:"address"`
+	Phone             string `json:"phone"`
+	Email             string `json:"email"`
+	Status            int    `json:"status"`
+	EmployeeCount     int64  `json:"employeeCount"`
+	DepartmentCount   int64  `json:"departmentCount"`
+	TaskCount         int64  `json:"taskCount"`
+	CreateTime        string `json:"createTime"`
+	UpdateTime        string `json:"updateTime"`
+}
+
 type AdminCompanyListRequest struct {
 	Page     int    `json:"page"`
 	PageSize int    `json:"pageSize"`
@@ -37,6 +56,19 @@ type AdminLoginResponse struct {
 }
 
 type AdminLogoutRequest struct {
+}
+
+type AdminUserInfo struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	Email       string `json:"email"`
+	Phone       string `json:"phone"`
+	RealName    string `json:"realName"`
+	Avatar      string `json:"avatar"`
+	Status      int    `json:"status"`
+	CompanyID   string `json:"companyId"`
+	CompanyName string `json:"companyName"`
+	CreateTime  string `json:"createTime"`
 }
 
 type AdminUserListRequest struct {
@@ -219,6 +251,12 @@ type CompanyData struct {
 	Status        string   `json:"status"` // normal, warning, critical
 	Position      Position `json:"position"`
 	Employees     int      `json:"employees,optional"`
+}
+
+type CompanyEmployeeCount struct {
+	CompanyID     string `json:"companyId"`
+	CompanyName   string `json:"companyName"`
+	EmployeeCount int64  `json:"employeeCount"`
 }
 
 type CompanyInfo struct {
@@ -755,6 +793,19 @@ type LikeCommentRequest struct {
 	IsLike    int    `json:"isLike"` // 1-点赞，0-取消点赞
 }
 
+type LoginRecordInfo struct {
+	ID          string `json:"id"`
+	UserID      string `json:"userId"`
+	Username    string `json:"username"`
+	UserType    int    `json:"userType"`
+	LoginIP     string `json:"loginIp"`
+	UserAgent   string `json:"userAgent"`
+	LoginStatus int    `json:"loginStatus"`
+	FailReason  string `json:"failReason"`
+	LoginTime   string `json:"loginTime"`
+	CreateTime  string `json:"createTime"`
+}
+
 type LoginRecordListRequest struct {
 	Page        int    `json:"page"`
 	PageSize    int    `json:"pageSize"`
@@ -883,6 +934,16 @@ type PlannedTask struct {
 	Dependencies   []string `json:"dependencies"`
 	Priority       string   `json:"priority"` // high, medium, low
 	Order          int      `json:"order,optional"`
+}
+
+type PlatformStatsResponse struct {
+	TotalCompanies      int64                  `json:"totalCompanies"`
+	TotalUsers          int64                  `json:"totalUsers"`
+	TotalTasks          int64                  `json:"totalTasks"`
+	TotalEmployees      int64                  `json:"totalEmployees"`
+	CompanyDistribution []CompanyEmployeeCount `json:"companyDistribution"`
+	UserTrend           []TrendData            `json:"userTrend"`
+	TaskTrend           []TrendData            `json:"taskTrend"`
 }
 
 type PolishTaskRequest struct {
@@ -1173,6 +1234,11 @@ type TaskStats struct {
 	DueSoon    int `json:"dueSoon"`
 	Overdue    int `json:"overdue"`
 	Progress   int `json:"progress"`
+}
+
+type TrendData struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
 }
 
 type UnbanUserRequest struct {

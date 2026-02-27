@@ -4,6 +4,7 @@
 package flow
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -21,8 +22,24 @@ func SuggestDesignsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
+		// 转换为 logic 层请求类型
+		logicReq := &flow.SuggestDesignsRequest{
+			FlowType:    "task_flow",
+			Description: "",
+			Context:     req.Constraints,
+		}
+
+		// 如果有任务列表，拼接为描述
+		if len(req.Tasks) > 0 {
+			desc := "任务列表:\n"
+			for i, task := range req.Tasks {
+				desc += fmt.Sprintf("%d. %s\n", i+1, task)
+			}
+			logicReq.Description = desc
+		}
+
 		l := flow.NewSuggestDesignsLogic(r.Context(), svcCtx)
-		resp, err := l.SuggestDesigns(&req)
+		resp, err := l.SuggestDesigns(logicReq)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
