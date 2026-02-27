@@ -7,6 +7,7 @@ import (
 
 	flowLogic "task_Project/task/internal/logic/ai/flow"
 	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -41,6 +42,44 @@ func SuggestDesignsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := flowLogic.NewSuggestDesignsLogic(r.Context(), svcCtx)
 		resp, err := l.SuggestDesigns(designReq)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
+
+// GenerateFlowHandler 生成流程图处理器
+func GenerateFlowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.GenerateFlowRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
+		l := flowLogic.NewGenerateFlowLogic(r.Context(), svcCtx)
+		resp, err := l.GenerateFlow(&req)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
+
+// GenerateTasksFromFlowHandler 根据流程生成任务处理器
+func GenerateTasksFromFlowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.GenerateTasksFromFlowRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
+		l := flowLogic.NewGenerateTasksFromFlowLogic(r.Context(), svcCtx)
+		resp, err := l.GenerateTasksFromFlow(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

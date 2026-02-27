@@ -3,6 +3,73 @@
 
 package types
 
+type AIInsight struct {
+	ID       string   `json:"id"`
+	Priority string   `json:"priority"` // high, medium, low
+	Message  string   `json:"message"`
+	Actions  []Action `json:"actions"`
+}
+
+type Action struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Type  string `json:"type,optional"` // button, link
+}
+
+type AdminCompanyListRequest struct {
+	Page     int    `json:"page"`
+	PageSize int    `json:"pageSize"`
+	Name     string `json:"name,optional"`
+	Status   int    `json:"status,optional"`
+}
+
+type AdminLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type AdminLoginResponse struct {
+	Token    string `json:"token"`
+	AdminID  string `json:"adminId"`
+	Username string `json:"username"`
+	RealName string `json:"realName"`
+	Role     string `json:"role"`
+}
+
+type AdminLogoutRequest struct {
+}
+
+type AdminUserListRequest struct {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	Username  string `json:"username,optional"`
+	Status    int    `json:"status,optional"`
+	CompanyID string `json:"companyId,optional"`
+}
+
+type AgentInfo struct {
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Type         string   `json:"type"`   // planning, design, collection, decision, execution
+	Status       string   `json:"status"` // idle, running, paused, error
+	Capabilities []string `json:"capabilities"`
+	Description  string   `json:"description"`
+	Avatar       string   `json:"avatar,optional"`
+	CreatedAt    string   `json:"createdAt"`
+}
+
+type AgentResult struct {
+	Type     string                 `json:"type"` // text, plan, designs, polished_task, subtasks, error
+	Data     map[string]interface{} `json:"data"`
+	Metadata map[string]interface{} `json:"metadata,optional"`
+}
+
+type AnalyticsData struct {
+	Summary string   `json:"summary"`
+	Trend   []int    `json:"trend"`
+	Labels  []string `json:"labels,optional"`
+}
+
 type AnnotationDataReq struct {
 	X      float64 `json:"x,optional"`
 	Y      float64 `json:"y,optional"`
@@ -48,6 +115,10 @@ type AssignRoleRequest struct {
 	PositionId string `json:"positionId"` // 职位ID（改为给职位分配角色）
 	RoleId     string `json:"roleId"`
 	ExpireTime string `json:"expireTime,optional"`
+}
+
+type AssigneeRecommendations struct {
+	Recommendations []UserRecommendation `json:"recommendations"`
 }
 
 type AttachmentCommentInfo struct {
@@ -103,6 +174,11 @@ type AutoDispatchRequest struct {
 	NodeID string `json:"nodeId,optional"` // 可选，指定节点ID时只推荐该节点
 }
 
+type BanUserRequest struct {
+	UserID    string `json:"userId"`
+	BanReason string `json:"banReason,optional"`
+}
+
 type BaseResponse struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
@@ -132,6 +208,17 @@ type ChecklistStats struct {
 	TotalCount     int64  `json:"totalCount"`
 	CompletedCount int64  `json:"completedCount"`
 	Progress       int64  `json:"progress"` // 百分比进度 0-100
+}
+
+type CompanyData struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	ActiveTasks   int      `json:"activeTasks"`
+	PendingTasks  int      `json:"pendingTasks"`
+	ResourceUsage float64  `json:"resourceUsage"`
+	Status        string   `json:"status"` // normal, warning, critical
+	Position      Position `json:"position"`
+	Employees     int      `json:"employees,optional"`
 }
 
 type CompanyInfo struct {
@@ -168,6 +255,14 @@ type ConfirmLeaveApprovalRequest struct {
 	ApprovalID string `json:"approvalId"`
 	Approved   bool   `json:"approved"`
 	Note       string `json:"note,optional"`
+}
+
+type CreateAgentRequest struct {
+	Name         string    `json:"name"`
+	Type         string    `json:"type"`
+	Capabilities []string  `json:"capabilities"`
+	LLMConfig    LLMConfig `json:"llmConfig"`
+	Description  string    `json:"description,optional"`
 }
 
 type CreateAttachmentCommentRequest struct {
@@ -376,6 +471,24 @@ type DepartmentListRequest struct {
 	Name      string `json:"name,optional"`
 }
 
+type DesignOption struct {
+	ID                  string   `json:"id"`
+	Name                string   `json:"name"`
+	Description         string   `json:"description"`
+	MermaidCode         string   `json:"mermaidCode,optional"`
+	EstimatedDays       int      `json:"estimatedDays"`
+	RequiredPeople      int      `json:"requiredPeople"`
+	RiskLevel           string   `json:"riskLevel"` // high, medium, low
+	RecommendationScore int      `json:"recommendationScore"`
+	IsRecommended       bool     `json:"isRecommended,optional"`
+	Tags                []string `json:"tags,optional"`
+}
+
+type DisableCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+	Reason    string `json:"reason,optional"`
+}
+
 type DispatchTaskRequest struct {
 	TaskNodeID string `json:"taskNodeId"`
 	EmployeeID string `json:"employeeId,optional"` // 如果为空则自动派发
@@ -419,12 +532,65 @@ type EmployeeRolesRequest struct {
 	EmployeeId string `json:"employeeId"` // 查询员工通过职位获得的角色
 }
 
+type EnableCompanyRequest struct {
+	CompanyID string `json:"companyId"`
+}
+
+type ExecuteAgentRequest struct {
+	Input   string                 `json:"input"`
+	Context map[string]interface{} `json:"context,optional"`
+}
+
+type FlowData struct {
+	Nodes []FlowNode `json:"nodes"`
+	Edges []FlowEdge `json:"edges"`
+}
+
+type FlowDesignRequest struct {
+	Tasks       []string               `json:"tasks"`
+	Constraints map[string]interface{} `json:"constraints,optional"`
+}
+
+type FlowDesignResponse struct {
+	Designs []DesignOption `json:"designs"`
+}
+
+type FlowEdge struct {
+	ID     string `json:"id"`
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Type   string `json:"type,optional"`
+	Label  string `json:"label,optional"`
+}
+
+type FlowNode struct {
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"`
+	Position map[string]float64     `json:"position"` // x, y
+	Data     map[string]interface{} `json:"data"`
+}
+
+type GenerateFlowRequest struct {
+	SelectedDesignID string `json:"selectedDesignId"`
+}
+
 type GenerateInviteCodeRequest struct {
 	ExpireDays int `json:"expireDays,optional"` // 有效期（天）
 	MaxUses    int `json:"maxUses,optional"`    // 最大使用次数，0表示不限制
 }
 
+type GenerateSubtasksRequest struct {
+	TaskDescription string `json:"taskDescription"`
+}
+
+type GenerateTasksFromFlowRequest struct {
+	DesignID string     `json:"designId"`
+	Nodes    []FlowNode `json:"nodes"`
+}
+
 type GetAiSuggestionRequest struct {
+	TaskDescription string `json:"taskDescription,optional"`
+	Context         string `json:"context,optional"`
 }
 
 type GetAttachmentCommentsRequest struct {
@@ -443,10 +609,6 @@ type GetChecklistRequest struct {
 
 type GetCompanyRequest struct {
 	CompanyID string `json:"companyId"`
-}
-
-type GetDashboardStatsRequest struct {
-	Scope string `form:"scope,optional"` // 范围：personal（个人）或 department（部门），默认personal
 }
 
 type GetDepartmentRequest struct {
@@ -582,9 +744,25 @@ type JoinCompanyRequest struct {
 	PositionID   string `json:"positionId,optional"`   // 可选，不填则使用默认职位
 }
 
+type LLMConfig struct {
+	Model       string  `json:"model"`
+	Temperature float64 `json:"temperature"`
+	MaxTokens   int     `json:"maxTokens"`
+}
+
 type LikeCommentRequest struct {
 	CommentID string `json:"commentId"`
 	IsLike    int    `json:"isLike"` // 1-点赞，0-取消点赞
+}
+
+type LoginRecordListRequest struct {
+	Page        int    `json:"page"`
+	PageSize    int    `json:"pageSize"`
+	UserID      string `json:"userId,optional"`
+	UserType    string `json:"userType,optional"`
+	LoginStatus int    `json:"loginStatus,optional"`
+	StartTime   string `json:"startTime,optional"`
+	EndTime     string `json:"endTime,optional"`
 }
 
 type LoginRequest struct {
@@ -602,6 +780,14 @@ type LoginResponse struct {
 
 type MarkNotificationReadRequest struct {
 	NotificationID string `json:"notificationId"`
+}
+
+type Milestone struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	TaskIndices   []int  `json:"taskIndices"`
+	EstimatedDate string `json:"estimatedDate"`
 }
 
 type MyAttachmentInfo struct {
@@ -663,8 +849,8 @@ type NotificationListRequest struct {
 }
 
 type PageReq struct {
-	Page     int `json:"page,optional" form:"page,optional"`
-	PageSize int `json:"pageSize,optional" form:"pageSize,optional"`
+	Page     int `json:"page,optional"`
+	PageSize int `json:"pageSize,optional"`
 }
 
 type PageResp struct {
@@ -679,6 +865,47 @@ type ParseInviteCodeRequest struct {
 type PendingJoinApplicationsResponse struct {
 	List  []JoinApplicationInfo `json:"list"`
 	Total int64                 `json:"total"`
+}
+
+type Plan struct {
+	Tasks              []PlannedTask `json:"tasks"`
+	Milestones         []Milestone   `json:"milestones"`
+	Risks              []Risk        `json:"risks"`
+	TotalEstimatedDays int           `json:"totalEstimatedDays"`
+	CriticalPath       []string      `json:"criticalPath,optional"`
+}
+
+type PlannedTask struct {
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	EstimatedHours int      `json:"estimatedHours"`
+	Dependencies   []string `json:"dependencies"`
+	Priority       string   `json:"priority"` // high, medium, low
+	Order          int      `json:"order,optional"`
+}
+
+type PolishTaskRequest struct {
+	RawDescription string                 `json:"rawDescription"`
+	Context        map[string]interface{} `json:"context,optional"`
+}
+
+type PolishedTask struct {
+	Title             string              `json:"title"`
+	Description       string              `json:"description"`
+	Tags              []string            `json:"tags"`
+	SuggestedDueDate  string              `json:"suggestedDueDate"`
+	SuggestedPriority string              `json:"suggestedPriority"` // high, medium, low
+	Complexity        string              `json:"complexity"`        // simple, medium, complex
+	KeyPoints         []string            `json:"keyPoints"`
+	Subtasks          []SubTask           `json:"subtasks,optional"`
+	SuggestedAssignee *UserRecommendation `json:"suggestedAssignee,optional"`
+	AIConfidence      int                 `json:"aiConfidence,optional"`
+}
+
+type Position struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type PositionInfo struct {
@@ -715,6 +942,17 @@ type ProxyFileRequest struct {
 	FileID string `json:"fileId"`
 }
 
+type RTSData struct {
+	Companies     []CompanyData  `json:"companies"`
+	TaskStats     TaskStats      `json:"taskStats"`
+	UserStats     UserStats      `json:"userStats"`
+	ResourceFlows []ResourceFlow `json:"resourceFlows"`
+	Insights      []AIInsight    `json:"insights"`
+	SystemLoad    int            `json:"systemLoad"`
+	Analytics     AnalyticsData  `json:"analytics"`
+	Timestamp     string         `json:"timestamp"`
+}
+
 type RegisterRequest struct {
 	Username         string `json:"username"`
 	Password         string `json:"password"`
@@ -735,6 +973,18 @@ type ResolveAttachmentCommentRequest struct {
 	Resolved  int    `json:"resolved"` // 1-已解决，0-未解决
 }
 
+type ResourceFlow struct {
+	ID     string  `json:"id"`
+	From   string  `json:"from"`
+	To     string  `json:"to"`
+	Amount float64 `json:"amount"`
+	Type   string  `json:"type"` // task, person, resource
+}
+
+type RestoreUserRequest struct {
+	UserID string `json:"userId"`
+}
+
 type RevokeInviteCodeRequest struct {
 	InviteCode string `json:"inviteCode"`
 }
@@ -742,6 +992,14 @@ type RevokeInviteCodeRequest struct {
 type RevokeRoleRequest struct {
 	PositionId string `json:"positionId"` // 职位ID（改为从职位撤销角色）
 	RoleId     string `json:"roleId"`
+}
+
+type Risk struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Probability string `json:"probability"` // high, medium, low
+	Impact      string `json:"impact"`      // high, medium, low
+	Mitigation  string `json:"mitigation"`
 }
 
 type RoleInfo struct {
@@ -767,8 +1025,35 @@ type SendVerificationCodeRequest struct {
 	Type  string `json:"type"` // register/reset
 }
 
+type SubTask struct {
+	ID             string `json:"id,optional"`
+	Title          string `json:"title"`
+	Description    string `json:"description,optional"`
+	EstimatedHours int    `json:"estimatedHours"`
+	Order          int    `json:"order"`
+	Completed      bool   `json:"completed,optional"`
+}
+
 type SubmitTaskNodeCompletionApprovalRequest struct {
 	NodeID string `json:"nodeId"`
+}
+
+type SuggestAssigneeRequest struct {
+	TaskDescription string   `json:"taskDescription"`
+	Requirements    []string `json:"requirements,optional"`
+	ExcludeUsers    []string `json:"excludeUsers,optional"`
+}
+
+type SystemLogListRequest struct {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	Level     string `json:"level,optional"`
+	Module    string `json:"module,optional"`
+	Keyword   string `json:"keyword,optional"`
+	UserID    string `json:"userId,optional"`
+	UserType  string `json:"userType,optional"`
+	StartTime string `json:"startTime,optional"`
+	EndTime   string `json:"endTime,optional"`
 }
 
 type TaskCommentInfo struct {
@@ -878,6 +1163,20 @@ type TaskNodeListRequest struct {
 	TaskID       string `json:"taskId"`
 	DepartmentID string `json:"departmentId,optional"`
 	Status       int    `json:"status,optional"`
+}
+
+type TaskStats struct {
+	Total      int `json:"total"`
+	InProgress int `json:"inProgress"`
+	Completed  int `json:"completed"`
+	Pending    int `json:"pending"`
+	DueSoon    int `json:"dueSoon"`
+	Overdue    int `json:"overdue"`
+	Progress   int `json:"progress"`
+}
+
+type UnbanUserRequest struct {
+	UserID string `json:"userId"`
 }
 
 type UpdateChecklistRequest struct {
@@ -1032,148 +1331,20 @@ type UploadInfoResponse struct {
 	FileType  string `json:"fileType"`           // 文件类型
 }
 
-type AdminLoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+type UserRecommendation struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Avatar      string   `json:"avatar,optional"`
+	MatchScore  int      `json:"matchScore"`
+	MatchReason string   `json:"matchReason"`
+	Department  string   `json:"department,optional"`
+	Skills      []string `json:"skills,optional"`
 }
 
-type AdminLoginResponse struct {
-	Token    string `json:"token"`
-	AdminID  string `json:"adminId"`
-	Username string `json:"username"`
-	RealName string `json:"realName"`
-	Role     string `json:"role"`
-}
-
-type AdminLogoutRequest struct{}
-
-type AdminCompanyListRequest struct {
-	Page     int    `json:"page"`
-	PageSize int    `json:"pageSize"`
-	Name     string `json:"name,optional"`
-	Status   int    `json:"status,optional"`
-}
-
-type BanUserRequest struct {
-	UserID    string `json:"userId"`
-	BanReason string `json:"banReason,optional"`
-}
-
-type DisableCompanyRequest struct {
-	CompanyID string `json:"companyId"`
-	Reason    string `json:"reason,optional"`
-}
-
-type EnableCompanyRequest struct {
-	CompanyID string `json:"companyId"`
-}
-
-type LoginRecordListRequest struct {
-	Page        int    `json:"page"`
-	PageSize    int    `json:"pageSize"`
-	UserID      string `json:"userId,optional"`
-	UserType    string `json:"userType,optional"`
-	LoginStatus int    `json:"loginStatus,optional"`
-	StartTime   string `json:"startTime,optional"`
-	EndTime     string `json:"endTime,optional"`
-}
-
-type LoginRecordInfo struct {
-	ID          string `json:"id"`
-	UserID      string `json:"userId,optional"`
-	Username    string `json:"username,optional"`
-	UserType    string `json:"userType"`
-	LoginIP     string `json:"loginIp,optional"`
-	UserAgent   string `json:"userAgent,optional"`
-	LoginStatus int    `json:"loginStatus"`
-	FailReason  string `json:"failReason,optional"`
-	LoginTime   string `json:"loginTime"`
-	CreateTime  string `json:"createTime"`
-}
-
-type RestoreUserRequest struct {
-	UserID string `json:"userId"`
-}
-
-type SystemLogListRequest struct {
-	Page      int    `json:"page"`
-	PageSize  int    `json:"pageSize"`
-	Level     string `json:"level,optional"`
-	Module    string `json:"module,optional"`
-	Keyword   string `json:"keyword,optional"`
-	UserID    string `json:"userId,optional"`
-	UserType  string `json:"userType,optional"`
-	StartTime string `json:"startTime,optional"`
-	EndTime   string `json:"endTime,optional"`
-}
-
-type UnbanUserRequest struct {
-	UserID string `json:"userId"`
-}
-
-type UserListRequest struct {
-	Page      int    `json:"page"`
-	PageSize  int    `json:"pageSize"`
-	Username  string `json:"username,optional"`
-	Status    int    `json:"status,optional"`
-	CompanyID string `json:"companyId,optional"`
-}
-
-type CompanyEmployeeCount struct {
-	CompanyID     string `json:"companyId"`
-	CompanyName   string `json:"companyName"`
-	EmployeeCount int64  `json:"employeeCount"`
-}
-
-type TrendData struct {
-	Date  string `json:"date"`
-	Count int64  `json:"count"`
-}
-
-type AdminUserInfo struct {
-	ID          string `json:"id"`
-	Username    string `json:"username"`
-	Email       string `json:"email,optional"`
-	Phone       string `json:"phone,optional"`
-	RealName    string `json:"realName,optional"`
-	Avatar      string `json:"avatar,optional"`
-	Status      int    `json:"status"`
-	CompanyID   string `json:"companyId,optional"`
-	CompanyName string `json:"companyName,optional"`
-	CreateTime  string `json:"createTime"`
-}
-
-type ServerMetricsResponse struct {
-	CPUUsage    float64 `json:"cpuUsage"`
-	MemoryUsage float64 `json:"memoryUsage"`
-	MemoryTotal int64   `json:"memoryTotal"`
-	MemoryUsed  int64   `json:"memoryUsed"`
-	DiskUsage   float64 `json:"diskUsage"`
-	DiskTotal   int64   `json:"diskTotal"`
-	DiskUsed    int64   `json:"diskUsed"`
-	GoRoutines  int     `json:"goRoutines"`
-	ActiveConns int     `json:"activeConns"`
-	MySQLConns  int     `json:"mySqlConns"`
-	RedisConns  int     `json:"redisConns"`
-	Uptime      int64   `json:"uptime"`
-}
-
-type PlatformStatsResponse struct {
-	TotalCompanies      int64                  `json:"totalCompanies"`
-	TotalUsers          int64                  `json:"totalUsers"`
-	TotalTasks          int64                  `json:"totalTasks"`
-	TotalEmployees      int64                  `json:"totalEmployees"`
-	CompanyDistribution []CompanyEmployeeCount `json:"companyDistribution"`
-	UserTrend           []TrendData            `json:"userTrend"`
-	TaskTrend           []TrendData            `json:"taskTrend"`
-}
-
-type AdminUserListRequest struct {
-	Page      int    `json:"page"`
-	PageSize  int    `json:"pageSize"`
-	Username  string `json:"username,optional"`
-	Status    int    `json:"status,optional"`
-	CompanyID string `json:"companyId,optional"`
+type UserStats struct {
+	Online int `json:"online"`
+	Total  int `json:"total"`
+	Trend  int `json:"trend"`
 }
 
 type AdminCompanyInfo struct {
@@ -1194,20 +1365,49 @@ type AdminCompanyInfo struct {
 	UpdateTime        string `json:"updateTime"`
 }
 
-type SystemLogInfo struct {
-	LogID      string `json:"logId"`
-	Level      string `json:"level"`
-	Module     string `json:"module"`
-	Action     string `json:"action"`
-	Message    string `json:"message"`
-	Detail     string `json:"detail"`
-	UserID     string `json:"userId,optional"`
-	UserType   string `json:"userType,optional"`
-	Username   string `json:"username,optional"`
-	IP         string `json:"ip,optional"`
-	UserAgent  string `json:"userAgent,optional"`
-	RequestID  string `json:"requestId,optional"`
-	TraceID    string `json:"traceId,optional"`
-	StackTrace string `json:"stackTrace,optional"`
-	CreateTime string `json:"createTime"`
+type AdminUserInfo struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	Email       string `json:"email,optional"`
+	Phone       string `json:"phone,optional"`
+	RealName    string `json:"realName,optional"`
+	Avatar      string `json:"avatar,optional"`
+	Status      int    `json:"status"`
+	CompanyID   string `json:"companyId,optional"`
+	CompanyName string `json:"companyName,optional"`
+	CreateTime  string `json:"createTime"`
+}
+
+type LoginRecordInfo struct {
+	ID          string `json:"id"`
+	UserID      string `json:"userId,optional"`
+	Username    string `json:"username,optional"`
+	UserType    string `json:"userType"`
+	LoginIP     string `json:"loginIp,optional"`
+	UserAgent   string `json:"userAgent,optional"`
+	LoginStatus int    `json:"loginStatus"`
+	FailReason  string `json:"failReason,optional"`
+	LoginTime   string `json:"loginTime"`
+	CreateTime  string `json:"createTime"`
+}
+
+type CompanyEmployeeCount struct {
+	CompanyID     string `json:"companyId"`
+	CompanyName   string `json:"companyName"`
+	EmployeeCount int64  `json:"employeeCount"`
+}
+
+type TrendData struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+type PlatformStatsResponse struct {
+	TotalCompanies      int64                  `json:"totalCompanies"`
+	TotalUsers          int64                  `json:"totalUsers"`
+	TotalTasks          int64                  `json:"totalTasks"`
+	TotalEmployees      int64                  `json:"totalEmployees"`
+	CompanyDistribution []CompanyEmployeeCount `json:"companyDistribution"`
+	UserTrend           []TrendData            `json:"userTrend"`
+	TaskTrend           []TrendData            `json:"taskTrend"`
 }

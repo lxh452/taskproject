@@ -160,13 +160,24 @@ func (l *CreateEmployeeLogic) CreateEmployee(req *types.CreateEmployeeRequest) (
 		// 不影响主流程，继续执行
 	}
 
-	// 发送入职通知邮件（通过消息队列）
+	// 发送入职通知邮件（使用新的统一邮件服务）
 	go func() {
 		ctx := context.Background()
+
 		// 发送入职邮件给新员工
-		if req.WorkEmail != "" && l.svcCtx.EmailService != nil {
+		if req.WorkEmail != "" && l.svcCtx.UnifiedEmailService != nil {
 			onboardingTime := time.Now().Format("2006-01-02 15:04:05")
-			if err := l.svcCtx.EmailService.SendOnboardingEmail(ctx, req.WorkEmail, req.RealName, companyInfo.Name, departmentInfo.DepartmentName, positionInfo.PositionName, onboardingTime); err != nil {
+
+			onboardingData := map[string]interface{}{
+				"employeeName":   req.RealName,
+				"companyName":    companyInfo.Name,
+				"departmentName": departmentInfo.DepartmentName,
+				"positionName":   positionInfo.PositionName,
+				"onboardingTime": onboardingTime,
+				"message":        fmt.Sprintf("欢迎 %s 加入 %s，担任 %s 职位", req.RealName, companyInfo.Name, positionInfo.PositionName),
+			}
+
+			if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(ctx, "onboarding", []string{req.WorkEmail}, onboardingData); err != nil {
 				logx.Errorf("发送入职通知邮件失败: %v", err)
 			}
 		}

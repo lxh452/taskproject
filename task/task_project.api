@@ -1095,8 +1095,9 @@ type (
 )
 
 @server (
-	group:  role
-	prefix: /api/v1/role
+	group:      role
+	prefix:     /api/v1/role
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建角色"
@@ -1133,8 +1134,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  company
-	prefix: /api/v1/company
+	group:      company
+	prefix:     /api/v1/company
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建公司"
@@ -1175,8 +1177,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  department
-	prefix: /api/v1/department
+	group:      department
+	prefix:     /api/v1/department
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建部门"
@@ -1201,8 +1204,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  position
-	prefix: /api/v1/position
+	group:      position
+	prefix:     /api/v1/position
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建职位"
@@ -1227,8 +1231,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  employee
-	prefix: /api/v1/employee
+	group:      employee
+	prefix:     /api/v1/employee
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建员工"
@@ -1285,8 +1290,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  task
-	prefix: /api/v1/task
+	group:      task
+	prefix:     /api/v1/task
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建任务"
@@ -1343,8 +1349,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  tasknode
-	prefix: /api/v1/tasknode
+	group:      tasknode
+	prefix:     /api/v1/tasknode
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建任务节点"
@@ -1377,8 +1384,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  checklist
-	prefix: /api/v1/checklist
+	group:      checklist
+	prefix:     /api/v1/checklist
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建任务清单"
@@ -1416,11 +1424,16 @@ service taskprojectapi {
 	@doc "获取我的清单列表"
 	@handler GetMyChecklist
 	post /my (GetMyChecklistRequest) returns (BaseResponse)
+
+	@doc "获取我的任务节点完成审批列表"
+	@handler GetMyTaskNodeApprovals
+	post /approvals/my (GetMyChecklistRequest) returns (BaseResponse)
 }
 
 @server (
-	group:  handover
-	prefix: /api/v1/handover
+	group:      handover
+	prefix:     /api/v1/handover
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建任务交接"
@@ -1446,11 +1459,15 @@ service taskprojectapi {
 	@doc "确认交接"
 	@handler ConfirmHandover
 	post /confirm (ConfirmHandoverRequest) returns (BaseResponse)
+
+	@doc "获取可交接的任务列表"
+	@handler GetHandoverableTasks
+	get /tasks returns (BaseResponse)
 }
 
 @server (
-	group:  notification
-	prefix: /api/v1/notification
+	group:      notification
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "创建通知"
@@ -1471,8 +1488,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  user
-	prefix: /api/v1/user
+	group:      user
+	prefix:     /api/v1/user
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "更新用户信息"
@@ -1481,8 +1499,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  upload
-	prefix: /api/v1/upload
+	group:      upload
+	prefix:     /api/v1/upload
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "文件上传（支持图片、PDF、Markdown等文件）"
@@ -1539,7 +1558,6 @@ service taskprojectapi {
 }
 
 // ==================== VibeCraft AI API Definitions ====================
-
 // AI Agent 相关类型
 type (
 	// Agent 基础信息
@@ -1553,14 +1571,12 @@ type (
 		Avatar       string   `json:"avatar,optional"`
 		CreatedAt    string   `json:"createdAt"`
 	}
-
 	// LLM 配置
 	LLMConfig {
 		Model       string  `json:"model"`
 		Temperature float64 `json:"temperature"`
 		MaxTokens   int     `json:"maxTokens"`
 	}
-
 	// 创建 Agent 请求
 	CreateAgentRequest {
 		Name         string    `json:"name"`
@@ -1569,20 +1585,17 @@ type (
 		LLMConfig    LLMConfig `json:"llmConfig"`
 		Description  string    `json:"description,optional"`
 	}
-
 	// 执行 Agent 请求
 	ExecuteAgentRequest {
 		Input   string                 `json:"input"`
 		Context map[string]interface{} `json:"context,optional"`
 	}
-
 	// Agent 执行结果
 	AgentResult {
 		Type     string                 `json:"type"` // text, plan, designs, polished_task, subtasks, error
 		Data     map[string]interface{} `json:"data"`
 		Metadata map[string]interface{} `json:"metadata,optional"`
 	}
-
 	// AI 建议请求
 	GetAiSuggestionRequest {
 		TaskDescription string `json:"taskDescription,optional"`
@@ -1597,21 +1610,19 @@ type (
 		Tasks       []string               `json:"tasks"`
 		Constraints map[string]interface{} `json:"constraints,optional"`
 	}
-
 	// 设计选项
 	DesignOption {
-		ID                  string  `json:"id"`
-		Name                string  `json:"name"`
-		Description         string  `json:"description"`
-		MermaidCode         string  `json:"mermaidCode,optional"`
-		EstimatedDays       int     `json:"estimatedDays"`
-		RequiredPeople      int     `json:"requiredPeople"`
-		RiskLevel           string  `json:"riskLevel"` // high, medium, low
-		RecommendationScore int     `json:"recommendationScore"`
-		IsRecommended       bool    `json:"isRecommended,optional"`
+		ID                  string   `json:"id"`
+		Name                string   `json:"name"`
+		Description         string   `json:"description"`
+		MermaidCode         string   `json:"mermaidCode,optional"`
+		EstimatedDays       int      `json:"estimatedDays"`
+		RequiredPeople      int      `json:"requiredPeople"`
+		RiskLevel           string   `json:"riskLevel"` // high, medium, low
+		RecommendationScore int      `json:"recommendationScore"`
+		IsRecommended       bool     `json:"isRecommended,optional"`
 		Tags                []string `json:"tags,optional"`
 	}
-
 	// 流程节点
 	FlowNode {
 		ID       string                 `json:"id"`
@@ -1619,7 +1630,6 @@ type (
 		Position map[string]float64     `json:"position"` // x, y
 		Data     map[string]interface{} `json:"data"`
 	}
-
 	// 流程边
 	FlowEdge {
 		ID     string `json:"id"`
@@ -1628,24 +1638,20 @@ type (
 		Type   string `json:"type,optional"`
 		Label  string `json:"label,optional"`
 	}
-
 	// 流程数据
 	FlowData {
 		Nodes []FlowNode `json:"nodes"`
 		Edges []FlowEdge `json:"edges"`
 	}
-
 	// 生成流程请求
 	GenerateFlowRequest {
-		SelectedDesignID string   `json:"selectedDesignId"`
+		SelectedDesignID string `json:"selectedDesignId"`
 	}
-
 	// 生成任务请求
 	GenerateTasksFromFlowRequest {
 		DesignID string     `json:"designId"`
 		Nodes    []FlowNode `json:"nodes"`
 	}
-
 	// 设计方案响应
 	FlowDesignResponse {
 		Designs []DesignOption `json:"designs"`
@@ -1659,21 +1665,19 @@ type (
 		RawDescription string                 `json:"rawDescription"`
 		Context        map[string]interface{} `json:"context,optional"`
 	}
-
 	// 润色后的任务
 	PolishedTask {
-		Title               string               `json:"title"`
-		Description         string               `json:"description"`
-		Tags                []string             `json:"tags"`
-		SuggestedDueDate    string               `json:"suggestedDueDate"`
-		SuggestedPriority   string               `json:"suggestedPriority"` // high, medium, low
-		Complexity          string               `json:"complexity"`        // simple, medium, complex
-		KeyPoints           []string             `json:"keyPoints"`
-		Subtasks            []SubTask            `json:"subtasks,optional"`
-		SuggestedAssignee   *UserRecommendation   `json:"suggestedAssignee,optional"`
-		AIConfidence        int                  `json:"aiConfidence,optional"`
+		Title             string              `json:"title"`
+		Description       string              `json:"description"`
+		Tags              []string            `json:"tags"`
+		SuggestedDueDate  string              `json:"suggestedDueDate"`
+		SuggestedPriority string              `json:"suggestedPriority"` // high, medium, low
+		Complexity        string              `json:"complexity"` // simple, medium, complex
+		KeyPoints         []string            `json:"keyPoints"`
+		Subtasks          []SubTask           `json:"subtasks,optional"`
+		SuggestedAssignee *UserRecommendation `json:"suggestedAssignee,optional"`
+		AIConfidence      int                 `json:"aiConfidence,optional"`
 	}
-
 	// 子任务
 	SubTask {
 		ID             string `json:"id,optional"`
@@ -1683,7 +1687,6 @@ type (
 		Order          int    `json:"order"`
 		Completed      bool   `json:"completed,optional"`
 	}
-
 	// 用户推荐
 	UserRecommendation {
 		ID          string   `json:"id"`
@@ -1694,19 +1697,16 @@ type (
 		Department  string   `json:"department,optional"`
 		Skills      []string `json:"skills,optional"`
 	}
-
 	// 生成子任务请求
 	GenerateSubtasksRequest {
 		TaskDescription string `json:"taskDescription"`
 	}
-
 	// 推荐负责人请求
 	SuggestAssigneeRequest {
 		TaskDescription string   `json:"taskDescription"`
 		Requirements    []string `json:"requirements,optional"`
 		ExcludeUsers    []string `json:"excludeUsers,optional"`
 	}
-
 	// 推荐负责人响应
 	AssigneeRecommendations {
 		Recommendations []UserRecommendation `json:"recommendations"`
@@ -1717,13 +1717,12 @@ type (
 type (
 	// 规划结果
 	Plan {
-		Tasks             []PlannedTask `json:"tasks"`
-		Milestones        []Milestone   `json:"milestones"`
-		Risks             []Risk        `json:"risks"`
-		TotalEstimatedDays int          `json:"totalEstimatedDays"`
-		CriticalPath      []string      `json:"criticalPath,optional"`
+		Tasks              []PlannedTask `json:"tasks"`
+		Milestones         []Milestone   `json:"milestones"`
+		Risks              []Risk        `json:"risks"`
+		TotalEstimatedDays int           `json:"totalEstimatedDays"`
+		CriticalPath       []string      `json:"criticalPath,optional"`
 	}
-
 	// 规划任务
 	PlannedTask {
 		ID             string   `json:"id"`
@@ -1734,22 +1733,20 @@ type (
 		Priority       string   `json:"priority"` // high, medium, low
 		Order          int      `json:"order,optional"`
 	}
-
 	// 里程碑
 	Milestone {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		TaskIndices []int  `json:"taskIndices"`
+		ID            string `json:"id"`
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		TaskIndices   []int  `json:"taskIndices"`
 		EstimatedDate string `json:"estimatedDate"`
 	}
-
 	// 风险
 	Risk {
 		ID          string `json:"id"`
 		Description string `json:"description"`
 		Probability string `json:"probability"` // high, medium, low
-		Impact      string `json:"impact"`    // high, medium, low
+		Impact      string `json:"impact"` // high, medium, low
 		Mitigation  string `json:"mitigation"`
 	}
 )
@@ -1767,25 +1764,22 @@ type (
 		Analytics     AnalyticsData  `json:"analytics"`
 		Timestamp     string         `json:"timestamp"`
 	}
-
 	// 公司数据
 	CompanyData {
-		ID            string  `json:"id"`
-		Name          string  `json:"name"`
-		ActiveTasks   int     `json:"activeTasks"`
-		PendingTasks  int     `json:"pendingTasks"`
-		ResourceUsage float64 `json:"resourceUsage"`
-		Status        string  `json:"status"` // normal, warning, critical
+		ID            string   `json:"id"`
+		Name          string   `json:"name"`
+		ActiveTasks   int      `json:"activeTasks"`
+		PendingTasks  int      `json:"pendingTasks"`
+		ResourceUsage float64  `json:"resourceUsage"`
+		Status        string   `json:"status"` // normal, warning, critical
 		Position      Position `json:"position"`
-		Employees     int     `json:"employees,optional"`
+		Employees     int      `json:"employees,optional"`
 	}
-
 	// 位置
 	Position {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
 	}
-
 	// 任务统计
 	TaskStats {
 		Total      int `json:"total"`
@@ -1796,14 +1790,12 @@ type (
 		Overdue    int `json:"overdue"`
 		Progress   int `json:"progress"`
 	}
-
 	// 用户统计
 	UserStats {
 		Online int `json:"online"`
 		Total  int `json:"total"`
 		Trend  int `json:"trend"`
 	}
-
 	// 资源流动
 	ResourceFlow {
 		ID     string  `json:"id"`
@@ -1812,35 +1804,32 @@ type (
 		Amount float64 `json:"amount"`
 		Type   string  `json:"type"` // task, person, resource
 	}
-
 	// AI 洞察
 	AIInsight {
-		ID       string  `json:"id"`
-		Priority string  `json:"priority"` // high, medium, low
-		Message  string  `json:"message"`
+		ID       string   `json:"id"`
+		Priority string   `json:"priority"` // high, medium, low
+		Message  string   `json:"message"`
 		Actions  []Action `json:"actions"`
 	}
-
 	// 操作
 	Action {
 		ID    string `json:"id"`
 		Label string `json:"label"`
 		Type  string `json:"type,optional"` // button, link
 	}
-
 	// 分析数据
 	AnalyticsData {
-		Summary string  `json:"summary"`
-		Trend   []int   `json:"trend"`
+		Summary string   `json:"summary"`
+		Trend   []int    `json:"trend"`
 		Labels  []string `json:"labels,optional"`
 	}
 )
 
 // ==================== VibeCraft AI Services ====================
-
 @server (
-	group:  ai-agent
-	prefix: /api/v1/agents
+	group:      aiagent
+	prefix:     /api/v1/agents
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "获取 Agent 列表"
@@ -1861,8 +1850,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  ai-flow
-	prefix: /api/v1/ai/flow
+	group:      ai/flow
+	prefix:     /api/v1/ai/flow
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "生成设计方案"
@@ -1879,8 +1869,9 @@ service taskprojectapi {
 }
 
 @server (
-	group:  ai-task
-	prefix: /api/v1/ai/task
+	group:      ai/task
+	prefix:     /api/v1/ai/task
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "润色任务"
@@ -1898,8 +1889,9 @@ service taskprojectapi {
 
 // ==================== Original AI API ====================
 @server (
-	group:  ai
-	prefix: /api/v1/ai
+	group:      ai
+	prefix:     /api/v1/ai
+	middleware: JWT
 )
 service taskprojectapi {
 	@doc "获取AI工作建议"
@@ -1907,5 +1899,136 @@ service taskprojectapi {
 	get /suggestion (GetAiSuggestionRequest) returns (BaseResponse)
 }
 
+// ==================== Admin Types ====================
+type (
+	AdminLoginRequest {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	AdminLoginResponse {
+		Token    string `json:"token"`
+		AdminID  string `json:"adminId"`
+		Username string `json:"username"`
+		RealName string `json:"realName"`
+		Role     string `json:"role"`
+	}
+	AdminLogoutRequest  {}
+	AdminCompanyListRequest {
+		Page     int    `json:"page"`
+		PageSize int    `json:"pageSize"`
+		Name     string `json:"name,optional"`
+		Status   int    `json:"status,optional"`
+	}
+	BanUserRequest {
+		UserID    string `json:"userId"`
+		BanReason string `json:"banReason,optional"`
+	}
+	UnbanUserRequest {
+		UserID string `json:"userId"`
+	}
+	RestoreUserRequest {
+		UserID string `json:"userId"`
+	}
+	DisableCompanyRequest {
+		CompanyID string `json:"companyId"`
+		Reason    string `json:"reason,optional"`
+	}
+	EnableCompanyRequest {
+		CompanyID string `json:"companyId"`
+	}
+	AdminUserListRequest {
+		Page      int    `json:"page"`
+		PageSize  int    `json:"pageSize"`
+		Username  string `json:"username,optional"`
+		Status    int    `json:"status,optional"`
+		CompanyID string `json:"companyId,optional"`
+	}
+	LoginRecordListRequest {
+		Page        int    `json:"page"`
+		PageSize    int    `json:"pageSize"`
+		UserID      string `json:"userId,optional"`
+		UserType    string `json:"userType,optional"`
+		LoginStatus int    `json:"loginStatus,optional"`
+		StartTime   string `json:"startTime,optional"`
+		EndTime     string `json:"endTime,optional"`
+	}
+	SystemLogListRequest {
+		Page      int    `json:"page"`
+		PageSize  int    `json:"pageSize"`
+		Level     string `json:"level,optional"`
+		Module    string `json:"module,optional"`
+		Keyword   string `json:"keyword,optional"`
+		UserID    string `json:"userId,optional"`
+		UserType  string `json:"userType,optional"`
+		StartTime string `json:"startTime,optional"`
+		EndTime   string `json:"endTime,optional"`
+	}
+)
 
+// Admin 公开路由（登录/登出/仪表盘等）
+@server (
+	group:  admin
+	prefix: /api/v1/admin
+)
+service taskprojectapi {
+	@doc "管理员登录"
+	@handler AdminLogin
+	post /login (AdminLoginRequest) returns (BaseResponse)
+
+	@doc "管理员登出"
+	@handler AdminLogout
+	post /logout (AdminLogoutRequest) returns (BaseResponse)
+
+	@doc "获取公司列表"
+	@handler CompanyList
+	post /company/list (AdminCompanyListRequest) returns (BaseResponse)
+
+	@doc "获取仪表盘统计数据"
+	@handler DashboardStats
+	get /dashboard/stats returns (BaseResponse)
+
+	@doc "获取服务器监控指标"
+	@handler ServerMetrics
+	get /metrics returns (BaseResponse)
+}
+
+// Admin 受保护路由（需要 AdminAuth 中间件）
+@server (
+	group:      admin
+	prefix:     /api/v1/admin
+	middleware: AdminAuth
+)
+service taskprojectapi {
+	@doc "禁用用户"
+	@handler BanUser
+	post /user/ban (BanUserRequest) returns (BaseResponse)
+
+	@doc "解禁用户"
+	@handler UnbanUser
+	post /user/unban (UnbanUserRequest) returns (BaseResponse)
+
+	@doc "恢复用户"
+	@handler RestoreUser
+	post /user/restore (RestoreUserRequest) returns (BaseResponse)
+
+	@doc "获取用户列表"
+	@handler UserList
+	post /user/list (AdminUserListRequest) returns (BaseResponse)
+
+	@doc "禁用公司"
+	@handler DisableCompany
+	post /company/disable (DisableCompanyRequest) returns (BaseResponse)
+
+	@doc "启用公司"
+	@handler EnableCompany
+	post /company/enable (EnableCompanyRequest) returns (BaseResponse)
+
+	@doc "获取登录记录"
+	@handler LoginRecordList
+	post /login-records (LoginRecordListRequest) returns (BaseResponse)
+
+	@doc "获取系统日志"
+	@handler LogList
+	post /logs (SystemLogListRequest) returns (BaseResponse)
+}
 

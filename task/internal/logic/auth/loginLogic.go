@@ -170,12 +170,20 @@ func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, e
 		l.svcCtx.SystemLogService.UserAction(l.ctx, "auth", "login", fmt.Sprintf("用户 %s 登录成功", req.Username), userInfo.Id, "127.0.0.1", "")
 	}
 
-	// 发送登录成功通知邮件（通过消息队列）
+	// 发送登录成功通知邮件（使用新的统一邮件服务）
 	go func() {
-		if userInfo.Email.Valid && userInfo.Email.String != "" && l.svcCtx.EmailService != nil {
+		if userInfo.Email.Valid && userInfo.Email.String != "" && l.svcCtx.UnifiedEmailService != nil {
 			loginTime := now.Format("2006-01-02 15:04:05")
 			loginIP := "127.0.0.1"
-			if err := l.svcCtx.EmailService.SendLoginSuccessEmail(context.Background(), userInfo.Email.String, userInfo.Username, loginTime, loginIP); err != nil {
+
+			systemData := map[string]interface{}{
+				"username":  userInfo.Username,
+				"loginTime": loginTime,
+				"loginIP":   loginIP,
+				"message":   fmt.Sprintf("用户 %s 在 %s 从 %s 登录成功", userInfo.Username, loginTime, loginIP),
+			}
+
+			if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(context.Background(), "login_success", []string{userInfo.Email.String}, systemData); err != nil {
 				logx.Errorf("发送登录通知邮件失败: %v", err)
 			}
 		}

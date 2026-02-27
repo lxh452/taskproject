@@ -143,10 +143,15 @@ func (l *EmployeeLeaveLogic) handleHRInitiatedLeave(employee *user.Employee, req
 	// 3. 发送通知给审批人
 	taskNodes := []string{}
 
-	// 获取审批人邮箱
+	// 获取审批人邮箱 - 使用统一邮件服务发送通知
 	approver, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverResult.ApproverID)
-	if err == nil && approver.Email.Valid && approver.Email.String != "" && l.svcCtx.EmailService != nil {
-		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, approver.Email.String, employee.RealName, taskNodes); err != nil {
+	if err == nil && approver.Email.Valid && approver.Email.String != "" && l.svcCtx.UnifiedEmailService != nil {
+		systemData := map[string]interface{}{
+			"employeeName": employee.RealName,
+			"leaveReason":  req.LeaveReason,
+			"taskNodes":    taskNodes,
+		}
+		if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(l.ctx, "employee_leave_approval", []string{approver.Email.String}, systemData); err != nil {
 			logx.Errorf("发送离职邮件失败: %v", err)
 		}
 	}
@@ -204,10 +209,15 @@ func (l *EmployeeLeaveLogic) handleEmployeeInitiatedLeave(employee *user.Employe
 	// 3. 发送通知给审批人
 	taskNodes := []string{}
 
-	// 获取审批人邮箱
+	// 获取审批人邮箱 - 使用统一邮件服务发送通知
 	approver, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, approverResult.ApproverID)
-	if err == nil && approver.Email.Valid && approver.Email.String != "" && l.svcCtx.EmailService != nil {
-		if err := l.svcCtx.EmailService.SendEmployeeLeaveEmail(l.ctx, approver.Email.String, employee.RealName, taskNodes); err != nil {
+	if err == nil && approver.Email.Valid && approver.Email.String != "" && l.svcCtx.UnifiedEmailService != nil {
+		systemData := map[string]interface{}{
+			"employeeName": employee.RealName,
+			"leaveReason":  req.LeaveReason,
+			"taskNodes":    taskNodes,
+		}
+		if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(l.ctx, "employee_leave_approval", []string{approver.Email.String}, systemData); err != nil {
 			logx.Errorf("发送离职邮件失败: %v", err)
 		}
 	}

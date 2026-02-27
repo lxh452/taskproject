@@ -127,12 +127,11 @@ func (e *EmailMiddleware) sendMailWithTLS(addr string, auth smtp.Auth, from stri
 	// 增加超时时间到 60 秒，QQ 邮箱可能响应较慢
 	dialTimeout := 60 * time.Second
 
-	// 方法1: 尝试直接使用 tls.Dial（QQ 邮箱可能更适合这种方式）
+	// 方法1: 尝试直接使用 tls.Dial
 	tlsConfig := &tls.Config{
-		ServerName:         e.config.Host,
-		InsecureSkipVerify: true, // QQ 邮箱可能需要跳过证书验证
-		MinVersion:         tls.VersionTLS10,
-		MaxVersion:         tls.VersionTLS13,
+		ServerName: e.config.Host,
+		MinVersion: tls.VersionTLS12,
+		MaxVersion: tls.VersionTLS13,
 	}
 
 	logx.Infof("[EmailMiddleware] Attempting direct TLS dial with timeout=%v", dialTimeout)
@@ -292,22 +291,13 @@ func (e *EmailMiddleware) sendMailWithSTARTTLS(addr string, auth smtp.Auth, serv
 	if ok, _ := c.Extension("STARTTLS"); ok {
 		logx.Infof("[EmailMiddleware] Server supports STARTTLS, upgrading to TLS, serverName=%s", serverName)
 		cfg := &tls.Config{
-			ServerName:         serverName,
-			InsecureSkipVerify: false, // STARTTLS 通常可以验证证书
+			ServerName: serverName,
 		}
 		if err := c.StartTLS(cfg); err != nil {
 			logx.Errorf("[EmailMiddleware] STARTTLS failed: error=%v, serverName=%s", err, serverName)
-			// 如果标准配置失败，尝试跳过证书验证
-			logx.Infof("[EmailMiddleware] Retrying STARTTLS with relaxed TLS config")
-			cfg.InsecureSkipVerify = true
-			if err := c.StartTLS(cfg); err != nil {
-				logx.Errorf("[EmailMiddleware] STARTTLS failed even with relaxed config: error=%v", err)
-				return fmt.Errorf("STARTTLS failed: %w", err)
-			}
-			logx.Infof("[EmailMiddleware] STARTTLS successful with relaxed config")
-		} else {
-			logx.Infof("[EmailMiddleware] STARTTLS upgrade successful")
+			return fmt.Errorf("STARTTLS failed: %w", err)
 		}
+		logx.Infof("[EmailMiddleware] STARTTLS upgrade successful")
 	} else {
 		logx.Infof("[EmailMiddleware] STARTTLS not supported by server, continuing without TLS (not recommended)")
 	}

@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -120,6 +121,11 @@ type Config struct {
 		BurstSize     int  `json:"burstSize"`     // 突发容量
 		BlockDuration int  `json:"blockDuration"` // 封禁时长(分钟)
 	} `json:"rateLimit"`
+
+	// CORS 配置
+	CORS struct {
+		AllowedOrigins []string `json:"allowedOrigins"`
+	} `json:"cors"`
 }
 
 func (c *Config) ApplyEnvOverrides() {
@@ -325,6 +331,13 @@ func (c *Config) ApplyEnvOverrides() {
 			c.RateLimit.APILimit = limit
 			overrideCount++
 		}
+	}
+
+	// CORS
+	if v := os.Getenv("CORS_ALLOWED_ORIGINS"); v != "" {
+		c.CORS.AllowedOrigins = strings.Split(v, ",")
+		overrideCount++
+		logx.Infof("[Config] CORS_ALLOWED_ORIGINS 已从环境变量覆盖: %v", c.CORS.AllowedOrigins)
 	}
 
 	if overrideCount > 0 {

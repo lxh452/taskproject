@@ -67,9 +67,9 @@ RabbitMQ:
   Exchange: "task.exchange"
   Queue: "task.queue"
 
-# MongoDB配置
+# MongoDB配置 - temporarily disabled
 Mongo:
-  Host: "task_project_mongodb"  # Docker容器名
+  Host: ""
   Port: 27017
   Database: task_project
   Username: admin

@@ -160,3 +160,18 @@ func (s *SystemLogService) AdminAction(ctx context.Context, module, action, mess
 		UserAgent: userAgent,
 	})
 }
+
+// LogGeneric 记录通用日志（满足 middleware.SystemLogger 接口）
+func (s *SystemLogService) LogGeneric(ctx context.Context, module, action, message, userID, userType, ip, userAgent string, extra map[string]interface{}) {
+	s.Log(ctx, LogEntry{
+		Level:     LogLevelInfo,
+		Module:    module,
+		Action:    action,
+		Message:   message,
+		UserID:    userID,
+		UserType:  userType,
+		IP:        ip,
+		UserAgent: userAgent,
+		Extra:     extra,
+	})
+}

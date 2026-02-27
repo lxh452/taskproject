@@ -14,6 +14,20 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 )
 
+// contextKey 自定义 context key 类型，避免跨包冲突
+type contextKey string
+
+const (
+	CtxKeyUserID     contextKey = "userId"
+	CtxKeyUsername   contextKey = "username"
+	CtxKeyRealName   contextKey = "realName"
+	CtxKeyRole       contextKey = "role"
+	CtxKeyEmployeeID contextKey = "employeeId"
+	CtxKeyCompanyID  contextKey = "companyId"
+	CtxKeyClaims     contextKey = "claims"
+	CtxKeyAdminID    contextKey = "adminId"
+)
+
 // Token在Redis中的key前缀
 const (
 	TokenKeyPrefix = "auth:token:"
@@ -201,7 +215,7 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		tokenString, err := j.ExtractTokenFromHeader(r)
 		if err != nil {
 			logx.Errorf("提取JWT令牌失败: %v", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "未授权访问")
 			return
 		}
 
@@ -209,22 +223,22 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		claims, err := j.ParseToken(tokenString)
 		if err != nil {
 			logx.Errorf("JWT令牌验证失败: %v", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "令牌无效或已过期")
 			return
 		}
 
 		// 验证Token是否在Redis中有效（确保登录一致性）
 		if err := j.ValidateTokenWithRedis(tokenString, claims.UserID); err != nil {
 			logx.Errorf("Redis Token验证失败: %v, userId=%s", err, claims.UserID)
-			http.Error(w, "Token invalid or expired, please login again", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "令牌无效或已过期，请重新登录")
 			return
 		}
 
-		// 实时检查用户状态（封禁检查）- 仅对普通用户进行检查，管理员跳过
-		if j.statusChecker != nil && claims.Role != "admin" {
+		// 实时检查用户状态（封禁检查）— 所有角色均检查，包括管理员
+		if j.statusChecker != nil {
 			if err := j.statusChecker.CheckUserStatus(r.Context(), claims.UserID); err != nil {
 				logx.Errorf("用户状态检查失败: %v, userId=%s", err, claims.UserID)
-				http.Error(w, err.Error(), http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, err.Error())
 				return
 			}
 
@@ -232,27 +246,26 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			if claims.CompanyID != "" {
 				if err := j.statusChecker.CheckCompanyStatus(r.Context(), claims.CompanyID); err != nil {
 					logx.Errorf("公司状态检查失败: %v, companyId=%s", err, claims.CompanyID)
-					http.Error(w, err.Error(), http.StatusForbidden)
+					writeJSONError(w, http.StatusForbidden, err.Error())
 					return
 				}
 
-				// 检查员工是否已离职
 				if err := j.statusChecker.CheckEmployeeStatus(r.Context(), claims.UserID, claims.CompanyID); err != nil {
 					logx.Errorf("员工状态检查失败: %v, userId=%s, companyId=%s", err, claims.UserID, claims.CompanyID)
-					http.Error(w, err.Error(), http.StatusForbidden)
+					writeJSONError(w, http.StatusForbidden, err.Error())
 					return
 				}
 			}
 		}
 
-		// 将用户信息添加到请求上下文
-		ctx := context.WithValue(r.Context(), "userId", claims.UserID)
-		ctx = context.WithValue(ctx, "username", claims.Username)
-		ctx = context.WithValue(ctx, "realName", claims.RealName)
-		ctx = context.WithValue(ctx, "role", claims.Role)
-		ctx = context.WithValue(ctx, "employeeId", claims.EmployeeID)
-		ctx = context.WithValue(ctx, "companyId", claims.CompanyID)
-		ctx = context.WithValue(ctx, "claims", claims)
+		// 将用户信息添加到请求上下文（使用类型安全的 key）
+		ctx := context.WithValue(r.Context(), CtxKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, CtxKeyUsername, claims.Username)
+		ctx = context.WithValue(ctx, CtxKeyRealName, claims.RealName)
+		ctx = context.WithValue(ctx, CtxKeyRole, claims.Role)
+		ctx = context.WithValue(ctx, CtxKeyEmployeeID, claims.EmployeeID)
+		ctx = context.WithValue(ctx, CtxKeyCompanyID, claims.CompanyID)
+		ctx = context.WithValue(ctx, CtxKeyClaims, claims)
 
 		// 继续处理请求
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -261,43 +274,43 @@ func (j *JWTMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 
 // GetUserID 从上下文中获取用户ID
 func GetUserID(ctx context.Context) (string, bool) {
-	userID, ok := ctx.Value("userId").(string)
+	userID, ok := ctx.Value(CtxKeyUserID).(string)
 	return userID, ok
 }
 
 // GetUsername 从上下文中获取用户名
 func GetUsername(ctx context.Context) (string, bool) {
-	username, ok := ctx.Value("username").(string)
+	username, ok := ctx.Value(CtxKeyUsername).(string)
 	return username, ok
 }
 
 // GetRealName 从上下文中获取真实姓名
 func GetRealName(ctx context.Context) (string, bool) {
-	realName, ok := ctx.Value("realName").(string)
+	realName, ok := ctx.Value(CtxKeyRealName).(string)
 	return realName, ok
 }
 
 // GetRole 从上下文中获取角色
 func GetRole(ctx context.Context) (string, bool) {
-	role, ok := ctx.Value("role").(string)
+	role, ok := ctx.Value(CtxKeyRole).(string)
 	return role, ok
 }
 
 // GetClaims 从上下文中获取声明
 func GetClaims(ctx context.Context) (*Claims, bool) {
-	claims, ok := ctx.Value("claims").(*Claims)
+	claims, ok := ctx.Value(CtxKeyClaims).(*Claims)
 	return claims, ok
 }
 
 // GetEmployeeID 从上下文中获取员工ID
 func GetEmployeeID(ctx context.Context) (string, bool) {
-	employeeID, ok := ctx.Value("employeeId").(string)
+	employeeID, ok := ctx.Value(CtxKeyEmployeeID).(string)
 	return employeeID, ok
 }
 
 // GetCompanyID 从上下文中获取公司ID
 func GetCompanyID(ctx context.Context) (string, bool) {
-	companyID, ok := ctx.Value("companyId").(string)
+	companyID, ok := ctx.Value(CtxKeyCompanyID).(string)
 	return companyID, ok
 }
 
@@ -305,14 +318,12 @@ func GetCompanyID(ctx context.Context) (string, bool) {
 func (j *JWTMiddleware) RequireRole(requiredRole string) rest.Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// 先执行JWT验证
 			j.Handle(next)(w, r)
 
-			// 检查角色
 			role, ok := GetRole(r.Context())
 			if !ok || role != requiredRole {
 				logx.Errorf("用户角色不匹配: 需要 %s, 实际 %s", requiredRole, role)
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, "权限不足")
 				return
 			}
 		}
@@ -323,13 +334,11 @@ func (j *JWTMiddleware) RequireRole(requiredRole string) rest.Middleware {
 func (j *JWTMiddleware) RequireAnyRole(requiredRoles ...string) rest.Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// 先执行JWT验证
 			j.Handle(next)(w, r)
 
-			// 检查角色
 			role, ok := GetRole(r.Context())
 			if !ok {
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, "权限不足")
 				return
 			}
 
@@ -343,7 +352,7 @@ func (j *JWTMiddleware) RequireAnyRole(requiredRoles ...string) rest.Middleware 
 
 			if !hasRole {
 				logx.Errorf("用户角色不匹配: 需要 %v 中的任意一个, 实际 %s", requiredRoles, role)
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, "权限不足")
 				return
 			}
 		}

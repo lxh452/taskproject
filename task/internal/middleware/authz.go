@@ -81,11 +81,8 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		path := r.URL.Path
-		// 白名单：这些路径不需要员工记录即可访问
-		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/logout" ||
-			path == "/api/v1/company/create" || path == "/api/v1/employee/join" ||
-			path == "/api/v1/company/list" || path == "/api/v1/department/list" || path == "/api/v1/position/list" ||
-			strings.HasPrefix(path, "/api/v1/admin/") {
+		// 使用统一白名单
+		if IsAuthzExemptPath(path) {
 			next(w, r)
 			return
 		}
@@ -97,23 +94,11 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// 从上下文取 userId（JWT 已填充），不同项目键名可能不同，尽可能兼容
+		// 从上下文取 userId（JWT 已通过类型安全的 key 填充）
 		ctx := r.Context()
-		var userId string
-		if v := ctx.Value("userId"); v != nil {
-			if s, ok := v.(string); ok {
-				userId = s
-			}
-		}
+		userId, _ := GetUserID(ctx)
 		if userId == "" {
-			if v := ctx.Value("UserId"); v != nil {
-				if s, ok := v.(string); ok {
-					userId = s
-				}
-			}
-		}
-		if userId == "" {
-			http.Error(w, "Forbidden: no user", http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足：未识别用户")
 			return
 		}
 
@@ -121,7 +106,7 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		emp, err := m.deps.FindEmployeeByUserID(ctx, userId)
 		if err != nil || emp == nil {
 			logx.Errorf("AuthZ: find employee by userId failed: %v", err)
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足")
 			return
 		}
 		// 优先使用内部主键 Id（与 employee.position_id 关联，通过职位获得角色），业务工号为备选
@@ -134,12 +119,12 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		roles, err := m.deps.ListRolesByEmployeeId(ctx, employeeId)
 		if err != nil {
 			logx.Errorf("AuthZ: list roles failed employee=%s user=%s: %v", employeeId, userId, err)
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足")
 			return
 		}
 		if len(roles) == 0 {
 			logx.Infof("AuthZ: no roles bound for employee=%s user=%s, needPerm=%d path=%s (员工可能没有职位或职位没有角色)", employeeId, userId, needPerm, key)
-			http.Error(w, "Forbidden: no roles assigned", http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足：未分配角色")
 			return
 		}
 		perms := make([]string, 0, 8)
@@ -153,7 +138,7 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 
 		if len(perms) == 0 {
 			logx.Infof("AuthZ: no permissions found for employee=%s user=%s, roles=%d but all permissions empty", employeeId, userId, len(roles))
-			http.Error(w, "Forbidden: no permissions", http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足：无有效权限")
 			return
 		}
 
@@ -162,7 +147,7 @@ func (m *AuthzMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		logx.Infof("AuthZ: forbidden user=%s employee=%s needPerm=%d path=%s perms_raw=%v", userId, employeeId, needPerm, key, perms)
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "权限不足")
 	}
 }
 

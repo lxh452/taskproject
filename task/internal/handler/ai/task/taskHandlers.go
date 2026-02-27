@@ -6,9 +6,29 @@ import (
 
 	taskLogic "task_Project/task/internal/logic/ai/task"
 	"task_Project/task/internal/svc"
+	"task_Project/task/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
+
+// SuggestAssigneeHandler 推荐负责人处理器
+func SuggestAssigneeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.SuggestAssigneeRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
+		l := taskLogic.NewSuggestAssigneeLogic(r.Context(), svcCtx)
+		resp, err := l.SuggestAssignee(&req)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
 
 // PolishTaskHandler 任务润色处理器
 func PolishTaskHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {

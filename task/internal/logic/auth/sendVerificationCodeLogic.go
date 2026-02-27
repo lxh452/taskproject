@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"time"
 
+	"task_Project/model/user"
+	"task_Project/task/internal/middleware"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
 	"task_Project/task/internal/utils"
@@ -37,8 +39,15 @@ func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerifica
 	// 2. 检查邮箱是否已被注册（如果是注册场景）
 	if req.Type == "register" {
 		existingUser, err := l.svcCtx.UserModel.FindByEmail(l.ctx, req.Email)
+		// 如果查询成功且用户存在，说明邮箱已被注册
 		if err == nil && existingUser != nil {
 			return utils.Response.BusinessError("email_exists"), nil
+		}
+		// 如果是用户不存在的错误（ErrNotFound），这是正常的新用户注册场景，直接返回
+		// 导入 user 包的 ErrNotFound 用于判断
+		if err != nil && !errors.Is(err, user.ErrNotFound) {
+			// 其他数据库错误，记录日志但不阻止发送验证码（降级处理）
+			l.Logger.Errorf("查询用户邮箱时出现数据库错误: %v", err)
 		}
 	}
 
@@ -169,9 +178,14 @@ func (l *SendVerificationCodeLogic) sendVerificationEmail(email, code, codeType 
 		return errors.New("无效的验证码类型")
 	}
 
-	// 使用邮件服务发送
-	if l.svcCtx.EmailService != nil {
-		return l.svcCtx.EmailService.SendCustomEmail(l.ctx, email, subject, body)
+	// 使用邮件中间件发送
+	if l.svcCtx.EmailMiddleware != nil {
+		return l.svcCtx.EmailMiddleware.SendEmail(l.ctx, middleware.EmailMessage{
+			To:      []string{email},
+			Subject: subject,
+			Body:    body,
+			IsHTML:  true,
+		})
 	}
 
 	return errors.New("邮件服务未配置")

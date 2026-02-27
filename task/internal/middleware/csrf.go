@@ -97,23 +97,9 @@ func (c *CSRFMiddleware) getRedisKey(userID string) string {
 	return "csrf:" + userID
 }
 
-// isExemptPath 检查路径是否豁免CSRF验证
+// isExemptPath 检查路径是否豁免CSRF验证（使用统一白名单）
 func isExemptPath(path string) bool {
-	exemptPaths := []string{
-		"/api/v1/auth/login",
-		"/api/v1/auth/register",
-		"/api/v1/auth/logout",
-		"/api/v1/auth/send-code",
-		"/api/v1/auth/reset-password",
-		"/api/v1/admin/login",
-		"/api/v1/company/invite/parse",
-	}
-	for _, p := range exemptPaths {
-		if path == p {
-			return true
-		}
-	}
-	return false
+	return IsPublicPath(path)
 }
 
 // isExemptMethod 检查HTTP方法是否豁免CSRF验证

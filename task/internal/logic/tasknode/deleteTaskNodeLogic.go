@@ -149,37 +149,19 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 		}
 	}
 
-	// 发布邮件事件（使用模板）
-	if l.svcCtx.EmailMQService != nil && len(emails) > 0 {
-		// 使用模板渲染邮件内容
-		body := ""
-		if l.svcCtx.EmailTemplateService != nil {
-			data := svc.TaskNodeDeletedData{
-				TaskTitle:    taskTitle,
-				NodeName:     taskNode.NodeName,
-				OperatorName: operatorName,
-				DeleteTime:   time.Now().Format("2006-01-02 15:04:05"),
-				Year:         time.Now().Year(),
-			}
-			renderedBody, err := l.svcCtx.EmailTemplateService.RenderTemplate("task_node_deleted", data)
-			if err == nil {
-				body = renderedBody
-			} else {
-				l.Logger.WithContext(l.ctx).Errorf("渲染任务节点删除邮件模板失败: %v", err)
-			}
+	// 发送邮件通知（使用新的统一邮件服务）
+	if l.svcCtx.UnifiedEmailService != nil && len(emails) > 0 {
+		taskData := map[string]interface{}{
+			"taskId":       taskNode.TaskId,
+			"taskTitle":    taskTitle,
+			"nodeName":     taskNode.NodeName,
+			"operatorName": operatorName,
+			"deleteTime":   time.Now().Format("2006-01-02 15:04:05"),
+			"message":      fmt.Sprintf("任务节点 %s（任务：%s）已被 %s 删除", taskNode.NodeName, taskTitle, operatorName),
 		}
 
-		emailEvent := &svc.EmailEvent{
-			EventType: svc.TaskNodeDeleted,
-			To:        emails,
-			Subject:   "任务节点删除通知",
-			Body:      body,
-			IsHTML:    true,
-			TaskID:    taskNode.TaskId,
-			NodeID:    req.TaskNodeID,
-		}
-		if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-			l.Logger.WithContext(l.ctx).Errorf("发布任务节点删除邮件事件失败: %v", err)
+		if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(l.ctx, "task_node_deleted", emails, taskData); err != nil {
+			l.Logger.WithContext(l.ctx).Errorf("发送任务节点删除邮件失败: %v", err)
 		}
 	}
 

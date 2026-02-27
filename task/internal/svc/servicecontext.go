@@ -21,12 +21,17 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 type ServiceContext struct {
 	Config config.Config
 
-	// 中间件
+	// go-zero 路由中间件（由 routes.go 引用）
+	JWT       rest.Middleware
+	AdminAuth rest.Middleware
+
+	// 中间件实例
 	JWTMiddleware       *middleware.JWTMiddleware
 	AdminAuthMiddleware *middleware.AdminAuthMiddleware
 	EmailMiddleware     *middleware.EmailMiddleware
@@ -94,9 +99,9 @@ type ServiceContext struct {
 	NotificationMQService *NotificationMQService // 通知消息队列服务
 	EmailMQService        *EmailMQService        // 邮件消息队列服务
 
-	// 邮件模板和服务
-	EmailTemplateService *EmailTemplateService // 邮件模板服务
-	EmailService         *EmailService         // 邮件服务
+	// 通用模板系统
+	TemplateEngine      *TemplateEngine      // 通用模板引擎
+	UnifiedEmailService *UnifiedEmailService // 统一邮件服务
 
 	// 文件存储服务（COS存储）
 	FileStorageService FileStorageInterface
@@ -148,7 +153,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	var mongoURL, mongoDB string
 
 	// 只有当Mongo配置存在时才初始化MongoDB
-	var systemLogModel adminModel.SystemLogModel
 	if c.Mongo.Host != "" {
 		// 构建 MongoDB 连接 URL
 		// 格式: mongodb://[username:password@]host[:port]/[database][?authSource=admin]
@@ -166,18 +170,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		taskProjectDetailModel = task.NewTask_project_detailModel(mongoURL, c.Mongo.Database, "task_project_detail")
 		taskCommentModel = task.NewTask_commentModel(mongoURL, c.Mongo.Database, "task_comment")
 		attachmentCommentModel = upload.NewAttachment_commentModel(mongoURL, c.Mongo.Database, "attachment_comment")
-
-		// 初始化系统日志模型
-		systemLogModel = adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs")
-		logx.Infof("[ServiceContext] SystemLogModel initialized with MongoDB: %s", c.Mongo.Host)
 	} else {
 		// MongoDB disabled - set nil placeholders
 		uploadFileModel = nil
 		taskProjectDetailModel = nil
 		taskCommentModel = nil
 		attachmentCommentModel = nil
-		systemLogModel = nil
-		logx.Info("[ServiceContext] MongoDB not configured, SystemLogModel disabled")
 	}
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.MySQL.DataSource)
@@ -230,6 +228,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 管理员相关模型
 	adminModelInstance := adminModel.NewAdminModel(conn)
 	loginRecordModel := adminModel.NewLoginRecordModel(conn)
+	// systemLogModel := adminModel.NewSystemLogModel(mongoURL, c.Mongo.Database, "system_logs") // MongoDB disabled
+	var systemLogModel adminModel.SystemLogModel // nil placeholder
 
 	// 初始化默认管理员账户（如果不存在）
 	if err := initDefaultAdmin(adminModelInstance); err != nil {
@@ -269,17 +269,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		logx.Infof("[ServiceContext] RabbitMQ URL is empty, message queue services will be disabled")
 	}
 
-	// 初始化邮件模板服务
-	emailTemplateService, err := NewEmailTemplateService()
+	// 初始化通用模板引擎
+	templateEngine, err := NewTemplateEngine("./task/internal/templates")
 	if err != nil {
-		logx.Errorf("Failed to initialize email template service: %v", err)
-		emailTemplateService = nil
+		logx.Errorf("Failed to initialize template engine: %v", err)
+		templateEngine = nil
 	}
 
-	// 初始化邮件服务
-	var emailService *EmailService
-	if emailTemplateService != nil {
-		emailService = NewEmailService(emailTemplateService, emailMQService, emailMiddleware, c.System.BaseURL)
+	// 初始化统一邮件服务
+	var unifiedEmailService *UnifiedEmailService
+	if templateEngine != nil && emailMiddleware != nil {
+		unifiedEmailService = NewUnifiedEmailService(templateEngine, emailMiddleware, c.System.BaseURL)
 	}
 
 	// 初始化文件存储服务（仅支持COS存储）
@@ -351,6 +351,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	s := &ServiceContext{
 		Config:              c,
+		JWT:                 jwtMiddleware.Handle,
+		AdminAuth:           adminAuthMiddleware.Handle,
 		JWTMiddleware:       jwtMiddleware,
 		AdminAuthMiddleware: adminAuthMiddleware,
 		EmailMiddleware:     emailMiddleware,
@@ -418,9 +420,9 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		NotificationMQService: notificationMQService,
 		EmailMQService:        emailMQService,
 
-		// 邮件模板和服务
-		EmailTemplateService: emailTemplateService,
-		EmailService:         emailService,
+		// 通用模板系统
+		TemplateEngine:      templateEngine,
+		UnifiedEmailService: unifiedEmailService,
 
 		// 文件存储服务
 		FileStorageService: fileStorageService,

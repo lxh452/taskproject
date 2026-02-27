@@ -171,12 +171,17 @@ func (l *UpdateTaskProgressLogic) UpdateTaskProgress(req *types.UpdateTaskProgre
 				}
 			}
 
-			// 同时也通过 EmailService 直接发送（如果可用）
+			// 同时也通过 UnifiedEmailService 直接发送（如果可用）
 			leader, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, taskNode.LeaderId)
 			if err == nil && leader.Email.Valid && leader.Email.String != "" {
-				if l.svcCtx.EmailService != nil {
+				if l.svcCtx.UnifiedEmailService != nil {
 					completeTime := time.Now().Format("2006-01-02 15:04:05")
-					if err := l.svcCtx.EmailService.SendTaskCompletedEmail(l.ctx, leader.Email.String, taskInfo.TaskTitle, taskNode.NodeName, completeTime); err != nil {
+					systemData := map[string]interface{}{
+						"taskTitle":    taskInfo.TaskTitle,
+						"nodeName":     taskNode.NodeName,
+						"completeTime": completeTime,
+					}
+					if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(l.ctx, "task_completed", []string{leader.Email.String}, systemData); err != nil {
 						l.Logger.WithContext(l.ctx).Errorf("发送任务完成邮件失败: %v", err)
 					}
 				}

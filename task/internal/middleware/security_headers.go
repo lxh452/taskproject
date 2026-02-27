@@ -42,9 +42,10 @@ func (m *SecurityHeadersMiddleware) Handle(next http.HandlerFunc) http.HandlerFu
 		// Permissions-Policy: 限制浏览器功能（原Feature-Policy）
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
-		// Strict-Transport-Security: 强制HTTPS（仅在生产环境启用）
-		// 注意：这个头只在HTTPS连接时有效
-		// w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		// Strict-Transport-Security: 强制HTTPS（仅在 HTTPS 连接时生效）
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 
 		next(w, r)
 	}

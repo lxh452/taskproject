@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"task_Project/model/user"
@@ -151,11 +152,18 @@ func (l *RegisterLogic) Register(req *types.RegisterRequest) (resp *types.BaseRe
 		return utils.Response.InternalError("注册失败"), nil
 	}
 
-	// 发送注册成功邮件（通过消息队列）
+	// 发送注册成功邮件（使用新的统一邮件服务）
 	go func() {
-		if req.Email != "" && l.svcCtx.EmailService != nil {
+		if req.Email != "" && l.svcCtx.UnifiedEmailService != nil {
 			registerTime := time.Now().Format("2006-01-02 15:04:05")
-			if err := l.svcCtx.EmailService.SendRegisterSuccessEmail(context.Background(), req.Email, req.Username, registerTime); err != nil {
+
+			systemData := map[string]interface{}{
+				"username":     req.Username,
+				"registerTime": registerTime,
+				"message":      fmt.Sprintf("用户 %s 在 %s 注册成功", req.Username, registerTime),
+			}
+
+			if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(context.Background(), "register_success", []string{req.Email}, systemData); err != nil {
 				logx.Errorf("发送注册成功邮件失败: %v", err)
 			}
 		}

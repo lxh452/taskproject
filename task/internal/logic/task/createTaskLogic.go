@@ -132,9 +132,9 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		}
 	}
 
-	// 发送邮件给节点负责人（通过消息队列）
-	if l.svcCtx.EmailMQService != nil && len(req.NodeEmployeeIDs) > 0 {
-		l.Logger.WithContext(l.ctx).Infof("[CreateTask] EmailMQService is available, preparing to send emails to node employees")
+	// 发送邮件给节点负责人（使用新的统一邮件服务）
+	if l.svcCtx.UnifiedEmailService != nil && len(req.NodeEmployeeIDs) > 0 {
+		l.Logger.WithContext(l.ctx).Infof("[CreateTask] UnifiedEmailService is available, preparing to send emails to node employees")
 		emails := []string{}
 		for _, employeeID := range req.NodeEmployeeIDs {
 			emp, err := l.svcCtx.EmployeeModel.FindOne(l.ctx, employeeID)
@@ -147,25 +147,24 @@ func (l *CreateTaskLogic) CreateTask(req *types.CreateTaskRequest) (resp *types.
 		}
 		if len(emails) > 0 {
 			l.Logger.WithContext(l.ctx).Infof("[CreateTask] Sending email to %d recipients: %v", len(emails), emails)
-			emailEvent := &svc.EmailEvent{
-				EventType: svc.TaskCreated,
-				To:        emails,
-				Subject:   fmt.Sprintf("新任务创建 - %s", req.TaskTitle),
-				Body:      content,
-				IsHTML:    true,
-				TaskID:    taskID,
+
+			taskData := map[string]interface{}{
+				"taskId":    taskID,
+				"taskTitle": req.TaskTitle,
+				"message":   content,
 			}
-			if err := l.svcCtx.EmailMQService.PublishEmailEvent(l.ctx, emailEvent); err != nil {
-				l.Logger.WithContext(l.ctx).Errorf("[CreateTask] Failed to publish email event: error=%v, taskId=%s, emails=%v",
+
+			if err := l.svcCtx.UnifiedEmailService.SendTaskNotification(l.ctx, "task_created", emails, taskData); err != nil {
+				l.Logger.WithContext(l.ctx).Errorf("[CreateTask] Failed to send email: error=%v, taskId=%s, emails=%v",
 					err, taskID, emails)
 			} else {
-				l.Logger.WithContext(l.ctx).Infof("[CreateTask] Email event published successfully: taskId=%s, emails=%v", taskID, emails)
+				l.Logger.WithContext(l.ctx).Infof("[CreateTask] Email sent successfully: taskId=%s, emails=%v", taskID, emails)
 			}
 		} else {
 			l.Logger.WithContext(l.ctx).Infof("[CreateTask] No valid email addresses found for node employees: nodeEmployeeIDs=%v", req.NodeEmployeeIDs)
 		}
 	} else {
-		l.Logger.WithContext(l.ctx).Infof("[CreateTask] EmailMQService is not available or no node employees, email notification will be skipped")
+		l.Logger.WithContext(l.ctx).Infof("[CreateTask] UnifiedEmailService is not available or no node employees, email notification will be skipped")
 	}
 
 	// 7. 创建任务日志

@@ -60,7 +60,7 @@ func (m *AdminAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		tokenString, err := m.jwtMiddleware.ExtractTokenFromHeader(r)
 		if err != nil {
 			logx.Errorf("提取JWT令牌失败: %v", err)
-			http.Error(w, `{"code":401,"msg":"未授权访问"}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "未授权访问")
 			return
 		}
 
@@ -68,31 +68,31 @@ func (m *AdminAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		claims, err := m.jwtMiddleware.ParseToken(tokenString)
 		if err != nil {
 			logx.Errorf("JWT令牌验证失败: %v", err)
-			http.Error(w, `{"code":401,"msg":"令牌无效或已过期"}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "令牌无效或已过期")
 			return
 		}
 
 		// 检查是否是管理员角色
 		if claims.Role != "admin" && claims.Role != "super_admin" {
 			logx.Errorf("非管理员角色尝试访问管理端: role=%s, userId=%s", claims.Role, claims.UserID)
-			http.Error(w, `{"code":403,"msg":"权限不足，仅管理员可访问"}`, http.StatusForbidden)
+			writeJSONError(w, http.StatusForbidden, "权限不足，仅管理员可访问")
 			return
 		}
 
 		// 验证Token是否在Redis中有效
 		if err := m.ValidateAdminTokenWithRedis(tokenString, claims.UserID); err != nil {
 			logx.Errorf("Redis Admin Token验证失败: %v, adminId=%s", err, claims.UserID)
-			http.Error(w, `{"code":401,"msg":"令牌无效或已过期，请重新登录"}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "令牌无效或已过期，请重新登录")
 			return
 		}
 
-		// 将管理员信息添加到请求上下文
-		ctx := context.WithValue(r.Context(), "userId", claims.UserID)
-		ctx = context.WithValue(ctx, "adminId", claims.UserID)
-		ctx = context.WithValue(ctx, "username", claims.Username)
-		ctx = context.WithValue(ctx, "realName", claims.RealName)
-		ctx = context.WithValue(ctx, "role", claims.Role)
-		ctx = context.WithValue(ctx, "claims", claims)
+		// 将管理员信息添加到请求上下文（使用类型安全的 key）
+		ctx := context.WithValue(r.Context(), CtxKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, CtxKeyAdminID, claims.UserID)
+		ctx = context.WithValue(ctx, CtxKeyUsername, claims.Username)
+		ctx = context.WithValue(ctx, CtxKeyRealName, claims.RealName)
+		ctx = context.WithValue(ctx, CtxKeyRole, claims.Role)
+		ctx = context.WithValue(ctx, CtxKeyClaims, claims)
 
 		// 继续处理请求
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -101,6 +101,6 @@ func (m *AdminAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 
 // GetAdminID 从上下文中获取管理员ID
 func GetAdminID(ctx context.Context) (string, bool) {
-	adminID, ok := ctx.Value("adminId").(string)
+	adminID, ok := ctx.Value(CtxKeyAdminID).(string)
 	return adminID, ok
 }
