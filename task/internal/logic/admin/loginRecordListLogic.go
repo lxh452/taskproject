@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"strconv"
 
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
@@ -60,11 +61,12 @@ func (l *LoginRecordListLogic) LoginRecordList(req *types.LoginRecordListRequest
 
 	var recordList []types.LoginRecordInfo
 	for _, r := range records {
+		userType, _ := strconv.Atoi(r.UserType)
 		recordInfo := types.LoginRecordInfo{
 			ID:          r.Id,
 			UserID:      r.UserId,
 			Username:    r.Username.String,
-			UserType:    r.UserType,
+			UserType:    userType,
 			LoginIP:     r.LoginIp.String,
 			UserAgent:   r.UserAgent.String,
 			LoginStatus: int(r.LoginStatus),
