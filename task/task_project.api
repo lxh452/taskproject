@@ -1163,10 +1163,6 @@ service taskprojectapi {
 	@handler GenerateInviteCode
 	post /invite/generate (GenerateInviteCodeRequest) returns (BaseResponse)
 
-	@doc "解析邀请码"
-	@handler ParseInviteCode
-	post /invite/parse (ParseInviteCodeRequest) returns (BaseResponse)
-
 	@doc "获取邀请码列表"
 	@handler GetInviteCodeList
 	post /invite/list (GetInviteCodeListRequest) returns (BaseResponse)
@@ -1174,6 +1170,16 @@ service taskprojectapi {
 	@doc "撤销邀请码"
 	@handler RevokeInviteCode
 	post /invite/revoke (RevokeInviteCodeRequest) returns (BaseResponse)
+}
+
+@server (
+	group:  company
+	prefix: /api/v1/company
+)
+service taskprojectapi {
+	@doc "解析邀请码"
+	@handler ParseInviteCode
+	post /invite/parse (ParseInviteCodeRequest) returns (BaseResponse)
 }
 
 @server (

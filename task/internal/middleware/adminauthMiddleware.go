@@ -1,12 +1,14 @@
+// Code scaffolded by goctl. Safe to edit.
+// goctl 1.9.2
+
 package middleware
 
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
+	"net/http"
 )
 
 // Admin Token在Redis中的key前缀
@@ -14,13 +16,11 @@ const (
 	AdminTokenKeyPrefix = "admin:token:"
 )
 
-// AdminAuthMiddleware 管理员认证中间件
 type AdminAuthMiddleware struct {
 	jwtMiddleware *JWTMiddleware
 	redisClient   *redis.Redis
 }
 
-// NewAdminAuthMiddleware 创建管理员认证中间件
 func NewAdminAuthMiddleware(jwtMiddleware *JWTMiddleware, redisClient *redis.Redis) *AdminAuthMiddleware {
 	return &AdminAuthMiddleware{
 		jwtMiddleware: jwtMiddleware,
@@ -97,10 +97,4 @@ func (m *AdminAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		// 继续处理请求
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
-}
-
-// GetAdminID 从上下文中获取管理员ID
-func GetAdminID(ctx context.Context) (string, bool) {
-	adminID, ok := ctx.Value(CtxKeyAdminID).(string)
-	return adminID, ok
 }

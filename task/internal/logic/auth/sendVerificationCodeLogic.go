@@ -93,14 +93,56 @@ func generateVerificationCode() string {
 	return fmt.Sprintf("%06d", code)
 }
 
-// sendVerificationEmail 发送验证码邮件
+// sendVerificationEmail 发送验证码邮件（使用统一邮件模板服务）
 func (l *SendVerificationCodeLogic) sendVerificationEmail(email, code, codeType string) error {
-	var subject, body string
+	var subject, purpose string
+	var theme string
 
 	switch codeType {
 	case "register":
 		subject = "注册验证码 - Task 任务管理系统"
-		body = fmt.Sprintf(`
+		purpose = "注册 Task 任务管理系统账号"
+		theme = "info"
+	case "reset_password":
+		subject = "重置密码验证码 - Task 任务管理系统"
+		purpose = "重置 Task 任务管理系统登录密码"
+		theme = "warning"
+	default:
+		return errors.New("无效的验证码类型")
+	}
+
+	// 使用统一邮件服务发送
+	if l.svcCtx.UnifiedEmailService != nil {
+		return l.svcCtx.UnifiedEmailService.SendEmail(l.ctx, svc.EmailRequest{
+			TemplateName: "email/auth/verification_code",
+			To:           []string{email},
+			Subject:      subject,
+			Data: map[string]interface{}{
+				"code":    code,
+				"purpose": purpose,
+			},
+			Style: svc.TemplateStyle{
+				Theme: theme,
+			},
+		})
+	}
+
+	// 降级：使用邮件中间件直接发送（保留原有逻辑作为 fallback）
+	if l.svcCtx.EmailMiddleware != nil {
+		return l.svcCtx.EmailMiddleware.SendEmail(l.ctx, middleware.EmailMessage{
+			To:      []string{email},
+			Subject: subject,
+			Body:    l.buildFallbackEmailBody(code, purpose),
+			IsHTML:  true,
+		})
+	}
+
+	return errors.New("邮件服务未配置")
+}
+
+// buildFallbackEmailBody 构建降级邮件内容（当统一邮件服务不可用时使用）
+func (l *SendVerificationCodeLogic) buildFallbackEmailBody(code, purpose string) string {
+	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -123,9 +165,9 @@ func (l *SendVerificationCodeLogic) sendVerificationEmail(email, code, codeType 
         </div>
         <div class="content">
             <p>您好！</p>
-            <p>您正在注册 Task 任务管理系统账号，验证码为：</p>
+            <p>%s，验证码为：</p>
             <div class="code">%s</div>
-            <p class="notice">⏰ 验证码有效期为 5 分钟，请尽快完成注册。</p>
+            <p class="notice">⏰ 验证码有效期为 5 分钟，请尽快使用。</p>
             <p class="notice">🔒 如非本人操作，请忽略此邮件。</p>
         </div>
         <div class="footer">
@@ -134,59 +176,5 @@ func (l *SendVerificationCodeLogic) sendVerificationEmail(email, code, codeType 
     </div>
 </body>
 </html>
-`, code, time.Now().Year())
-
-	case "reset_password":
-		subject = "重置密码验证码 - Task 任务管理系统"
-		body = fmt.Sprintf(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: linear-gradient(135deg, #dc2626, #b91c1c); padding: 30px; text-align: center; }
-        .header h1 { color: white; margin: 0; font-size: 24px; }
-        .content { padding: 30px; }
-        .code { font-size: 36px; font-weight: bold; color: #dc2626; letter-spacing: 8px; text-align: center; padding: 20px; background: #fef2f2; border-radius: 8px; margin: 20px 0; }
-        .notice { color: #666; font-size: 14px; margin-top: 20px; }
-        .footer { background: #f9fafb; padding: 20px; text-align: center; color: #9ca3af; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔑 重置密码</h1>
-        </div>
-        <div class="content">
-            <p>您好！</p>
-            <p>您正在重置 Task 任务管理系统的登录密码，验证码为：</p>
-            <div class="code">%s</div>
-            <p class="notice">⏰ 验证码有效期为 5 分钟。</p>
-            <p class="notice">🔒 如非本人操作，请立即检查账号安全。</p>
-        </div>
-        <div class="footer">
-            © %d Task 任务管理系统
-        </div>
-    </div>
-</body>
-</html>
-`, code, time.Now().Year())
-
-	default:
-		return errors.New("无效的验证码类型")
-	}
-
-	// 使用邮件中间件发送
-	if l.svcCtx.EmailMiddleware != nil {
-		return l.svcCtx.EmailMiddleware.SendEmail(l.ctx, middleware.EmailMessage{
-			To:      []string{email},
-			Subject: subject,
-			Body:    body,
-			IsHTML:  true,
-		})
-	}
-
-	return errors.New("邮件服务未配置")
+`, purpose, code, time.Now().Year())
 }

@@ -365,12 +365,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: company.GetInviteCodeListHandler(serverCtx),
 				},
 				{
-					// 解析邀请码
-					Method:  http.MethodPost,
-					Path:    "/invite/parse",
-					Handler: company.ParseInviteCodeHandler(serverCtx),
-				},
-				{
 					// 撤销邀请码
 					Method:  http.MethodPost,
 					Path:    "/invite/revoke",
@@ -390,6 +384,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				},
 			}...,
 		),
+		rest.WithPrefix("/api/v1/company"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 解析邀请码
+				Method:  http.MethodPost,
+				Path:    "/invite/parse",
+				Handler: company.ParseInviteCodeHandler(serverCtx),
+			},
+		},
 		rest.WithPrefix("/api/v1/company"),
 	)
 
