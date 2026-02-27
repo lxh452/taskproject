@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	adminModel "task_Project/model/admin"
@@ -43,15 +44,26 @@ func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic 
 func (l *LoginLogic) Login(req *types.LoginRequest) (resp *types.BaseResponse, err error) {
 	// 参数验证
 	if utils.Validator.IsEmpty(req.Username) || utils.Validator.IsEmpty(req.Password) {
-		return utils.Response.ValidationError("用户名和密码不能为空"), nil
+		return utils.Response.ValidationError("用户名/邮箱和密码不能为空"), nil
 	}
 
-	// 查找用户
-	userInfo, err := l.svcCtx.UserModel.FindByUsername(l.ctx, req.Username)
+	// 智能识别：根据输入内容判断是邮箱还是用户名
+	var userInfo *user.User
+	loginType := "用户名"
+
+	if strings.Contains(req.Username, "@") {
+		// 包含 @ 符号，按邮箱查找
+		loginType = "邮箱"
+		userInfo, err = l.svcCtx.UserModel.FindByEmail(l.ctx, req.Username)
+	} else {
+		// 按用户名查找
+		userInfo, err = l.svcCtx.UserModel.FindByUsername(l.ctx, req.Username)
+	}
+
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
 			// 记录登录失败日志（用户不存在）
-			l.recordLoginLog("", req.Username, 0, "用户不存在")
+			l.recordLoginLog("", req.Username, 0, fmt.Sprintf("%s不存在", loginType))
 			return utils.Response.BusinessError("login_failed"), nil
 		}
 		logx.Errorf("查找用户失败: %v", err)
