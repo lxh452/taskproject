@@ -107,7 +107,7 @@ func (m *defaultTaskModel) Insert(ctx context.Context, data *Task) (sql.Result, 
 }
 func (m *defaultTaskModel) Update(ctx context.Context, data *Task) error {
 	query := fmt.Sprintf("update %s set %s where `task_id` = ?", m.table, taskRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskProgress, data.TotalNodes, data.CompletedNodes, data.EstimatedHours, data.ActualHours, data.TaskPriority, data.TaskType, data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline, data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.LeaderId, data.TotalNodeCount, data.CompletedNodeCount, data.DeleteTime, data.TaskId)
+	_, err := m.conn.ExecCtx(ctx, query, data.CompanyId, data.TaskTitle, data.TaskDetail, data.TaskStatus, data.TaskPriority, data.TaskType, data.ResponsibleEmployeeIds, data.NodeEmployeeIds, data.DepartmentIds, data.TaskStartTime, data.TaskDeadline, data.TaskCreator, data.TaskAssigner, data.AttachmentUrl, data.LeaderId, data.DeleteTime, data.TaskProgress, data.TotalNodes, data.CompletedNodes, data.EstimatedHours, data.ActualHours, data.TotalNodeCount, data.CompletedNodeCount, data.TaskId)
 	return err
 }
 
