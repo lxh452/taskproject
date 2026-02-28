@@ -141,6 +141,14 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	if updatedTask.TaskDeadline.IsZero() || updatedTask.TaskDeadline.Year() < 1970 {
 		updatedTask.TaskDeadline = time.Now().Add(24 * time.Hour) // 默认明天
 	}
+	// 确保 EstimatedHours 有效
+	if !updatedTask.EstimatedHours.Valid || updatedTask.EstimatedHours.Float64 < 0 {
+		updatedTask.EstimatedHours = sql.NullFloat64{Valid: true, Float64: 0}
+	}
+	// 确保 ActualHours 有效
+	if !updatedTask.ActualHours.Valid || updatedTask.ActualHours.Float64 < 0 {
+		updatedTask.ActualHours = sql.NullFloat64{Valid: true, Float64: 0}
+	}
 
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
 	if err != nil {
