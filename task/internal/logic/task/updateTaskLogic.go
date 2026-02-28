@@ -133,12 +133,19 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 	updatedTask.UpdateTime = time.Now()
 
+	// 记录原始时间值用于调试
+	l.Logger.WithContext(l.ctx).Infof("更新任务前的时间值 - TaskStartTime: %v, TaskDeadline: %v",
+		updatedTask.TaskStartTime, updatedTask.TaskDeadline)
+
 	// 确保 TaskStartTime 不为零值或无效时间（避免 MySQL 错误）
-	if updatedTask.TaskStartTime.IsZero() || updatedTask.TaskStartTime.Year() < 1970 {
+	// 检查条件：零值、年份小于1970、或年份大于2100（防止未来无效日期）
+	if updatedTask.TaskStartTime.IsZero() || updatedTask.TaskStartTime.Year() < 1970 || updatedTask.TaskStartTime.Year() > 2100 {
+		l.Logger.WithContext(l.ctx).Infof("TaskStartTime 无效，设置为当前时间。原值: %v", updatedTask.TaskStartTime)
 		updatedTask.TaskStartTime = time.Now()
 	}
 	// 确保 TaskDeadline 不为零值或无效时间
-	if updatedTask.TaskDeadline.IsZero() || updatedTask.TaskDeadline.Year() < 1970 {
+	if updatedTask.TaskDeadline.IsZero() || updatedTask.TaskDeadline.Year() < 1970 || updatedTask.TaskDeadline.Year() > 2100 {
+		l.Logger.WithContext(l.ctx).Infof("TaskDeadline 无效，设置为明天。原值: %v", updatedTask.TaskDeadline)
 		updatedTask.TaskDeadline = time.Now().Add(24 * time.Hour) // 默认明天
 	}
 	// 确保 EstimatedHours 有效
@@ -148,6 +155,16 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	// 确保 ActualHours 有效
 	if !updatedTask.ActualHours.Valid || updatedTask.ActualHours.Float64 < 0 {
 		updatedTask.ActualHours = sql.NullFloat64{Valid: true, Float64: 0}
+	}
+
+	// 记录最终时间值
+	l.Logger.WithContext(l.ctx).Infof("更新任务后的时间值 - TaskStartTime: %v, TaskDeadline: %v",
+		updatedTask.TaskStartTime, updatedTask.TaskDeadline)
+
+	// 确保 DeleteTime 有效（如果无效则设为 NULL）
+	if updatedTask.DeleteTime.Valid && (updatedTask.DeleteTime.Time.Year() < 1970 || updatedTask.DeleteTime.Time.Year() > 2100) {
+		l.Logger.WithContext(l.ctx).Infof("DeleteTime 无效，设置为 NULL。原值: %v", updatedTask.DeleteTime)
+		updatedTask.DeleteTime = sql.NullTime{Valid: false}
 	}
 
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
