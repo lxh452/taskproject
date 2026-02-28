@@ -133,6 +133,11 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 	updatedTask.UpdateTime = time.Now()
 
+	// 确保 TaskStartTime 不为零值时间（避免 MySQL 错误）
+	if updatedTask.TaskStartTime.IsZero() {
+		updatedTask.TaskStartTime = time.Now()
+	}
+
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
 	if err != nil {
 		l.Logger.WithContext(l.ctx).Errorf("更新任务失败: %v", err)
