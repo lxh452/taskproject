@@ -133,9 +133,13 @@ func (l *UpdateTaskLogic) UpdateTask(req *types.UpdateTaskRequest) (resp *types.
 	}
 	updatedTask.UpdateTime = time.Now()
 
-	// 确保 TaskStartTime 不为零值时间（避免 MySQL 错误）
-	if updatedTask.TaskStartTime.IsZero() {
+	// 确保 TaskStartTime 不为零值或无效时间（避免 MySQL 错误）
+	if updatedTask.TaskStartTime.IsZero() || updatedTask.TaskStartTime.Year() < 1970 {
 		updatedTask.TaskStartTime = time.Now()
+	}
+	// 确保 TaskDeadline 不为零值或无效时间
+	if updatedTask.TaskDeadline.IsZero() || updatedTask.TaskDeadline.Year() < 1970 {
+		updatedTask.TaskDeadline = time.Now().Add(24 * time.Hour) // 默认明天
 	}
 
 	err = l.svcCtx.TaskModel.Update(l.ctx, &updatedTask)
