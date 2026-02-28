@@ -1473,7 +1473,7 @@ service taskprojectapi {
 
 @server (
 	group:      notification
-	prefix: 	/api/v1/notification
+	prefix:     /api/v1/notification
 	middleware: JWT
 )
 service taskprojectapi {
@@ -1884,6 +1884,10 @@ service taskprojectapi {
 	@doc "润色任务"
 	@handler PolishTask
 	post /polish (PolishTaskRequest) returns (BaseResponse)
+
+	@doc "流式润色任务"
+	@handler StreamPolishTask
+	post /polish/stream (PolishTaskRequest) returns (BaseResponse)
 
 	@doc "生成子任务"
 	@handler GenerateSubtasks
