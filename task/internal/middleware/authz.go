@@ -41,8 +41,6 @@ func NewAuthzMiddleware(deps AuthzDeps) *AuthzMiddleware {
 		"POST /api/v1/handover/approve": PermHandoverApprove,
 		"POST /api/v1/handover/reject":  PermHandoverReject,
 		// company
-		// 注意：company/create 不需要权限校验，允许新注册用户创建公司
-		// "POST /api/v1/company/create": PermCompanyCreate,
 		"PUT /api/v1/company/update":  PermCompanyUpdate,
 		"POST /api/v1/company/delete": PermCompanyDelete,
 		// department

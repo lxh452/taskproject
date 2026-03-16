@@ -1718,6 +1718,10 @@ type (
 	AssigneeRecommendations {
 		Recommendations []UserRecommendation `json:"recommendations"`
 	}
+	// 流式AI对话请求
+	StreamAIChatRequest {
+		Prompt string `json:"prompt"`
+	}
 )
 
 // AI 规划相关类型
@@ -1893,9 +1897,25 @@ service taskprojectapi {
 	@handler GenerateSubtasks
 	post /subtasks (GenerateSubtasksRequest) returns (BaseResponse)
 
+	@doc "流式生成子任务"
+	@handler StreamGenerateSubtasks
+	post /subtasks/stream (GenerateSubtasksRequest) returns (BaseResponse)
+
 	@doc "推荐负责人"
 	@handler SuggestAssignee
 	post /assignee (SuggestAssigneeRequest) returns (BaseResponse)
+}
+
+// ==================== AI Chat API ====================
+@server (
+	group:      ai/chat
+	prefix:     /api/v1/ai/chat
+	middleware: JWT
+)
+service taskprojectapi {
+	@doc "流式AI对话"
+	@handler StreamAIChat
+	post /stream (StreamAIChatRequest) returns (BaseResponse)
 }
 
 // ==================== Original AI API ====================

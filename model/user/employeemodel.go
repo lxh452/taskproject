@@ -71,6 +71,16 @@ func (m *customEmployeeModel) withSession(session sqlx.Session) EmployeeModel {
 	return NewEmployeeModel(sqlx.NewSqlConnFromSession(session))
 }
 
+// GetId 获取员工ID（实现权限中间件接口）
+func (e *Employee) GetId() string {
+	return e.Id
+}
+
+// GetEmployeeId 获取工号（实现权限中间件接口）
+func (e *Employee) GetEmployeeId() string {
+	return e.EmployeeId
+}
+
 // FindByUserID 根据用户ID查找员工
 func (m *customEmployeeModel) FindByUserID(ctx context.Context, userID string) (*Employee, error) {
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE `user_id` = ? AND `delete_time` IS NULL", employeeRows, m.table)

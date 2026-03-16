@@ -54,6 +54,14 @@ func (m *customRoleModel) withSession(session sqlx.Session) RoleModel {
 	return NewRoleModel(sqlx.NewSqlConnFromSession(session))
 }
 
+// GetPermissions 获取权限字符串（实现权限中间件接口）
+func (r *Role) GetPermissions() string {
+	if r.Permissions.Valid {
+		return r.Permissions.String
+	}
+	return ""
+}
+
 // FindByCompanyID 根据公司ID查找角色
 func (m *customRoleModel) FindByCompanyID(ctx context.Context, companyID string) ([]*Role, error) {
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE `company_id` = ? AND `delete_time` IS NULL ORDER BY `create_time` DESC", roleRows, m.table)

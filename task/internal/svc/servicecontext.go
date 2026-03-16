@@ -30,10 +30,12 @@ type ServiceContext struct {
 	// go-zero 路由中间件（由 routes.go 引用）
 	JWT       rest.Middleware
 	AdminAuth rest.Middleware
+	Authz     rest.Middleware // 权限校验中间件
 
 	// 中间件实例
 	JWTMiddleware       *middleware.JWTMiddleware
 	AdminAuthMiddleware *middleware.AdminAuthMiddleware
+	AuthzMiddleware     *middleware.AuthzMiddleware
 	EmailMiddleware     *middleware.EmailMiddleware
 	RateLimiter         *middleware.RateLimiter // 限流中间件
 
@@ -313,6 +315,35 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	// 初始化管理员认证中间件
 	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(jwtMiddleware, redisClient)
 
+	// 初始化权限校验中间件
+	authzMiddleware := middleware.NewAuthzMiddleware(middleware.AuthzDeps{
+		FindEmployeeByUserID: func(ctx context.Context, userId string) (interface {
+			GetEmployeeId() string
+			GetId() string
+		}, error) {
+			emp, err := employeeModel.FindByUserID(ctx, userId)
+			if err != nil {
+				return nil, err
+			}
+			// 返回实现了接口的匿名结构体
+			return struct {
+				*user.Employee
+			}{emp}, nil
+		},
+		ListRolesByEmployeeId: func(ctx context.Context, employeeId string) ([]interface{ GetPermissions() string }, error) {
+			roles, err := positionRoleModel.ListRolesByEmployeeId(ctx, employeeId)
+			if err != nil {
+				return nil, err
+			}
+			result := make([]interface{ GetPermissions() string }, len(roles))
+			for i, r := range roles {
+				result[i] = r
+			}
+			return result, nil
+		},
+	})
+	logx.Info("[ServiceContext] 权限校验中间件初始化成功")
+
 	// 初始化限流中间件
 	var rateLimiter *middleware.RateLimiter
 	enabled, loginLimit, apiLimit, burstSize, blockDuration := c.GetRateLimitConfig()
@@ -353,8 +384,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:              c,
 		JWT:                 jwtMiddleware.Handle,
 		AdminAuth:           adminAuthMiddleware.Handle,
+		Authz:               authzMiddleware.Handle,
 		JWTMiddleware:       jwtMiddleware,
 		AdminAuthMiddleware: adminAuthMiddleware,
+		AuthzMiddleware:     authzMiddleware,
 		EmailMiddleware:     emailMiddleware,
 		RateLimiter:         rateLimiter,
 

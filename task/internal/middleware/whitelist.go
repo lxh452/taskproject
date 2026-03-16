@@ -37,7 +37,7 @@ func IsPublicPath(path string) bool {
 	return false
 }
 
-// IsAuthzExemptPath 判断路径是否豁免权限校验（公开路径 + 额外放行路径 + admin路径）
+// IsAuthzExemptPath 判断路径是否豁免权限校验（公开路径 + 额外放行路径）
 func IsAuthzExemptPath(path string) bool {
 	if IsPublicPath(path) {
 		return true
@@ -47,8 +47,6 @@ func IsAuthzExemptPath(path string) bool {
 			return true
 		}
 	}
-	if strings.HasPrefix(path, "/api/v1/admin/") {
-		return true
-	}
+	// Admin 路径需要权限校验，不豁免
 	return false
 }

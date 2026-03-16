@@ -60,16 +60,16 @@ func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerifica
 	// 4. 生成6位验证码
 	code := generateVerificationCode()
 
-	// 5. 存储验证码到Redis（5分钟有效期）
+	// 5. 存储验证码到Redis（10分钟有效期）
 	codeKey := fmt.Sprintf("email_code:%s:%s", req.Type, req.Email)
-	_, err = l.svcCtx.RedisClient.SetnxEx(codeKey, code, 300)
+	_, err = l.svcCtx.RedisClient.SetnxEx(codeKey, code, 600)
 	if err != nil {
 		l.Logger.Errorf("存储验证码失败: %v", err)
 		return nil, errors.New("发送验证码失败")
 	}
 
 	// 6. 设置发送频率限制（60秒）
-	l.svcCtx.RedisClient.SetnxEx(rateLimitKey, "1", 15)
+	l.svcCtx.RedisClient.SetnxEx(rateLimitKey, "1", 60)
 
 	// 7. 发送验证码邮件
 	err = l.sendVerificationEmail(req.Email, code, req.Type)
@@ -87,8 +87,9 @@ func (l *SendVerificationCodeLogic) SendVerificationCode(req *types.SendVerifica
 
 // generateVerificationCode 生成6位随机数字验证码
 func generateVerificationCode() string {
-	rand.Seed(time.Now().UnixNano())
-	code := rand.Intn(900000) + 100000 // 生成100000-999999之间的数字
+	// 使用独立的随机数生成器，避免并发问题
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	code := r.Intn(900000) + 100000 // 生成100000-999999之间的数字
 	return fmt.Sprintf("%06d", code)
 }
 

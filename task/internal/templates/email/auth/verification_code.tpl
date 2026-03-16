@@ -14,7 +14,7 @@
 
 <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-top: 20px;">
     <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">
-        <span style="color: #9ca3af;">⏰</span> 验证码有效期为 <strong>5 分钟</strong>，请尽快使用
+        <span style="color: #9ca3af;">⏰</span> 验证码有效期为 <strong>10 分钟</strong>，请尽快使用
     </p>
     <p style="margin: 0; font-size: 13px; color: #6b7280;">
         <span style="color: #9ca3af;">🔒</span> 如非本人操作，请忽略此邮件

@@ -125,7 +125,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 获取AI工作建议
@@ -140,7 +140,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 生成设计方案
@@ -167,7 +167,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 推荐负责人
@@ -193,6 +193,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/subtasks",
 					Handler: aitask.GenerateSubtasksHandler(serverCtx),
 				},
+				{
+					// 流式生成子任务
+					Method:  http.MethodPost,
+					Path:    "/subtasks/stream",
+					Handler: aitask.StreamGenerateSubtasksHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/api/v1/ai/task"),
@@ -200,7 +206,22 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
+			[]rest.Route{
+				{
+					// 流式AI对话
+					Method:  http.MethodPost,
+					Path:    "/stream",
+					Handler: aitask.StreamAIChatHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1/ai/chat"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 获取 Agent 列表
@@ -269,7 +290,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 获取我的任务节点完成审批列表
@@ -338,7 +359,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 创建公司
@@ -407,7 +428,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 创建部门
@@ -446,7 +467,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 创建员工
@@ -533,7 +554,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT},
+			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
 					// 审批任务交接
