@@ -104,6 +104,12 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 		updateFields = append(updateFields, "节点名称")
 	}
 
+	// 更新节点优先级
+	if req.NodePriority > 0 {
+		updateData["node_priority"] = req.NodePriority
+		updateFields = append(updateFields, "节点优先级")
+	}
+
 	// 更新节点详情  只有节点负责人或任务负责人可以修改
 	canUpdateDetail := taskNode.LeaderId == currentEmpID ||
 		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
@@ -186,6 +192,10 @@ func (l *UpdateTaskNodeLogic) UpdateTaskNode(req *types.UpdateTaskNodeRequest) (
 	updatedTaskNode := *taskNode
 	if req.NodeName != "" {
 		updatedTaskNode.NodeName = req.NodeName
+	}
+	// 更新节点优先级
+	if req.NodePriority > 0 {
+		updatedTaskNode.NodePriority = req.NodePriority
 	}
 	canUpdateDetail = taskNode.LeaderId == currentEmpID ||
 		(taskInfo.LeaderId.Valid && taskInfo.LeaderId.String == currentEmpID) ||
