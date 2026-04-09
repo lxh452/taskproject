@@ -127,23 +127,26 @@ func (l *StreamGenerateSubtasksLogic) buildSubtaskPrompt(req *GenerateSubtasksRe
 ## 生成要求
 1. 将主任务拆解为 3-8 个可执行的任务节点
 2. 每个节点必须包含以下字段：
-   - nodeType: 节点类型 (1=里程碑, 2=开发任务, 3=测试任务, 4=文档任务, 5=评审任务)
-   - nodeName: 节点名称（简洁明了，10字以内）
+   - nodeType: 节点类型 (1=里程碑，2=开发任务，3=测试任务，4=文档任务，5=评审任务)
+   - nodeName: 节点名称（简洁明了，10 字以内）
    - nodeDetail: 节点详细描述（包含具体要做什么、输出物、验收标准）
    - estimatedHours: 预估工时（小时）
+   - nodePriority: 节点优先级 (0=紧急，1=高，2=中，3=低)
 3. 节点之间应该有合理的依赖关系和执行顺序
 4. 预估工时应该合理，总工时应与任务复杂度匹配
 5. 第一个节点通常是里程碑或需求分析，最后一个是测试验收
+6. 根据任务的重要性和紧急程度合理设置 nodePriority
 
 ## 输出格式
 请严格按照以下 JSON 格式输出，不要包含任何其他内容：
 {
   "subtasks": [
     {
-      "nodeType": 节点类型数字,
+      "nodeType": 节点类型数字，
       "nodeName": "节点名称",
       "nodeDetail": "节点详细描述",
-      "estimatedHours": 预估工时数字
+      "estimatedHours": 预估工时数字，
+      "nodePriority": 优先级数字 (0-3)
     }
   ]
 }`, req.TaskTitle, req.TaskDetail, contextStr)
