@@ -72,8 +72,9 @@ func sendSSEEvent(w http.ResponseWriter, event string, data interface{}) {
 func StreamGenerateSubtasksHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			TaskDescription string `json:"taskDescription"`
-			TaskID          string `json:"taskId,optional"`
+			TaskDescription string                 `json:"taskDescription"`
+			TaskID          string                 `json:"taskId,optional"`
+			Context         map[string]interface{} `json:"context,optional"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			// 以 SSE 格式返回错误
@@ -89,6 +90,7 @@ func StreamGenerateSubtasksHandler(svcCtx *svc.ServiceContext) http.HandlerFunc 
 			TaskID:     req.TaskID,
 			TaskTitle:  req.TaskDescription,
 			TaskDetail: req.TaskDescription,
+			Context:    req.Context,
 		}
 
 		l := taskLogic.NewStreamGenerateSubtasksLogic(r.Context(), svcCtx)
