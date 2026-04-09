@@ -15,6 +15,29 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+// PolishTaskRequest 润色任务请求
+type PolishTaskRequest struct {
+	TaskID     string `json:"taskId"`     // 任务ID
+	TaskTitle  string `json:"taskTitle"`  // 任务标题
+	TaskDetail string `json:"taskDetail"` // 任务详情
+	PolishType string `json:"polishType"` // 润色类型：clarity(清晰度), professional(专业性), concise(简洁性)
+}
+
+// PolishResult 润色结果
+type PolishResult struct {
+	OriginalTitle  string   `json:"originalTitle"`  // 原标题
+	OriginalDetail string   `json:"originalDetail"` // 原详情
+	PolishedTitle  string   `json:"polishedTitle"`  // 润色后标题
+	PolishedDetail string   `json:"polishedDetail"` // 润色后详情
+	Improvements   []string `json:"improvements"`   // 改进点列表
+}
+
+// PolishTaskResponse AI 润色任务响应
+type PolishTaskResponse struct {
+	Result  PolishResult `json:"result"`  // 润色结果
+	Success bool         `json:"success"` // 是否成功
+}
+
 type StreamPolishTaskLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext

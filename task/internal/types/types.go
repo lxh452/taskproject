@@ -420,13 +420,13 @@ type CreateTaskDetailComment struct {
 }
 
 type CreateTaskNodeRequest struct {
-	TaskID        string   `json:"taskId"`                  // 总任务id
+	TaskID        string   `json:"taskId"`                  // 总任务 id
 	NodeName      string   `json:"nodeName"`                // 节点名字
 	NodeDetail    string   `json:"nodeDetail"`              // 该节点的详情
 	NodePriority  int64    `json:"nodePriority"`            // 该节点的优先级
 	DepartmentID  string   `json:"departmentId"`            // 该节点的所属部门
 	LeaderID      string   `json:"leaderId"`                // 该任务节点的负责人
-	ExecutorIDs   []string `json:"executorIds,optional"`    // 执行者们的id
+	ExecutorIDs   []string `json:"executorIds,optional"`    // 执行者们的 id
 	EstimatedDays int64    `json:"estimatedHours,optional"` // 预期完成时间（小时）
 	NodeStartTime string   `json:"nodeStartTime,optional"`  // 节点开始时间
 	NodeDeadline  string   `json:"nodeDeadline,optional"`   // 节点截止时间

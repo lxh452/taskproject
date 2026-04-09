@@ -10,7 +10,6 @@ import (
 	ai "task_Project/task/internal/handler/ai"
 	aiflow "task_Project/task/internal/handler/ai/flow"
 	aitask "task_Project/task/internal/handler/ai/task"
-	aiagent "task_Project/task/internal/handler/aiagent"
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
 	company "task_Project/task/internal/handler/company"
@@ -170,18 +169,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
-					// 推荐负责人
-					Method:  http.MethodPost,
-					Path:    "/assignee",
-					Handler: aitask.SuggestAssigneeHandler(serverCtx),
-				},
-				{
-					// 润色任务
-					Method:  http.MethodPost,
-					Path:    "/polish",
-					Handler: aitask.PolishTaskHandler(serverCtx),
-				},
-				{
 					// 流式润色任务
 					Method:  http.MethodPost,
 					Path:    "/polish/stream",
@@ -217,39 +204,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/api/v1/ai/chat"),
-	)
-
-	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
-			[]rest.Route{
-				{
-					// 获取 Agent 列表
-					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: aiagent.ListAgentsHandler(serverCtx),
-				},
-				{
-					// 创建 Agent
-					Method:  http.MethodPost,
-					Path:    "/",
-					Handler: aiagent.CreateAgentHandler(serverCtx),
-				},
-				{
-					// 执行 Agent
-					Method:  http.MethodPost,
-					Path:    "/:id/execute",
-					Handler: aiagent.ExecuteAgentHandler(serverCtx),
-				},
-				{
-					// 获取 Agent 状态
-					Method:  http.MethodGet,
-					Path:    "/:id/status",
-					Handler: aiagent.GetAgentStatusHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/api/v1/agents"),
 	)
 
 	server.AddRoutes(

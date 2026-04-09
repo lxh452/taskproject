@@ -1564,46 +1564,7 @@ service taskprojectapi {
 	@handler GetMyAttachments
 	post /my/list (GetMyAttachmentsRequest) returns (BaseResponse)
 }
-
-// ==================== VibeCraft AI API Definitions ====================
-// AI Agent 相关类型
 type (
-	// Agent 基础信息
-	AgentInfo {
-		ID           string   `json:"id"`
-		Name         string   `json:"name"`
-		Type         string   `json:"type"` // planning, design, collection, decision, execution
-		Status       string   `json:"status"` // idle, running, paused, error
-		Capabilities []string `json:"capabilities"`
-		Description  string   `json:"description"`
-		Avatar       string   `json:"avatar,optional"`
-		CreatedAt    string   `json:"createdAt"`
-	}
-	// LLM 配置
-	LLMConfig {
-		Model       string  `json:"model"`
-		Temperature float64 `json:"temperature"`
-		MaxTokens   int     `json:"maxTokens"`
-	}
-	// 创建 Agent 请求
-	CreateAgentRequest {
-		Name         string    `json:"name"`
-		Type         string    `json:"type"`
-		Capabilities []string  `json:"capabilities"`
-		LLMConfig    LLMConfig `json:"llmConfig"`
-		Description  string    `json:"description,optional"`
-	}
-	// 执行 Agent 请求
-	ExecuteAgentRequest {
-		Input   string                 `json:"input"`
-		Context map[string]interface{} `json:"context,optional"`
-	}
-	// Agent 执行结果
-	AgentResult {
-		Type     string                 `json:"type"` // text, plan, designs, polished_task, subtasks, error
-		Data     map[string]interface{} `json:"data"`
-		Metadata map[string]interface{} `json:"metadata,optional"`
-	}
 	// AI 建议请求
 	GetAiSuggestionRequest {
 		TaskDescription string `json:"taskDescription,optional"`
@@ -1611,60 +1572,6 @@ type (
 	}
 )
 
-// AI 流程设计相关类型
-type (
-	// 流程设计请求
-	FlowDesignRequest {
-		Tasks       []string               `json:"tasks"`
-		Constraints map[string]interface{} `json:"constraints,optional"`
-	}
-	// 设计选项
-	DesignOption {
-		ID                  string   `json:"id"`
-		Name                string   `json:"name"`
-		Description         string   `json:"description"`
-		MermaidCode         string   `json:"mermaidCode,optional"`
-		EstimatedDays       int      `json:"estimatedDays"`
-		RequiredPeople      int      `json:"requiredPeople"`
-		RiskLevel           string   `json:"riskLevel"` // high, medium, low
-		RecommendationScore int      `json:"recommendationScore"`
-		IsRecommended       bool     `json:"isRecommended,optional"`
-		Tags                []string `json:"tags,optional"`
-	}
-	// 流程节点
-	FlowNode {
-		ID       string                 `json:"id"`
-		Type     string                 `json:"type"`
-		Position map[string]float64     `json:"position"` // x, y
-		Data     map[string]interface{} `json:"data"`
-	}
-	// 流程边
-	FlowEdge {
-		ID     string `json:"id"`
-		Source string `json:"source"`
-		Target string `json:"target"`
-		Type   string `json:"type,optional"`
-		Label  string `json:"label,optional"`
-	}
-	// 流程数据
-	FlowData {
-		Nodes []FlowNode `json:"nodes"`
-		Edges []FlowEdge `json:"edges"`
-	}
-	// 生成流程请求
-	GenerateFlowRequest {
-		SelectedDesignID string `json:"selectedDesignId"`
-	}
-	// 生成任务请求
-	GenerateTasksFromFlowRequest {
-		DesignID string     `json:"designId"`
-		Nodes    []FlowNode `json:"nodes"`
-	}
-	// 设计方案响应
-	FlowDesignResponse {
-		Designs []DesignOption `json:"designs"`
-	}
-)
 
 // AI 任务润色相关类型
 type (
@@ -1837,48 +1744,6 @@ type (
 	}
 )
 
-// ==================== VibeCraft AI Services ====================
-@server (
-	group:      aiagent
-	prefix:     /api/v1/agents
-	middleware: JWT
-)
-service taskprojectapi {
-	@doc "获取 Agent 列表"
-	@handler ListAgents
-	get / returns (BaseResponse)
-
-	@doc "创建 Agent"
-	@handler CreateAgent
-	post / (CreateAgentRequest) returns (BaseResponse)
-
-	@doc "执行 Agent"
-	@handler ExecuteAgent
-	post /:id/execute (ExecuteAgentRequest) returns (BaseResponse)
-
-	@doc "获取 Agent 状态"
-	@handler GetAgentStatus
-	get /:id/status returns (BaseResponse)
-}
-
-@server (
-	group:      ai/flow
-	prefix:     /api/v1/ai/flow
-	middleware: JWT
-)
-service taskprojectapi {
-	@doc "生成设计方案"
-	@handler SuggestDesigns
-	post /designs (FlowDesignRequest) returns (BaseResponse)
-
-	@doc "生成流程图"
-	@handler GenerateFlow
-	post /generate (GenerateFlowRequest) returns (BaseResponse)
-
-	@doc "根据流程生成任务"
-	@handler GenerateTasksFromFlow
-	post /generate-tasks (GenerateTasksFromFlowRequest) returns (BaseResponse)
-}
 
 @server (
 	group:      ai/task
@@ -1886,10 +1751,6 @@ service taskprojectapi {
 	middleware: JWT
 )
 service taskprojectapi {
-	@doc "润色任务"
-	@handler PolishTask
-	post /polish (PolishTaskRequest) returns (BaseResponse)
-
 	@doc "流式润色任务"
 	@handler StreamPolishTask
 	post /polish/stream (PolishTaskRequest) returns (BaseResponse)
@@ -1902,9 +1763,6 @@ service taskprojectapi {
 	@handler StreamGenerateSubtasks
 	post /subtasks/stream (GenerateSubtasksRequest) returns (BaseResponse)
 
-	@doc "推荐负责人"
-	@handler SuggestAssignee
-	post /assignee (SuggestAssigneeRequest) returns (BaseResponse)
 }
 
 // ==================== AI Chat API ====================

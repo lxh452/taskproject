@@ -189,10 +189,21 @@ func (l *StreamGenerateSubtasksLogic) parseSubtaskResponse(response string) ([]S
 		if description == "" {
 			description = st.Description
 		}
-		// 默认nodeType为2（开发任务）
+		// 默认 nodeType 为 2（开发任务）
 		nodeType := st.NodeType
 		if nodeType == 0 {
 			nodeType = 2
+		}
+		// 将优先级转换为 nodePriority (1-5 -> 0-3)
+		nodePriority := int64(2) // 默认为中
+		if st.Priority >= 4 {
+			nodePriority = 0 // 紧急
+		} else if st.Priority == 3 {
+			nodePriority = 1 // 高
+		} else if st.Priority == 2 {
+			nodePriority = 2 // 中
+		} else {
+			nodePriority = 3 // 低
 		}
 
 		subtasks = append(subtasks, Subtask{
@@ -204,6 +215,7 @@ func (l *StreamGenerateSubtasksLogic) parseSubtaskResponse(response string) ([]S
 			NodeDetail:     description,
 			EstimatedHours: st.EstimatedHours,
 			Priority:       st.Priority,
+			NodePriority:   nodePriority,
 		})
 	}
 

@@ -144,11 +144,6 @@ func (e *EmailMiddleware) sendMailWithTLS(addr string, auth smtp.Auth, from stri
 	if err != nil {
 		logx.Errorf("[EmailMiddleware] Direct TLS dial failed: error=%v, addr=%s, host=%s, timeout=%v, duration=%v",
 			err, addr, e.config.Host, dialTimeout, dialDuration)
-		logx.Errorf("[EmailMiddleware] TROUBLESHOOTING: This error might be caused by:")
-		logx.Errorf("[EmailMiddleware]   1. VPN interference - Try disabling VPN or adding SMTP exception")
-		logx.Errorf("[EmailMiddleware]   2. Firewall blocking port 465")
-		logx.Errorf("[EmailMiddleware]   3. Network connectivity issues")
-		logx.Errorf("[EmailMiddleware]   4. TLS handshake timeout (server not responding)")
 
 		// 方法2: 尝试先建立 TCP 连接再升级（分步进行，更容易定位问题）
 		logx.Infof("[EmailMiddleware] Trying TCP connection then TLS upgrade with timeout=%v", dialTimeout)
@@ -275,12 +270,6 @@ func (e *EmailMiddleware) sendMailWithSTARTTLS(addr string, auth smtp.Auth, serv
 
 	if err != nil {
 		logx.Errorf("[EmailMiddleware] Failed to dial SMTP server: error=%v, addr=%s, duration=%v", err, addr, dialDuration)
-		logx.Errorf("[EmailMiddleware] TROUBLESHOOTING: EOF error usually means:")
-		logx.Errorf("[EmailMiddleware]   1. VPN is interfering with SMTP protocol handshake - TRY DISABLING VPN")
-		logx.Errorf("[EmailMiddleware]   2. Server closed connection during greeting")
-		logx.Errorf("[EmailMiddleware]   3. Network interruption after TCP connection")
-		logx.Errorf("[EmailMiddleware]   4. Firewall blocking SMTP protocol")
-		logx.Infof("[EmailMiddleware] Trying standard library smtp.SendMail as fallback")
 		// 尝试使用标准库作为备用方案
 		return e.sendMailWithStandardLibrary(addr, auth, from, to, msg)
 	}

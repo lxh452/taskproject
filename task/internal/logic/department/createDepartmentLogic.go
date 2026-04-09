@@ -107,6 +107,7 @@ func (l *CreateDepartmentLogic) CreateDepartment(req *types.CreateDepartmentRequ
 			}
 		}
 
+		//todo
 		// 发布通知事件
 		if l.svcCtx.NotificationMQService != nil && len(employeeIDs) > 0 {
 			notificationEvent := l.svcCtx.NotificationMQService.NewNotificationEvent(

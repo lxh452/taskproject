@@ -60,17 +60,6 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 		return utils.Response.BusinessError("task_node_completed_no_delete"), nil
 	}
 
-	// 6. 检查是否有其他节点依赖此节点（暂时注释掉，因为方法不存在）
-	// dependentNodes, err := l.svcCtx.TaskNodeModel.FindDependentNodes(l.ctx, req.TaskNodeID)
-	// if err != nil {
-	// 	l.Logger.WithContext(l.ctx).Errorf("查询依赖节点失败: %v", err)
-	// 	return nil, err
-	// }
-
-	// if len(dependentNodes) > 0 {
-	// 	return utils.Response.BusinessError("node_has_dependents"), nil
-	// }
-
 	// 7. 软删除任务节点
 	err = l.svcCtx.TaskNodeModel.SoftDelete(l.ctx, req.TaskNodeID)
 	if err != nil {

@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zeromicro/go-zero/core/logx"
 	"task_Project/task/internal/svc"
 	"task_Project/task/internal/types"
+
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // GenerateSubtasksLogic AI 生成子任务逻辑
@@ -31,7 +32,7 @@ type GenerateSubtasksRequest struct {
 
 // Subtask 子任务
 type Subtask struct {
-	SubtaskID      string `json:"subtaskId"`      // 子任务ID
+	SubtaskID      string `json:"subtaskId"`      // 子任务 ID
 	Title          string `json:"title"`          // 子任务标题（兼容旧字段）
 	Description    string `json:"description"`    // 子任务描述（兼容旧字段）
 	NodeType       int    `json:"nodeType"`       // 节点类型 1=里程碑 2=开发任务 3=测试任务 4=文档任务 5=评审任务
@@ -39,6 +40,7 @@ type Subtask struct {
 	NodeDetail     string `json:"nodeDetail"`     // 节点详细描述
 	EstimatedHours int    `json:"estimatedHours"` // 预估工时
 	Priority       int    `json:"priority"`       // 优先级
+	NodePriority   int64  `json:"nodePriority"`   // 节点优先级（用于创建节点）
 }
 
 // GenerateSubtasksResponse AI 生成子任务响应
@@ -169,12 +171,25 @@ func (l *GenerateSubtasksLogic) parseSubtaskResponse(response string) ([]Subtask
 	// 转换为 Subtask 结构
 	subtasks := make([]Subtask, 0, len(result.Subtasks))
 	for i, st := range result.Subtasks {
+		// 将优先级转换为 nodePriority (1-5 -> 0-3)
+		nodePriority := int64(2) // 默认为中
+		if st.Priority >= 4 {
+			nodePriority = 0 // 紧急
+		} else if st.Priority == 3 {
+			nodePriority = 1 // 高
+		} else if st.Priority == 2 {
+			nodePriority = 2 // 中
+		} else {
+			nodePriority = 3 // 低
+		}
+
 		subtasks = append(subtasks, Subtask{
 			SubtaskID:      fmt.Sprintf("sub_%03d", i+1),
 			Title:          st.Title,
 			Description:    st.Description,
 			EstimatedHours: st.EstimatedHours,
 			Priority:       st.Priority,
+			NodePriority:   nodePriority,
 		})
 	}
 
@@ -190,6 +205,7 @@ func (l *GenerateSubtasksLogic) getDefaultSubtasks(req *GenerateSubtasksRequest)
 			Description:    fmt.Sprintf("深入理解任务'%s'的具体需求和目标", req.TaskTitle),
 			EstimatedHours: 4,
 			Priority:       1,
+			NodePriority:   1, // 高
 		},
 		{
 			SubtaskID:      "sub_002",
@@ -197,6 +213,7 @@ func (l *GenerateSubtasksLogic) getDefaultSubtasks(req *GenerateSubtasksRequest)
 			Description:    "制定详细的执行方案和步骤",
 			EstimatedHours: 6,
 			Priority:       1,
+			NodePriority:   1, // 高
 		},
 		{
 			SubtaskID:      "sub_003",
@@ -204,6 +221,7 @@ func (l *GenerateSubtasksLogic) getDefaultSubtasks(req *GenerateSubtasksRequest)
 			Description:    "完成主要工作内容",
 			EstimatedHours: 12,
 			Priority:       2,
+			NodePriority:   2, // 中
 		},
 		{
 			SubtaskID:      "sub_004",
@@ -211,6 +229,7 @@ func (l *GenerateSubtasksLogic) getDefaultSubtasks(req *GenerateSubtasksRequest)
 			Description:    "验证完成质量，确保符合要求",
 			EstimatedHours: 4,
 			Priority:       2,
+			NodePriority:   2, // 中
 		},
 		{
 			SubtaskID:      "sub_005",
@@ -218,6 +237,7 @@ func (l *GenerateSubtasksLogic) getDefaultSubtasks(req *GenerateSubtasksRequest)
 			Description:    "整理工作成果并提交",
 			EstimatedHours: 2,
 			Priority:       3,
+			NodePriority:   3, // 低
 		},
 	}
 }
