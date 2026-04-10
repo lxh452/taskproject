@@ -43,11 +43,18 @@ func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequ
 		l.Logger.WithContext(l.ctx).Errorf("公司id不能为空")
 		return utils.Response.NotFoundError("公司id不能为空"), nil
 	}
+	l.Logger.WithContext(l.ctx).Infof("开始查询部门列表，CompanyID: %s, Page: %d, PageSize: %d", req.CompanyID, req.Page, req.PageSize)
+
 	// 查询部门列表
 	departments, total, err := l.svcCtx.DepartmentModel.FindByPageCompany(l.ctx, req.CompanyID, req.Page, req.PageSize)
 	if err != nil {
-		logx.Errorf("查询部门列表失败: %v", err)
+		logx.Errorf("查询部门列表失败：%v", err)
 		return utils.Response.InternalError("查询部门列表失败"), err
+	}
+
+	l.Logger.WithContext(l.ctx).Infof("查询到 %d 条部门记录，总数：%d", len(departments), total)
+	for i, dept := range departments {
+		l.Logger.WithContext(l.ctx).Infof("部门 %d: ID=%s, Name=%s, CompanyID=%s", i, dept.Id, dept.DepartmentName, dept.CompanyId)
 	}
 
 	// 转换为响应格式
