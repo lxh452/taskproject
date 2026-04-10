@@ -175,12 +175,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: aitask.StreamPolishTaskHandler(serverCtx),
 				},
 				{
-					// 生成子任务
-					Method:  http.MethodPost,
-					Path:    "/subtasks",
-					Handler: aitask.GenerateSubtasksHandler(serverCtx),
-				},
-				{
 					// 流式生成子任务
 					Method:  http.MethodPost,
 					Path:    "/subtasks/stream",
