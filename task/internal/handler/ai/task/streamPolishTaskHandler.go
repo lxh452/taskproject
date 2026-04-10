@@ -16,12 +16,13 @@ import (
 func StreamPolishTaskHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			RawDescription string                 `json:"rawDescription"`
-			PolishType     string                 `json:"polishType,optional"`
-			TaskID         string                 `json:"taskId,optional"`
-			CompanyID      string                 `json:"companyId,optional"`
-			DepartmentIDs  []string               `json:"departmentIds,optional"`
-			Context        map[string]interface{} `json:"context,optional"`
+			RawDescription         string                 `json:"rawDescription"`
+			PolishType             string                 `json:"polishType,optional"`
+			TaskID                 string                 `json:"taskId,optional"`
+			CompanyID              string                 `json:"companyId,optional"`
+			DepartmentIDs          []string               `json:"departmentIds,optional"`
+			ResponsibleEmployeeIDs []string               `json:"responsibleEmployeeIds,optional"`
+			Context                map[string]interface{} `json:"context,optional"`
 		}
 		if err := httpx.Parse(r, &req); err != nil {
 			// 即使是错误也要以 SSE 格式返回
@@ -34,13 +35,14 @@ func StreamPolishTaskHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 转换为内部请求格式
 		polishReq := &taskLogic.PolishTaskRequest{
-			TaskID:        req.TaskID,
-			TaskTitle:     req.RawDescription,
-			TaskDetail:    req.RawDescription,
-			PolishType:    req.PolishType,
-			CompanyID:     req.CompanyID,
-			DepartmentIDs: req.DepartmentIDs,
-			Context:       req.Context,
+			TaskID:                 req.TaskID,
+			TaskTitle:              req.RawDescription,
+			TaskDetail:             req.RawDescription,
+			PolishType:             req.PolishType,
+			CompanyID:              req.CompanyID,
+			DepartmentIDs:          req.DepartmentIDs,
+			ResponsibleEmployeeIDs: req.ResponsibleEmployeeIDs,
+			Context:                req.Context,
 		}
 		if polishReq.PolishType == "" {
 			polishReq.PolishType = "clarity"
