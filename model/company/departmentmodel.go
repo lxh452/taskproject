@@ -97,7 +97,7 @@ func (m *customDepartmentModel) FindByPageCompany(ctx context.Context, companyId
 	offset := (page - 1) * pageSize
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE `company_id` = ? and `delete_time` IS NULL", m.table)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE `company_id` = ? AND `delete_time` IS NULL", m.table)
 	var total int64
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, companyId)
 	if err != nil {
@@ -105,7 +105,7 @@ func (m *customDepartmentModel) FindByPageCompany(ctx context.Context, companyId
 	}
 
 	// 查询数据
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE `company_id` = ? and`delete_time` IS NULL ORDER BY `create_time` DESC LIMIT ? OFFSET ?", departmentRows, m.table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE `company_id` = ? AND `delete_time` IS NULL ORDER BY `create_time` DESC LIMIT ? OFFSET ?", departmentRows, m.table)
 	var resp []*Department
 	err = m.conn.QueryRowsCtx(ctx, &resp, query, companyId, pageSize, offset)
 	return resp, total, err
