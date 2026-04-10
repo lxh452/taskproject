@@ -12,6 +12,27 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+// GenerateSubtasksRequest 生成子任务请求
+type GenerateSubtasksRequest struct {
+	TaskID     string                 `json:"taskId,optional"`     // 任务 ID
+	TaskTitle  string                 `json:"taskTitle,optional"`  // 任务标题
+	TaskDetail string                 `json:"taskDetail,optional"` // 任务详情
+	Context    map[string]interface{} `json:"context,optional"`    // 上下文信息
+}
+
+// Subtask 子任务
+type Subtask struct {
+	SubtaskID      string `json:"subtaskId,optional"` // 子任务 ID
+	Title          string `json:"title"`              // 子任务标题（兼容旧字段）
+	Description    string `json:"description"`        // 子任务描述（兼容旧字段）
+	NodeType       int    `json:"nodeType"`           // 节点类型 1=里程碑 2=开发任务 3=测试任务 4=文档任务 5=评审任务
+	NodeName       string `json:"nodeName"`           // 节点名称
+	NodeDetail     string `json:"nodeDetail"`         // 节点详细描述
+	EstimatedHours int    `json:"estimatedHours"`     // 预估工时
+	Priority       int    `json:"priority"`           // 优先级
+	NodePriority   int64  `json:"nodePriority"`       // 节点优先级（用于创建节点）
+}
+
 // StreamGenerateSubtasksLogic 流式生成子任务逻辑
 type StreamGenerateSubtasksLogic struct {
 	ctx    context.Context
