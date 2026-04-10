@@ -31,9 +31,7 @@ func NewGetDepartmentListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequest) (resp *types.BaseResponse, err error) {
 	// 参数验证
 	validator := utils.NewValidator()
-	if _, _, errors := validator.ValidatePageParams(req.Page, req.PageSize); err != nil {
-		return utils.Response.ValidationError(errors[0]), nil
-	}
+	req.Page, req.PageSize, _ = validator.ValidatePageParams(req.Page, req.PageSize)
 
 	// 获取当前用户信息
 	if _, ok := utils.Common.GetCurrentUserID(l.ctx); !ok {
