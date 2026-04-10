@@ -270,7 +270,7 @@ func (m *customTaskModel) UpdateDeadline(ctx context.Context, id string, deadlin
 
 // SoftDelete 软删除任务
 func (m *customTaskModel) SoftDelete(ctx context.Context, id string) error {
-	query := `UPDATE task SET delete_time = NOW() WHERE id = ? AND delete_time IS NULL`
+	query := `UPDATE task SET delete_time = NOW() WHERE task_id = ? AND delete_time IS NULL`
 	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }
