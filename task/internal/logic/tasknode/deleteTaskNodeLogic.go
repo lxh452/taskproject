@@ -55,10 +55,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 		return utils.Response.BusinessError("task_node_delete_denied"), nil
 	}
 
-	// 5. 检查任务节点状态
-	if taskNode.NodeStatus == 3 { // 已完成
-		return utils.Response.BusinessError("task_node_completed_no_delete"), nil
-	}
+	// 5. 任何状态的节点都可以删除（已完成的也可以删除）
 
 	// 7. 软删除任务节点
 	err = l.svcCtx.TaskNodeModel.SoftDelete(l.ctx, req.TaskNodeID)
