@@ -154,28 +154,39 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
 		polishTypeDesc = "综合优化：提升清晰度、专业性和简洁度"
 	}
 
-	// 构建任务上下文信息
-	contextInfo := ""
-	if req.Context != nil {
-		// 提取部门信息
-		if deptNames, ok := req.Context["departmentNames"].([]string); ok && len(deptNames) > 0 {
-			contextInfo += fmt.Sprintf("\n- 涉及部门：%s", strings.Join(deptNames, ", "))
+	// 构建部门列表信息
+	departmentInfo := ""
+	if allDepts, ok := req.Context["allDepartments"].([]interface{}); ok && len(allDepts) > 0 {
+		departmentInfo = "\n## 可选部门列表\n"
+		for _, dept := range allDepts {
+			if deptMap, ok := dept.(map[string]interface{}); ok {
+				departmentInfo += fmt.Sprintf("- ID: %s, 名称：%s\n", deptMap["id"], deptMap["name"])
+			}
 		}
+	}
 
-		// 提取负责人信息
-		if leaderName, ok := req.Context["leaderName"].(string); ok && leaderName != "" {
-			contextInfo += fmt.Sprintf("\n- 任务负责人：%s", leaderName)
+	// 构建员工列表信息
+	employeeInfo := ""
+	if allEmps, ok := req.Context["allEmployees"].([]interface{}); ok && len(allEmps) > 0 {
+		employeeInfo = "\n## 可选员工列表\n"
+		for _, emp := range allEmps {
+			if empMap, ok := emp.(map[string]interface{}); ok {
+				pendingTasks := 0
+				if pt, ok := empMap["pendingTasks"].(float64); ok {
+					pendingTasks = int(pt)
+				}
+				employeeInfo += fmt.Sprintf("- ID: %s, 姓名：%s, 待办任务数：%d\n", empMap["id"], empMap["name"], pendingTasks)
+			}
 		}
+	}
 
-		// 提取参与员工信息
-		if employeeNames, ok := req.Context["employeeNames"].([]string); ok && len(employeeNames) > 0 {
-			contextInfo += fmt.Sprintf("\n- 参与员工：%s", strings.Join(employeeNames, ", "))
-		}
-
-		// 任务类型
-		if taskType, ok := req.Context["taskType"].(string); ok {
-			contextInfo += fmt.Sprintf("\n- 任务类型：%s", taskType)
-		}
+	// 任务优先级和工期
+	priorityInfo := ""
+	if priority, ok := req.Context["priority"].(float64); ok {
+		priorityInfo = fmt.Sprintf("\n- 期望优先级：%d", int(priority))
+	}
+	if duration, ok := req.Context["duration"].(float64); ok {
+		priorityInfo += fmt.Sprintf("\n- 期望工期：%d 天", int(duration))
 	}
 
 	return fmt.Sprintf(`你是一个专业的任务描述润色专家。请对以下任务描述进行优化。
@@ -186,15 +197,19 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
 ## 原始内容
 - 标题：%s
 - 详情：%s
-%s
+%s%s%s
 
 ## 润色要求
 1. 保持原始意图和核心信息不变
 2. 根据润色类型进行针对性优化
 3. 标题应该简洁明了，概括性强
 4. 详情应该结构清晰，重点突出，**不要包含部门名称、人员姓名等具体信息**（这些会作为独立字段返回）
-5. 根据任务内容和上下文信息，评估任务优先级和预估天数
-6. **重要**：部门 ID 列表和负责人 ID 列表必须作为独立字段返回，不要写入详情中
+5. **重要任务**：根据任务描述内容，从上面提供的部门列表和员工列表中，**智能选择**最合适的部门和员工
+   - 分析任务需要哪些部门的专业技能
+   - 考虑员工的工作负荷（待办任务数），优先选择负荷较低的员工
+   - 选择最合适的负责人（通常选择待办任务较少、经验更丰富的员工）
+6. 根据任务内容和上下文信息，评估任务优先级和预估天数
+7. **重要**：部门 ID 列表和负责人 ID 列表必须作为独立字段返回，不要写入详情中
 
 ## 输出格式
 请严格按照以下 JSON 格式输出，不要包含任何其他内容：
@@ -204,14 +219,14 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
   "taskType": 1,  // 0-单部门任务，1-跨部门任务（根据涉及部门数量判断）
   "taskPriority": 3,  // 0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急
   "estimatedDays": 7,  // 预估完成天数
-  "departmentIds": ["dept_001", "dept_002"],  // 涉及部门 ID 列表（从上下文获取）
-  "responsibleEmployeeIds": ["emp_001", "emp_002"],  // 负责人员工 ID 列表（从上下文获取）
+  "departmentIds": ["dept_001", "dept_002"],  // 涉及部门 ID 列表（从上面的可选部门列表中选择）
+  "responsibleEmployeeIds": ["emp_001", "emp_002"],  // 负责人员工 ID 列表（从上面的可选员工列表中选择）
   "improvements": [  // 改进点列表（仅用于调试，前端不显示）
     "改进点 1",
     "改进点 2",
     "改进点 3"
   ]
-}`, polishTypeDesc, req.TaskTitle, req.TaskDetail, contextInfo)
+}`, polishTypeDesc, req.TaskTitle, req.TaskDetail, departmentInfo, employeeInfo, priorityInfo)
 }
 
 // parsePolishResponse 解析 GLM 润色响应
