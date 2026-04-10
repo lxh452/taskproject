@@ -62,9 +62,15 @@ func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequ
 	// 查询负责人姓名
 	for i := range departmentList {
 		if departmentList[i].ManagerID != "" {
+			l.Logger.WithContext(l.ctx).Infof("查询部门 %s 的负责人 %s", departmentList[i].DepartmentName, departmentList[i].ManagerID)
 			emp, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, departmentList[i].ManagerID)
-			if err == nil && emp != nil {
+			if err != nil {
+				l.Logger.WithContext(l.ctx).Errorf("查询负责人失败：%v", err)
+			} else if emp != nil {
 				departmentList[i].ManagerName = emp.RealName
+				l.Logger.WithContext(l.ctx).Infof("找到负责人：%s", emp.RealName)
+			} else {
+				l.Logger.WithContext(l.ctx).Infof("未找到负责人：%s", departmentList[i].ManagerID)
 			}
 		}
 	}
