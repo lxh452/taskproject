@@ -403,6 +403,7 @@ type (
 		DepartmentCode string `json:"departmentCode,optional"`
 		ManagerID      string `json:"managerId,optional"`
 		Description    string `json:"description,optional"`
+		Status         int    `json:"status,optional"`
 	}
 	// 删除部门请求
 	DeleteDepartmentRequest {
@@ -420,6 +421,7 @@ type (
 		ParentID       string `json:"parentId"`
 		DepartmentCode string `json:"departmentCode"`
 		ManagerID      string `json:"managerId"`
+		ManagerName    string `json:"managerName"`
 		Description    string `json:"description"`
 		Status         int    `json:"status"`
 		CreateTime     string `json:"createTime"`
@@ -465,6 +467,7 @@ type (
 		SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
 		IsManagement     int    `json:"isManagement,optional"`
 		MaxEmployees     int    `json:"maxEmployees,optional"`
+		Status           int    `json:"status,optional"`
 	}
 	// 职位信息响应
 	PositionInfo {
@@ -1572,7 +1575,6 @@ type (
 	}
 )
 
-
 // AI 任务润色相关类型
 type (
 	// 任务润色请求
@@ -1744,7 +1746,6 @@ type (
 	}
 )
 
-
 @server (
 	group:      ai/task
 	prefix:     /api/v1/ai/task
@@ -1762,7 +1763,6 @@ service taskprojectapi {
 	@doc "流式生成子任务"
 	@handler StreamGenerateSubtasks
 	post /subtasks/stream (GenerateSubtasksRequest) returns (BaseResponse)
-
 }
 
 // ==================== AI Chat API ====================
