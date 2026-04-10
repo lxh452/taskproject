@@ -8,7 +8,6 @@ import (
 
 	admin "task_Project/task/internal/handler/admin"
 	ai "task_Project/task/internal/handler/ai"
-	aiflow "task_Project/task/internal/handler/ai/flow"
 	aitask "task_Project/task/internal/handler/ai/task"
 	auth "task_Project/task/internal/handler/auth"
 	checklist "task_Project/task/internal/handler/checklist"
@@ -127,7 +126,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
 			[]rest.Route{
 				{
-					// 获取AI工作建议
+					// 获取 AI 工作建议
 					Method:  http.MethodGet,
 					Path:    "/suggestion",
 					Handler: ai.GetAiSuggestionHandler(serverCtx),
@@ -135,33 +134,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/api/v1/ai"),
-	)
-
-	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.JWT, serverCtx.Authz},
-			[]rest.Route{
-				{
-					// 生成设计方案
-					Method:  http.MethodPost,
-					Path:    "/designs",
-					Handler: aiflow.SuggestDesignsHandler(serverCtx),
-				},
-				{
-					// 生成流程图
-					Method:  http.MethodPost,
-					Path:    "/generate",
-					Handler: aiflow.GenerateFlowHandler(serverCtx),
-				},
-				{
-					// 根据流程生成任务
-					Method:  http.MethodPost,
-					Path:    "/generate-tasks",
-					Handler: aiflow.GenerateTasksFromFlowHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/api/v1/ai/flow"),
 	)
 
 	server.AddRoutes(

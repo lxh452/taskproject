@@ -224,9 +224,45 @@ func (l *StreamGenerateSubtasksLogic) buildSubtaskPrompt(req *GenerateSubtasksRe
 			contextStr = deptInfo
 		}
 
+		// 提取节点信息映射
+		nodeInfoMap, hasNodeInfo := req.Context["nodeInfoMap"].(map[string]interface{})
+		if hasNodeInfo && len(nodeInfoMap) > 0 {
+			// 构建节点信息字符串
+			nodeInfoStr := "\n\n## 已有节点信息（ID 到名称的映射）\n"
+			for nodeID, nodeName := range nodeInfoMap {
+				nodeInfoStr += fmt.Sprintf("- 节点 ID: %s, 节点名称：%v\n", nodeID, nodeName)
+			}
+			nodeInfoStr += "\n请在生成子任务时，参考上述节点信息，确保生成的子任务与已有节点保持一致性和连贯性。"
+			contextStr += nodeInfoStr
+		}
+
+		// 提取完整的节点列表
+		flowNodes, hasFlowNodes := req.Context["flowNodes"].([]interface{})
+		if hasFlowNodes && len(flowNodes) > 0 {
+			nodeListStr := fmt.Sprintf("\n\n## 流程节点列表（共 %d 个节点）\n", len(flowNodes))
+			for i, node := range flowNodes {
+				if nodeMap, ok := node.(map[string]interface{}); ok {
+					nodeID := ""
+					if idVal, ok := nodeMap["id"]; ok {
+						nodeID = fmt.Sprintf("%v", idVal)
+					}
+					nodeLabel := ""
+					if data, ok := nodeMap["data"].(map[string]interface{}); ok {
+						if labelVal, ok := data["label"]; ok {
+							nodeLabel = fmt.Sprintf("%v", labelVal)
+						}
+					}
+					nodeListStr += fmt.Sprintf("%d. 节点 ID: %s, 名称：%s\n", i+1, nodeID, nodeLabel)
+				}
+			}
+			nodeListStr += "\n请根据上述流程节点的结构和内容，生成对应的子任务，确保任务拆解与流程设计保持一致。"
+			contextStr += nodeListStr
+		}
+
 		// 如果有其他上下文信息，也添加到 JSON 中
 		for k, v := range req.Context {
-			if k != "departmentIds" && k != "departmentCount" && k != "isCrossDepartment" {
+			if k != "departmentIds" && k != "departmentCount" && k != "isCrossDepartment" &&
+				k != "nodeInfoMap" && k != "flowNodes" {
 				contextMap[k] = v
 			}
 		}
@@ -260,6 +296,7 @@ func (l *StreamGenerateSubtasksLogic) buildSubtaskPrompt(req *GenerateSubtasksRe
 5. 第一个节点通常是里程碑或需求分析，最后一个是测试验收
 6. 根据任务的重要性和紧急程度合理设置 nodePriority
 7. 如果是跨部门任务，请在任务节点中体现跨部门协作、沟通协调的特点
+8. 如果提供了已有节点信息（nodeInfoMap 或 flowNodes），请确保生成的子任务与已有节点保持一致
 
 ## 输出格式
 请严格按照以下 JSON 格式输出，不要包含任何其他内容：
@@ -274,6 +311,14 @@ func (l *StreamGenerateSubtasksLogic) buildSubtaskPrompt(req *GenerateSubtasksRe
     }
   ]
 }`, req.TaskTitle, req.TaskDetail, contextStr)
+}
+
+// getStringValue 辅助函数，安全地获取 interface{} 的字符串值
+func getStringValue(val interface{}) string {
+	if val == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", val)
 }
 
 // parseSubtaskResponse 解析 GLM 返回的子任务
