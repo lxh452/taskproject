@@ -36,7 +36,7 @@ func (l *DeleteTaskNodeLogic) DeleteTaskNode(req *types.DeleteTaskNodeRequest) (
 	}
 
 	// 2. 获取当前用户ID
-	currentUserID, ok := utils.Common.GetCurrentUserID(l.ctx)
+	currentUserID, ok := utils.Common.GetCurrentEmployeeID(l.ctx)
 	if !ok {
 		return utils.Response.UnauthorizedError(), nil
 	}
