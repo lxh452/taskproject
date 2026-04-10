@@ -55,7 +55,8 @@ func (l *UpdateRoleLogic) UpdateRole(req *types.UpdateRoleRequest) (resp *types.
 		}
 		current.Permissions = utils.Common.ToSqlNullString(req.Permissions)
 	}
-	if req.Status != 0 {
+	// 支持状态更新（0 或 1）
+	if req.Status == 0 || req.Status == 1 {
 		current.Status = int64(req.Status)
 	}
 	if err := l.svcCtx.RoleModel.Update(l.ctx, current); err != nil {

@@ -497,6 +497,7 @@ type DepartmentInfo struct {
 	ParentID       string `json:"parentId"`
 	DepartmentCode string `json:"departmentCode"`
 	ManagerID      string `json:"managerId"`
+	ManagerName    string `json:"managerName"`
 	Description    string `json:"description"`
 	Status         int    `json:"status"`
 	CreateTime     string `json:"createTime"`
@@ -1270,6 +1271,7 @@ type UpdateDepartmentRequest struct {
 	DepartmentCode string `json:"departmentCode,optional"`
 	ManagerID      string `json:"managerId,optional"`
 	Description    string `json:"description,optional"`
+	Status         int    `json:"status,optional"`
 }
 
 type UpdateEmployeeRequest struct {
@@ -1312,6 +1314,7 @@ type UpdatePositionRequest struct {
 	SalaryRangeMax   int    `json:"salaryRangeMax,optional"`
 	IsManagement     int    `json:"isManagement,optional"`
 	MaxEmployees     int    `json:"maxEmployees,optional"`
+	Status           int    `json:"status,optional"`
 }
 
 type UpdatePrerequisiteNodesRequest struct {

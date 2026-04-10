@@ -58,6 +58,10 @@ func (l *UpdateDepartmentLogic) UpdateDepartment(req *types.UpdateDepartmentRequ
 	if !utils.Validator.IsEmpty(req.Description) {
 		updateData["description"] = req.Description
 	}
+	// 支持状态更新
+	if req.Status == 0 || req.Status == 1 {
+		updateData["status"] = req.Status
+	}
 
 	if len(updateData) == 0 {
 		return utils.Response.ValidationError("没有需要更新的字段"), nil

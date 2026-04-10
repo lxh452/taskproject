@@ -76,6 +76,10 @@ func (l *UpdatePositionLogic) UpdatePosition(req *types.UpdatePositionRequest) (
 	if req.MaxEmployees > 0 {
 		updateData["max_employees"] = req.MaxEmployees
 	}
+	// 支持状态更新
+	if req.Status == 0 || req.Status == 1 {
+		updateData["status"] = req.Status
+	}
 
 	if len(updateData) == 0 {
 		return utils.Response.ValidationError("没有需要更新的字段"), nil
