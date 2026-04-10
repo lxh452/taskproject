@@ -17,10 +17,13 @@ import (
 
 // PolishTaskRequest 润色任务请求
 type PolishTaskRequest struct {
-	TaskID     string `json:"taskId"`     // 任务ID
-	TaskTitle  string `json:"taskTitle"`  // 任务标题
-	TaskDetail string `json:"taskDetail"` // 任务详情
-	PolishType string `json:"polishType"` // 润色类型：clarity(清晰度), professional(专业性), concise(简洁性)
+	TaskID        string                 `json:"taskId"`        // 任务 ID
+	TaskTitle     string                 `json:"taskTitle"`     // 任务标题
+	TaskDetail    string                 `json:"taskDetail"`    // 任务详情
+	PolishType    string                 `json:"polishType"`    // 润色类型：clarity(清晰度), professional(专业性), concise(简洁性)
+	CompanyID     string                 `json:"companyId"`     // 公司 ID
+	DepartmentIDs []string               `json:"departmentIds"` // 涉及部门 ID 列表
+	Context       map[string]interface{} `json:"context"`       // 上下文信息（包含员工、部门等详细信息）
 }
 
 // PolishResult 润色结果
@@ -145,21 +148,47 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
 		polishTypeDesc = "综合优化：提升清晰度、专业性和简洁度"
 	}
 
+	// 构建任务上下文信息
+	contextInfo := ""
+	if req.Context != nil {
+		// 提取部门信息
+		if deptNames, ok := req.Context["departmentNames"].([]string); ok && len(deptNames) > 0 {
+			contextInfo += fmt.Sprintf("\n- 涉及部门：%s", strings.Join(deptNames, ", "))
+		}
+
+		// 提取负责人信息
+		if leaderName, ok := req.Context["leaderName"].(string); ok && leaderName != "" {
+			contextInfo += fmt.Sprintf("\n- 任务负责人：%s", leaderName)
+		}
+
+		// 提取参与员工信息
+		if employeeNames, ok := req.Context["employeeNames"].([]string); ok && len(employeeNames) > 0 {
+			contextInfo += fmt.Sprintf("\n- 参与员工：%s", strings.Join(employeeNames, ", "))
+		}
+
+		// 任务类型
+		if taskType, ok := req.Context["taskType"].(string); ok {
+			contextInfo += fmt.Sprintf("\n- 任务类型：%s", taskType)
+		}
+	}
+
 	return fmt.Sprintf(`你是一个专业的任务描述润色专家。请对以下任务描述进行优化。
 
 ## 润色类型
 %s
 
 ## 原始内容
-- 标题: %s
-- 详情: %s
+- 标题：%s
+- 详情：%s
+%s
 
 ## 润色要求
 1. 保持原始意图和核心信息不变
 2. 根据润色类型进行针对性优化
 3. 标题应该简洁明了，概括性强
-4. 详情应该结构清晰，重点突出
+4. 详情应该结构清晰，重点突出，体现跨部门协作的特点（如果是跨部门任务）
 5. 列出主要的改进点
+6. 在润色后的详情中，应该明确提及参与的部门和相关人员
 
 ## 输出格式
 请严格按照以下 JSON 格式输出，不要包含任何其他内容：
@@ -167,11 +196,11 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
   "polishedTitle": "润色后的标题",
   "polishedDetail": "润色后的详情",
   "improvements": [
-    "改进点1",
-    "改进点2",
-    "改进点3"
+    "改进点 1",
+    "改进点 2",
+    "改进点 3"
   ]
-}`, polishTypeDesc, req.TaskTitle, req.TaskDetail)
+}`, polishTypeDesc, req.TaskTitle, req.TaskDetail, contextInfo)
 }
 
 // parsePolishResponse 解析 GLM 润色响应

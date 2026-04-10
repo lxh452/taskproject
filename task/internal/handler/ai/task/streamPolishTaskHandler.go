@@ -18,6 +18,9 @@ func StreamPolishTaskHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		var req struct {
 			RawDescription string                 `json:"rawDescription"`
 			PolishType     string                 `json:"polishType,optional"`
+			TaskID         string                 `json:"taskId,optional"`
+			CompanyID      string                 `json:"companyId,optional"`
+			DepartmentIDs  []string               `json:"departmentIds,optional"`
 			Context        map[string]interface{} `json:"context,optional"`
 		}
 		if err := httpx.Parse(r, &req); err != nil {
@@ -31,9 +34,13 @@ func StreamPolishTaskHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 转换为内部请求格式
 		polishReq := &taskLogic.PolishTaskRequest{
-			TaskTitle:  req.RawDescription,
-			TaskDetail: req.RawDescription,
-			PolishType: req.PolishType,
+			TaskID:        req.TaskID,
+			TaskTitle:     req.RawDescription,
+			TaskDetail:    req.RawDescription,
+			PolishType:    req.PolishType,
+			CompanyID:     req.CompanyID,
+			DepartmentIDs: req.DepartmentIDs,
+			Context:       req.Context,
 		}
 		if polishReq.PolishType == "" {
 			polishReq.PolishType = "clarity"
