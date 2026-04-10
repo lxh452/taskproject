@@ -59,6 +59,16 @@ func (l *GetDepartmentListLogic) GetDepartmentList(req *types.DepartmentListRequ
 	converter := utils.NewConverter()
 	departmentList := converter.ToDepartmentInfoList(departments)
 
+	// 查询负责人姓名
+	for i := range departmentList {
+		if departmentList[i].ManagerID != "" {
+			emp, err := l.svcCtx.EmployeeModel.FindByUserID(l.ctx, departmentList[i].ManagerID)
+			if err == nil && emp != nil {
+				departmentList[i].ManagerName = emp.RealName
+			}
+		}
+	}
+
 	// 构建分页响应
 	pageResp := utils.NewConverter().ToPageResponse(departmentList, int(total), req.Page, req.PageSize)
 

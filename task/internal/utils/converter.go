@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"context"
 	"database/sql"
 	"time"
 
@@ -85,16 +84,6 @@ func (c *converter) ToCompanyInfoList(companies []*company.Company) []types.Comp
 
 // ToDepartmentInfo 将 Department 模型转换为 DepartmentInfo 类型
 func (c *converter) ToDepartmentInfo(department *company.Department) types.DepartmentInfo {
-	// 查询负责人姓名
-	var managerName string
-	if department.ManagerId.Valid && department.ManagerId.String != "" {
-		empModel := user.NewEmployeeModel(nil)
-		emp, err := empModel.FindByUserID(context.Background(), department.ManagerId.String)
-		if err == nil && emp != nil {
-			managerName = emp.RealName
-		}
-	}
-
 	return types.DepartmentInfo{
 		ID:             department.Id,
 		CompanyID:      department.CompanyId,
@@ -102,7 +91,7 @@ func (c *converter) ToDepartmentInfo(department *company.Department) types.Depar
 		DepartmentName: department.DepartmentName,
 		DepartmentCode: getStringValue(department.DepartmentCode),
 		ManagerID:      getStringValue(department.ManagerId),
-		ManagerName:    managerName,
+		ManagerName:    "", // 不在 converter 中查询，由调用方自行处理
 		Description:    getStringValue(department.Description),
 		Status:         int(department.Status),
 		CreateTime:     formatTime(&department.CreateTime),
