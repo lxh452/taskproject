@@ -32,7 +32,10 @@ type PolishResult struct {
 	OriginalDetail string   `json:"originalDetail"` // 原详情
 	PolishedTitle  string   `json:"polishedTitle"`  // 润色后标题
 	PolishedDetail string   `json:"polishedDetail"` // 润色后详情
-	Improvements   []string `json:"improvements"`   // 改进点列表
+	TaskType       int      `json:"taskType"`       // 任务类型：0-单部门任务，1-跨部门任务
+	TaskPriority   int      `json:"taskPriority"`   // 任务优先级：0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急
+	EstimatedDays  int      `json:"estimatedDays"`  // 预估天数
+	Improvements   []string `json:"improvements"`   // 改进点列表（仅用于调试，前端不显示）
 }
 
 // PolishTaskResponse AI 润色任务响应
@@ -187,15 +190,18 @@ func (l *StreamPolishTaskLogic) buildPolishPrompt(req *PolishTaskRequest) string
 2. 根据润色类型进行针对性优化
 3. 标题应该简洁明了，概括性强
 4. 详情应该结构清晰，重点突出，体现跨部门协作的特点（如果是跨部门任务）
-5. 列出主要的改进点
-6. 在润色后的详情中，应该明确提及参与的部门和相关人员
+5. 在润色后的详情中，应该明确提及参与的部门和相关人员
+6. 根据任务内容和上下文信息，评估任务优先级和预估天数
 
 ## 输出格式
 请严格按照以下 JSON 格式输出，不要包含任何其他内容：
 {
   "polishedTitle": "润色后的标题",
   "polishedDetail": "润色后的详情",
-  "improvements": [
+  "taskType": 1,  // 0-单部门任务，1-跨部门任务（根据涉及部门数量判断）
+  "taskPriority": 3,  // 0-不重要不紧急，1-紧急不重要，2-重要但不紧急，3-重要且紧急
+  "estimatedDays": 7,  // 预估完成天数
+  "improvements": [  // 改进点列表（仅用于调试，前端不显示）
     "改进点 1",
     "改进点 2",
     "改进点 3"
@@ -217,11 +223,20 @@ func (l *StreamPolishTaskLogic) parsePolishResponse(response string, req *Polish
 	var result struct {
 		PolishedTitle  string   `json:"polishedTitle"`
 		PolishedDetail string   `json:"polishedDetail"`
+		TaskType       int      `json:"taskType"`
+		TaskPriority   int      `json:"taskPriority"`
+		EstimatedDays  int      `json:"estimatedDays"`
 		Improvements   []string `json:"improvements"`
 	}
 
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return PolishResult{}, fmt.Errorf("解析 JSON 失败: %v", err)
+		return PolishResult{}, fmt.Errorf("解析 JSON 失败：%v", err)
+	}
+
+	// 如果没有返回 taskType，根据部门数量判断
+	taskType := result.TaskType
+	if taskType == 0 && len(req.DepartmentIDs) > 1 {
+		taskType = 1
 	}
 
 	return PolishResult{
@@ -229,6 +244,9 @@ func (l *StreamPolishTaskLogic) parsePolishResponse(response string, req *Polish
 		OriginalDetail: req.TaskDetail,
 		PolishedTitle:  result.PolishedTitle,
 		PolishedDetail: result.PolishedDetail,
+		TaskType:       taskType,
+		TaskPriority:   result.TaskPriority,
+		EstimatedDays:  result.EstimatedDays,
 		Improvements:   result.Improvements,
 	}, nil
 }
